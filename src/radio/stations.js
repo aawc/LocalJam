@@ -136,6 +136,19 @@ export const CURATED_STATIONS = [
   }
 ];
 
+export const RADIO_GENRES = [
+  'All',
+  'Eclectic / Rock',
+  'Acoustic / Ambient',
+  'Rock / Alternative',
+  'World Fusion',
+  'Downtempo / Chillout',
+  'Electronic / Industrial',
+  'Spy / Lounge / Trip-Hop',
+  'Ambient / Drone',
+  'Indie / Alternative'
+];
+
 export async function loadStations(db) {
   if (!db) return CURATED_STATIONS.map((s) => ({ ...s }));
   try {

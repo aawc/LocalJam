@@ -9,6 +9,13 @@
 
 import { audioEngine } from '../player/audio-engine.js';
 
+export const VISUALIZER_MODES = [
+  { id: 'bars', name: 'Frequency Bars' },
+  { id: 'wave', name: 'Oscilloscope' },
+  { id: 'nebula', name: 'Radial Nebula' },
+  { id: 'starfield', name: 'Starfield' }
+];
+
 export class AudioVisualizer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -50,6 +57,12 @@ export class AudioVisualizer {
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
+  }
+
+  init(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas && typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null;
+    this.resize();
   }
 
   initStars(count) {
@@ -298,6 +311,10 @@ export class AudioVisualizer {
     }
   }
 
+  stop() {
+    this.pause();
+  }
+
   destroy() {
     this.pause();
     if (typeof window !== 'undefined') {
@@ -308,3 +325,5 @@ export class AudioVisualizer {
     }
   }
 }
+
+export const audioVisualizer = new AudioVisualizer(null);

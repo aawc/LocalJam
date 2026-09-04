@@ -9,6 +9,7 @@
 
 import { generateDeterministicTrackId } from './session-registry.js';
 import { extractMetadataFromChunk } from '../metadata/index.js';
+import { db } from './db.js';
 
 export class FilesystemReconciler {
   /**
@@ -269,3 +270,78 @@ function hashCode(str) {
   }
   return hash;
 }
+
+/**
+ * Recursively scan a FileSystemDirectoryHandle (Tier 1 Chromium FSAA)
+ */
+async function scanDirectoryHandle(dirHandle, path = '') {
+  const items = [];
+  for await (const [name, entry] of dirHandle.entries()) {
+    const relativePath = path ? `${path}/${name}` : name;
+    if (entry.kind === 'file') {
+      try {
+        const file = await entry.getFile();
+        const ext = name.split('.').pop().toLowerCase();
+        if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'wav', 'opus'].includes(ext)) {
+          items.push({
+            relativePath,
+            filename: name,
+            size: file.size,
+            mtime: file.lastModified,
+            handle: entry,
+            file
+          });
+        }
+      } catch (err) {
+        console.warn(`[Reconciler] Could not read file ${name}:`, err);
+      }
+    } else if (entry.kind === 'directory') {
+      const subItems = await scanDirectoryHandle(entry, relativePath);
+      items.push(...subItems);
+    }
+  }
+  return items;
+}
+
+export const reconciler = {
+  async reconcileDirectoryHandle(dirHandle, progressCallback) {
+    const rootId = 'root_' + (dirHandle.name || 'default');
+    await db.saveDirectoryHandle(rootId, dirHandle);
+    const scannedItems = await scanDirectoryHandle(dirHandle);
+    const existingTracks = (await db.getAllTracks()).filter((t) => t.rootId === rootId);
+    const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
+    await FilesystemReconciler.applyDiff(db, rootId, diff, (processed, total, status) => {
+      if (progressCallback) {
+        progressCallback({ processed, total, status, parsedCount: scannedItems.length });
+      }
+    });
+    return { scannedCount: scannedItems.length, diff };
+  },
+
+  async reconcileFileList(fileList, progressCallback) {
+    const rootId = 'root_session_files';
+    const scannedItems = [];
+    for (const file of fileList) {
+      const relativePath = file.webkitRelativePath || file.name;
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'wav', 'opus'].includes(ext)) {
+        scannedItems.push({
+          relativePath,
+          filename: file.name,
+          size: file.size,
+          mtime: file.lastModified,
+          file
+        });
+      }
+    }
+    const existingTracks = (await db.getAllTracks()).filter((t) => t.rootId === rootId);
+    const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
+    await FilesystemReconciler.applyDiff(db, rootId, diff, (processed, total, status) => {
+      if (progressCallback) {
+        progressCallback({ processed, total, status, parsedCount: scannedItems.length });
+      }
+    });
+    return { scannedCount: scannedItems.length, diff };
+  }
+};
+
