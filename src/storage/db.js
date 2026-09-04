@@ -15,6 +15,10 @@ export class LocalJamDatabase {
     this.db = null;
   }
 
+  async init() {
+    return this.open();
+  }
+
   async open() {
     if (this.db) return this.db;
     if (!this.idb) throw new Error('IndexedDB is not supported in this environment');
@@ -100,6 +104,15 @@ export class LocalJamDatabase {
     return tx.objectStore(storeName);
   }
 
+  async clearStore(storeName) {
+    const store = await this.getStore(storeName, 'readwrite');
+    return new Promise((resolve, reject) => {
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   /* === Roots Store === */
   async saveRoot(root) {
     const store = await this.getStore('roots', 'readwrite');
@@ -123,6 +136,14 @@ export class LocalJamDatabase {
         reject(req.error);
       };
     });
+  }
+
+  async saveDirectoryHandle(id, handle) {
+    return this.saveRoot({ id, handle, name: handle?.name || id, dateAdded: Date.now() });
+  }
+
+  async getAllDirectoryHandles() {
+    return this.getRoots();
   }
 
   /* === Tracks Store === */
@@ -210,6 +231,60 @@ export class LocalJamDatabase {
     });
   }
 
+  async getAllAlbums() {
+    const tracks = await this.getAllTracks();
+    const map = new Map();
+    for (const t of tracks) {
+      const albumName = t.album || 'Unknown Album';
+      const artistName = t.albumArtist || t.artist || 'Unknown Artist';
+      const key = `${albumName}:::${artistName}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          name: albumName,
+          artist: artistName,
+          year: t.year || null,
+          artworkId: t.artworkId || null,
+          trackCount: 0,
+          tracks: []
+        });
+      }
+      const entry = map.get(key);
+      entry.trackCount += 1;
+      if (!entry.artworkId && t.artworkId) entry.artworkId = t.artworkId;
+      if (!entry.year && t.year) entry.year = t.year;
+      entry.tracks.push(t);
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getAllArtists() {
+    const tracks = await this.getAllTracks();
+    const map = new Map();
+    for (const t of tracks) {
+      const artistName = t.artist || 'Unknown Artist';
+      if (!map.has(artistName)) {
+        map.set(artistName, {
+          name: artistName,
+          trackCount: 0,
+          albums: new Set(),
+          artworkId: t.artworkId || null
+        });
+      }
+      const entry = map.get(artistName);
+      entry.trackCount += 1;
+      if (t.album) entry.albums.add(t.album);
+      if (!entry.artworkId && t.artworkId) entry.artworkId = t.artworkId;
+    }
+    return Array.from(map.values())
+      .map((a) => ({
+        name: a.name,
+        trackCount: a.trackCount,
+        albumCount: a.albums.size,
+        artworkId: a.artworkId
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   /* === Artwork Store === */
   async saveArtwork(artworkId, mimeType, thumbnailDataUrl) {
     const store = await this.getStore('artwork', 'readwrite');
@@ -264,6 +339,10 @@ export class LocalJamDatabase {
     });
   }
 
+  async putPlaylist(playlist) {
+    return this.savePlaylist(playlist);
+  }
+
   async getPlaylists() {
     const store = await this.getStore('playlists', 'readonly');
     return new Promise((resolve, reject) => {
@@ -271,6 +350,10 @@ export class LocalJamDatabase {
       req.onsuccess = () => resolve(req.result || []);
       req.onerror = () => reject(req.error);
     });
+  }
+
+  async getAllPlaylists() {
+    return this.getPlaylists();
   }
 
   async getPlaylist(id) {
@@ -332,6 +415,10 @@ export class LocalJamDatabase {
     });
   }
 
+  async getAllFavorites() {
+    return this.getFavorites();
+  }
+
   /* === Play History Store === */
   async addPlayHistory(trackId, playbackDuration = 0, completed = false) {
     const store = await this.getStore('playHistory', 'readwrite');
@@ -348,11 +435,28 @@ export class LocalJamDatabase {
     return new Promise((resolve, reject) => {
       const req = store.getAll();
       req.onsuccess = () => {
-        const sorted = (req.result || []).sort((a, b) => b.playedAt - a.playedAt).slice(0, limit);
+        const sorted = (req.result || []).sort((a, b) => (b.playedAt - a.playedAt) || ((b.id || 0) - (a.id || 0))).slice(0, limit);
         resolve(sorted);
       };
       req.onerror = () => reject(req.error);
     });
+  }
+
+  async getRecentHistory(limit = 100) {
+    const history = await this.getPlayHistory(limit);
+    const enriched = [];
+    for (const item of history) {
+      const track = await this.getTrack(item.trackId);
+      enriched.push({
+        ...item,
+        track: track || { title: 'Unknown Track', artist: 'Unknown Artist', duration: 0 }
+      });
+    }
+    return enriched;
+  }
+
+  async clearHistory() {
+    return this.clearStore('playHistory');
   }
 
   /* === Playback State Store === */
@@ -402,6 +506,17 @@ export class LocalJamDatabase {
         );
       req.onerror = () => reject(req.error);
     });
+  }
+
+  async getSetting(key, defaultValue = null) {
+    const settings = await this.getSettings();
+    return settings && key in settings ? settings[key] : defaultValue;
+  }
+
+  async setSetting(key, value) {
+    const settings = await this.getSettings();
+    settings[key] = value;
+    return this.saveSettings(settings);
   }
 
   /* === Stations Store === */
