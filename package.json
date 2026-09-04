@@ -1,0 +1,21 @@
+{
+  "name": "localjam",
+  "version": "1.0.0",
+  "description": "Privacy-first, local-first music and media player PWA",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/**/*.test.js"
+  },
+  "keywords": [
+    "pwa",
+    "audio-player",
+    "music-player",
+    "local-first",
+    "privacy-first",
+    "file-system-access-api",
+    "web-audio-api"
+  ],
+  "author": "git.bin <git.bin@khaneja.org>",
+  "license": "MIT"
+}
