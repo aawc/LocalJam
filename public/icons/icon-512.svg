@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="icon-grad-512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0072B2"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow-512" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <!-- Background Shell -->
+  <rect width="512" height="512" rx="112" fill="#0b0f17"/>
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="#1e293b" stroke-width="4"/>
+  
+  <!-- Outer Vinyl Groove / Ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#icon-grad-512)" stroke-width="16" filter="url(#glow-512)"/>
+  <circle cx="256" cy="256" r="130" fill="none" stroke="#334155" stroke-width="4" stroke-dasharray="16 12"/>
+  <circle cx="256" cy="256" r="85" fill="none" stroke="#1e293b" stroke-width="6"/>
+  
+  <!-- Center Core & Play Triangle -->
+  <circle cx="256" cy="256" r="52" fill="#fbbf24"/>
+  <polygon points="240,218 290,256 240,294" fill="#0b0f17"/>
+</svg>

@@ -42,12 +42,28 @@
 
 ---
 
+## Public Repository & Sanitization Standards
+
+1. **Public Open-Source Environment:**
+   - This is a public open-source project hosted on GitHub (`aawc/LocalJam`).
+   - Strict host neutrality and zero corporate metadata leakage must be maintained at all times.
+   - Prohibited content includes:
+     - Machine-specific hostnames, private cloudtop/workstation aliases, or corporate intranet domain names.
+     - Internal corporate directory hierarchies, proprietary monorepo paths, or local user home directory paths.
+     - Proprietary code review tags, internal issue tracking identifiers, or company-internal tool references.
+     - Corporate or internal employer email addresses. Author and committer identity must strictly use the public author configuration: `Varun Khaneja <git.bin@khaneja.org>`.
+   - All documentation, configuration examples, and local server guides must reference standard localhost (`http://localhost:3000`) or the official public domain.
+   - All commits and pull requests must pass automated hygiene checks prior to committing.
+
+---
+
 ## Verification & Subagent Review Requirements
 
 - Every commit must be atomic, single-purpose, and independently reviewable.
 - Author for all commits: `Varun Khaneja <git.bin@khaneja.org>`.
-- No internal tracking tags (`TAG=agy`, `CONV=<id>`) in git commit messages.
+- No internal tracking tags, private issue links, or company-specific annotations in git commit messages.
 - Every commit must be reviewed by an expert subagent prior to committing.
 - Automated tests must run with concrete inputs, real assertions, and pass 100%.
 - After each commit, the local branch changes must be pushed immediately to the `github-aawc` remote (`git push github-aawc <branch>`).
+
 

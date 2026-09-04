@@ -1,6 +1,8 @@
 # LocalJam
 
 > **Your music. Your device.**
+>
+> 🌐 **Live Deployed App:** [https://varun.khaneja.org/LocalJam/](https://varun.khaneja.org/LocalJam/)
 
 LocalJam is a privacy-first, local-first music and media player built as a Progressive Web App (PWA). It provides a polished, desktop-grade listening experience directly in the browser while keeping your personal music files strictly on your local device.
 
@@ -70,7 +72,7 @@ node server.js
 ```
 
 Then open your browser to:
-`http://localhost:3000` (or `http://xlarge-n2-96.c.googlers.com:3000`)
+`http://localhost:3000`
 
 ---
 
@@ -79,8 +81,8 @@ Then open your browser to:
 LocalJam uses Node.js 22's built-in test runner with strict assertions:
 
 ```bash
-# Run all unit and integration test suites
-node --test test/**/*.test.js
+# Run all unit, integration, and hygiene test suites
+node --test
 ```
 
 ---
@@ -104,14 +106,17 @@ node --test test/**/*.test.js
 
 ---
 
-## Deploying to GitHub Pages
+## Deployment & Live Access
 
-LocalJam is configured with relative asset paths and hash-based routing (`/#/`), making it ready for GitHub Pages:
+LocalJam is deployed and accessible at:
+- 🌐 **Production URL:** [https://varun.khaneja.org/LocalJam/](https://varun.khaneja.org/LocalJam/)
 
-1. Push this repository to the `github-aawc` remote (`git@github.com:aawc/LocalJam.git`).
-2. In the repository settings on GitHub, navigate to **Pages**.
+LocalJam is configured with relative asset paths and hash-based routing (`/#/`), making it directly hostable via GitHub Pages:
+
+1. Push this repository to the remote (`git@github.com:aawc/LocalJam.git`).
+2. In the repository settings on GitHub, navigate to **Settings > Pages**.
 3. Select **Deploy from a branch** and choose `main` (root directory `/`).
-4. LocalJam will be live at `https://aawc.github.io/LocalJam/`.
+4. LocalJam will be live at `https://aawc.github.io/LocalJam/` (or your custom domain).
 
 
 ---

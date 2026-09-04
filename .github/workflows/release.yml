@@ -1,0 +1,65 @@
+name: Release on Commit
+
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '**'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Generate Release Metadata & Bundle
+        id: meta
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          COMMIT_MSG_SUBJECT=$(git log -1 --pretty=format:"%s")
+          COMMIT_MSG_BODY=$(git log -1 --pretty=format:"%b")
+          COMMIT_DATE=$(git log -1 --pretty=format:"%cd" --date=iso)
+          TAG_NAME="release-${SHORT_SHA}"
+
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "title=${COMMIT_MSG_SUBJECT} (${SHORT_SHA})" >> "$GITHUB_OUTPUT"
+
+          # Create release notes
+          cat << 'EOF' > release_notes.md
+          ## Live Deployment & App Access
+          - 🌐 **Web App:** [https://varun.khaneja.org/LocalJam/](https://varun.khaneja.org/LocalJam/)
+          - 📦 **Repository Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+
+          ### Commit Details
+          EOF
+
+          echo "**Subject:** \`${COMMIT_MSG_SUBJECT}\`" >> release_notes.md
+          echo "**Date:** \`${COMMIT_DATE}\`" >> release_notes.md
+          if [ -n "$COMMIT_MSG_BODY" ]; then
+            echo "" >> release_notes.md
+            echo "### Commit Message" >> release_notes.md
+            printf '%s\n' "$COMMIT_MSG_BODY" >> release_notes.md
+          fi
+
+          # Create a standalone offline distribution zip
+          zip -r "LocalJam-${SHORT_SHA}.zip" . -x "*.git*" "node_modules/*" ".github/*" "test/*"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.meta.outputs.tag_name }}" \
+            --target "${{ github.sha }}" \
+            --title "${{ steps.meta.outputs.title }}" \
+            --notes-file release_notes.md \
+            "LocalJam-${{ steps.meta.outputs.short_sha }}.zip"
