@@ -57,13 +57,15 @@
 
 ---
 
-## Verification & Subagent Review Requirements
+## Task Execution & Verification Standards
 
-- Every commit must be atomic, single-purpose, and independently reviewable.
-- Author for all commits: `Varun Khaneja <git.bin@khaneja.org>`.
-- No internal tracking tags, private issue links, or company-specific annotations in git commit messages.
-- Every commit must be reviewed by an expert subagent prior to committing.
-- Automated tests must run with concrete inputs, real assertions, and pass 100%.
-- After each commit, the local branch changes must be pushed immediately to the `github-aawc` remote (`git push github-aawc <branch>`).
+- **Multi-Task Tracking:** When performing multiple tasks, maintain an explicit checklist of all known remaining tasks, updating their status (`[PENDING]`, `[IN_PROGRESS]`, `[DONE]`) as each item is completed.
+- **Atomic Commits:** Every commit must be atomic, single-purpose, and independently reviewable.
+- **Author Identity:** Author for all commits: `Varun Khaneja <git.bin@khaneja.org>`.
+- **Commit Hygiene:** No internal tracking tags, private issue links, or company-specific annotations in git commit messages.
+- **Subagent Review:** Every commit must be reviewed by an expert subagent prior to committing.
+- **Automated Verification:** Automated tests must run with concrete inputs, real assertions, and pass 100%.
+- **Remote Synchronization:** After each commit, the local branch changes must be pushed immediately to the `github-aawc` remote (`git push github-aawc <branch>`).
+
 
 
