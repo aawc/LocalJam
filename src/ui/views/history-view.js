@@ -57,7 +57,7 @@ export async function renderHistoryView() {
                     <td style="font-weight: 500; color: var(--text-primary);">${escapeHtml(track.title || track.filename || 'Unknown')}</td>
                     <td>${escapeHtml(track.artist || 'Unknown Artist')}</td>
                     <td>${escapeHtml(track.album || 'Unknown Album')}</td>
-                    <td style="color: var(--text-secondary); font-size: 13px;">${formatTimestamp(item.timestamp)}</td>
+                    <td style="color: var(--text-secondary); font-size: 13px;">${formatTimestamp(item.playedAt || item.timestamp)}</td>
                     <td style="text-align: right;">${formatDuration(track.duration)}</td>
                   </tr>
                 `;

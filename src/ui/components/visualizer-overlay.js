@@ -3,6 +3,7 @@
  */
 
 import { audioVisualizer, VISUALIZER_MODES } from '../../visualizer/visualizer.js';
+import { audioEngine } from '../../player/audio-engine.js';
 
 export function createVisualizerOverlay() {
   const overlay = document.createElement('div');
@@ -53,6 +54,9 @@ export function createVisualizerOverlay() {
 
   function open() {
     overlay.style.display = 'flex';
+    if (audioEngine && typeof audioEngine.initWebAudio === 'function') {
+      audioEngine.initWebAudio().catch(() => {});
+    }
     audioVisualizer.init(canvas);
     audioVisualizer.start();
   }

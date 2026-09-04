@@ -117,9 +117,51 @@ export class AudioVisualizer {
   render() {
     if (!this.isRunning || !this.ctx) return;
 
+    // Dynamically ensure canvas matches container dimensions and DPI
+    if (this.canvas) {
+      const rect = typeof this.canvas.getBoundingClientRect === 'function' ? this.canvas.getBoundingClientRect() : null;
+      const clientWidth = (rect && rect.width > 0 ? Math.floor(rect.width) : 0) || this.canvas.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 800);
+      const clientHeight = (rect && rect.height > 0 ? Math.floor(rect.height) : 0) || this.canvas.clientHeight || (typeof window !== 'undefined' ? Math.max(300, window.innerHeight - 80) : 400);
+      const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+      const targetW = Math.max(100, Math.floor(clientWidth * dpr));
+      const targetH = Math.max(100, Math.floor(clientHeight * dpr));
+
+      if (this.canvas.width !== targetW || this.canvas.height !== targetH || this.width !== clientWidth || this.height !== clientHeight) {
+        this.canvas.width = targetW;
+        this.canvas.height = targetH;
+        this.width = clientWidth;
+        this.height = clientHeight;
+      }
+
+      if (typeof this.ctx.setTransform === 'function') {
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+    }
+
     if (audioEngine) {
       audioEngine.getByteFrequencyData(this.freqData);
       audioEngine.getByteTimeDomainData(this.timeData);
+    }
+
+    // Check if audio has energy or is in idle/paused state
+    let totalEnergy = 0;
+    for (let i = 0; i < 64; i++) {
+      totalEnergy += this.freqData[i];
+    }
+    const isIdle = totalEnergy < 10;
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+
+    if (isIdle) {
+      // Synthesize smooth ambient harmonic waves for visual feedback
+      for (let i = 0; i < this.freqData.length; i++) {
+        const wave1 = Math.sin(i * 0.05 + now * 2);
+        const wave2 = Math.cos(i * 0.08 - now * 1.5);
+        this.freqData[i] = Math.max(0, Math.min(255, Math.floor((wave1 * 0.5 + wave2 * 0.5 + 1) * 35)));
+      }
+      for (let i = 0; i < this.timeData.length; i++) {
+        const wave = Math.sin(i * 0.03 + now * 3) * 20;
+        this.timeData[i] = Math.max(0, Math.min(255, Math.floor(128 + wave)));
+      }
     }
 
     const w = this.width || 800;
@@ -152,10 +194,10 @@ export class AudioVisualizer {
   }
 
   renderBars(w, h) {
-    const barCount = Math.min(64, Math.floor(w / 8));
+    const barCount = Math.min(64, Math.max(16, Math.floor(w / 12)));
     const barWidth = (w / barCount) * 0.7;
     const gap = (w / barCount) * 0.3;
-    const step = Math.floor(this.freqData.length / barCount / 2);
+    const step = Math.max(1, Math.floor(this.freqData.length / barCount / 2));
 
     let gradient = null;
     if (typeof this.ctx.createLinearGradient === 'function') {
@@ -167,7 +209,7 @@ export class AudioVisualizer {
 
     for (let i = 0; i < barCount; i++) {
       const val = this.freqData[i * step] || 0;
-      const barHeight = (val / 255) * (h * 0.85);
+      const barHeight = Math.max(4, (val / 255) * (h * 0.85));
       const x = i * (barWidth + gap) + gap / 2;
       const y = h - barHeight;
 

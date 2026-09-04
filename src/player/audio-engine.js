@@ -423,6 +423,9 @@ export class AudioEngine {
   }
 
   handleTrackEnded() {
+    if (this.currentTrack && db && typeof db.addPlayHistory === 'function') {
+      db.addPlayHistory(this.currentTrack.id, this.currentTrack.duration || 0, true).catch((e) => console.error(e));
+    }
     if (queueManager.repeat === 'one') {
       const current = queueManager.getCurrent();
       if (current) this.playTrack(current.track);

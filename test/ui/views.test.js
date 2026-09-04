@@ -134,12 +134,14 @@ test('UI Views - renderHistoryView displays listening history', async () => {
   assert.ok(view.innerHTML.includes('Played Recently'));
 });
 
-test('UI Views - renderRadioView displays curated streams', async () => {
+test('UI Views - renderRadioView displays curated streams and star action controls', async () => {
   db.getSetting = async () => [];
 
   const view = await renderRadioView();
   assert.ok(view.innerHTML.includes('Internet Radio'));
   assert.ok(view.innerHTML.includes('Radio Paradise'));
+  assert.ok(view.innerHTML.includes('btn-star-station'));
+  assert.ok(view.innerHTML.includes('Starred Streams'));
 });
 
 test('UI Views - renderSettingsView displays diagnostics and storage tier', async () => {

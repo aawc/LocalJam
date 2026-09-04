@@ -268,6 +268,9 @@ test('LocalJamDatabase - Full Store Operations and Aggregations', async (t) => {
     assert.equal(enriched.length, 2);
     assert.equal(enriched[0].track.title, 'One of These Days');
     assert.equal(enriched[1].track.title, 'Echoes');
+    assert.ok(typeof enriched[0].playedAt === 'number', 'playedAt must be numeric timestamp');
+    assert.ok(typeof enriched[0].timestamp === 'number', 'timestamp must be numeric timestamp');
+    assert.equal(enriched[0].playedAt, enriched[0].timestamp);
 
     await db.clearHistory();
     const cleared = await db.getPlayHistory();

@@ -103,6 +103,31 @@ test('Audio Visualizer Engine Suite', async (t) => {
     assert.ok(visualizer.stars.length > 0);
   });
 
+  await t.test('Dynamically resizes canvas, applies DPR transforms, and generates ambient waves when idle', () => {
+    let transformArgs = null;
+    const { canvas, ctx } = createMockCanvas(400, 200);
+    ctx.setTransform = (a, b, c, d, e, f) => {
+      transformArgs = [a, b, c, d, e, f];
+    };
+    canvas.getBoundingClientRect = () => ({ width: 600, height: 350 });
+
+    const visualizer = new AudioVisualizer(canvas);
+    visualizer.isRunning = true;
+    visualizer.render();
+
+    // Verifies canvas dimensions were dynamically updated
+    assert.equal(visualizer.width, 600);
+    assert.equal(visualizer.height, 350);
+    assert.ok(transformArgs !== null);
+
+    // Verifies ambient idle waves populated frequency and time domain data
+    let nonZeroFreq = 0;
+    for (let i = 0; i < visualizer.freqData.length; i++) {
+      if (visualizer.freqData[i] > 0) nonZeroFreq++;
+    }
+    assert.ok(nonZeroFreq > 0, 'Idle mode should synthesize non-zero ambient frequency values');
+  });
+
   await t.test('Handles start, pause, and destroy lifecycle cleanly', () => {
     const { canvas } = createMockCanvas();
     const visualizer = new AudioVisualizer(canvas);

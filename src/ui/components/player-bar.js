@@ -5,6 +5,7 @@
 import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
 import { db } from '../../storage/db.js';
+import { toggleFavoriteStation } from '../../radio/stations.js';
 
 export function createPlayerBar() {
   const bar = document.createElement('div');
@@ -167,9 +168,17 @@ export function createPlayerBar() {
   };
 
   favBtn.onclick = async () => {
-    if (audioEngine.currentTrack) {
+    if (audioEngine.isRadio && audioEngine.currentStation) {
+      const isFav = await toggleFavoriteStation(audioEngine.currentStation.id, db);
+      audioEngine.currentStation.isFavorite = isFav;
+      favBtn.style.color = isFav ? '#fbbf24' : 'var(--text-secondary)';
+      const svg = favBtn.querySelector('svg');
+      if (svg) svg.setAttribute('fill', isFav ? 'currentColor' : 'none');
+    } else if (audioEngine.currentTrack) {
       const isFav = await db.toggleFavorite(audioEngine.currentTrack.id);
       favBtn.style.color = isFav ? '#fbbf24' : 'var(--text-secondary)';
+      const svg = favBtn.querySelector('svg');
+      if (svg) svg.setAttribute('fill', isFav ? 'currentColor' : 'none');
     }
   };
 
@@ -185,6 +194,10 @@ export function createPlayerBar() {
       artImg.src = state.currentStation.favicon || 'public/icons/icon-192.svg';
       durationLabel.textContent = 'LIVE';
       seekSlider.disabled = true;
+      const isFav = Boolean(state.currentStation.isFavorite);
+      favBtn.style.color = isFav ? '#fbbf24' : 'var(--text-secondary)';
+      const svg = favBtn.querySelector('svg');
+      if (svg) svg.setAttribute('fill', isFav ? 'currentColor' : 'none');
     } else if (state.currentTrack) {
       titleEl.textContent = state.currentTrack.title || state.currentTrack.filename;
       artistEl.textContent = state.currentTrack.artist || 'Unknown Artist';
@@ -204,6 +217,8 @@ export function createPlayerBar() {
       // Check favorite status
       db.isFavorite(state.currentTrack.id).then((isFav) => {
         favBtn.style.color = isFav ? '#fbbf24' : 'var(--text-secondary)';
+        const svg = favBtn.querySelector('svg');
+        if (svg) svg.setAttribute('fill', isFav ? 'currentColor' : 'none');
       });
     } else {
       titleEl.textContent = 'Not Playing';

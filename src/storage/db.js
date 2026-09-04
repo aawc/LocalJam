@@ -422,7 +422,8 @@ export class LocalJamDatabase {
   /* === Play History Store === */
   async addPlayHistory(trackId, playbackDuration = 0, completed = false) {
     const store = await this.getStore('playHistory', 'readwrite');
-    const entry = { trackId, playedAt: Date.now(), playbackDuration, completed };
+    const now = Date.now();
+    const entry = { trackId, playedAt: now, timestamp: now, playbackDuration, completed };
     return new Promise((resolve, reject) => {
       const req = store.add(entry);
       req.onsuccess = () => resolve(req.result);
@@ -435,7 +436,7 @@ export class LocalJamDatabase {
     return new Promise((resolve, reject) => {
       const req = store.getAll();
       req.onsuccess = () => {
-        const sorted = (req.result || []).sort((a, b) => (b.playedAt - a.playedAt) || ((b.id || 0) - (a.id || 0))).slice(0, limit);
+        const sorted = (req.result || []).sort((a, b) => ((b.playedAt || b.timestamp || 0) - (a.playedAt || a.timestamp || 0)) || ((b.id || 0) - (a.id || 0))).slice(0, limit);
         resolve(sorted);
       };
       req.onerror = () => reject(req.error);
@@ -447,8 +448,11 @@ export class LocalJamDatabase {
     const enriched = [];
     for (const item of history) {
       const track = await this.getTrack(item.trackId);
+      const ts = item.playedAt || item.timestamp || Date.now();
       enriched.push({
         ...item,
+        playedAt: ts,
+        timestamp: ts,
         track: track || { title: 'Unknown Track', artist: 'Unknown Artist', duration: 0 }
       });
     }
