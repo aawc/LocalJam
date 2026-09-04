@@ -16,6 +16,6 @@
     "file-system-access-api",
     "web-audio-api"
   ],
-  "author": "git.bin <git.bin@khaneja.org>",
+  "author": "Varun Khaneja <git.bin@khaneja.org>",
   "license": "MIT"
 }

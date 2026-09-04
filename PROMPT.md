@@ -3,7 +3,7 @@
 **Tagline:** *Your music. Your device.*  
 **Application Type:** Progressive Web App (PWA) — Privacy-First, Local-First Music & Media Player  
 **Target Environments:** Android (Chrome), iOS/iPadOS (Safari PWA), Desktop (Chrome, Edge, Firefox, Safari), Hosted on GitHub Pages  
-**Author:** `git.bin@khaneja.org`  
+**Author:** Varun Khaneja <git.bin@khaneja.org>  
 
 ---
 

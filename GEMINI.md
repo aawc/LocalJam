@@ -1,7 +1,7 @@
 # GEMINI.md - LocalJam Development Context & Standards
 
 ## Project Identity
-- **Repository:** LocalJam (`git.bin@khaneja.org`)
+- **Repository:** LocalJam (Varun Khaneja <git.bin@khaneja.org>)
 - **Type:** Progressive Web App (PWA) / Local-First Audio Player
 - **Core Technology:** Vanilla JavaScript (ES Modules), Web Audio API, IndexedDB, Service Workers, HTML5/CSS3.
 - **Testing:** Node.js 22 built-in test runner (`node --test`).
@@ -45,7 +45,7 @@
 ## Verification & Subagent Review Requirements
 
 - Every commit must be atomic, single-purpose, and independently reviewable.
-- Author for all commits: `git.bin@khaneja.org`.
+- Author for all commits: `Varun Khaneja <git.bin@khaneja.org>`.
 - No internal tracking tags (`TAG=agy`, `CONV=<id>`) in git commit messages.
 - Every commit must be reviewed by an expert subagent prior to committing.
 - Automated tests must run with concrete inputs, real assertions, and pass 100%.
