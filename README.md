@@ -108,10 +108,11 @@ node --test test/**/*.test.js
 
 LocalJam is configured with relative asset paths and hash-based routing (`/#/`), making it ready for GitHub Pages:
 
-1. Push this repository to your GitHub account (e.g. `https://github.com/<username>/LocalJam`).
-2. In the repository settings, navigate to **Pages**.
+1. Push this repository to the `github-aawc` remote (`git@github.com:aawc/LocalJam.git`).
+2. In the repository settings on GitHub, navigate to **Pages**.
 3. Select **Deploy from a branch** and choose `main` (root directory `/`).
-4. LocalJam will be live at `https://<username>.github.io/LocalJam/`.
+4. LocalJam will be live at `https://aawc.github.io/LocalJam/`.
+
 
 ---
 

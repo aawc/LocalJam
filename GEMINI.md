@@ -49,3 +49,5 @@
 - No internal tracking tags (`TAG=agy`, `CONV=<id>`) in git commit messages.
 - Every commit must be reviewed by an expert subagent prior to committing.
 - Automated tests must run with concrete inputs, real assertions, and pass 100%.
+- After each commit, the local branch changes must be pushed immediately to the `github-aawc` remote (`git push github-aawc <branch>`).
+

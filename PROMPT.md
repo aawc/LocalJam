@@ -275,4 +275,5 @@ LocalJam enforces automated unit and integration tests using `node:test` and `no
 
 ## 10. Implementation Deliverables & Quality Bar
 
-Every component must contain complete, functional logic. No bare `TODO`, `pass`, or placeholder stubs. All commits must be small, single-purpose, and independently verified.
+Every component must contain complete, functional logic. No bare `TODO`, `pass`, or placeholder stubs. All commits must be small, single-purpose, and independently verified. After each commit, local branch changes must be pushed immediately to the `github-aawc` remote.
+
