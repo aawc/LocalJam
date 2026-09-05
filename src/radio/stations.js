@@ -227,22 +227,22 @@ export const CURATED_STATIONS = [
   },
   {
     id: 'kusc_classical',
-    name: 'Classical KUSC (Los Angeles)',
+    name: 'Classical KUSC 91.5 FM (Los Angeles)',
     description: 'Southern California premiere listener-supported classical music broadcast.',
-    streamUrl: 'https://kusc-stream.streamguys1.com/kusc-aac-128',
+    streamUrl: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KUSCAAC96.aac',
     homepageUrl: 'https://www.kusc.org',
     genre: 'Classical / Instrumental',
     country: 'USA',
-    bitrate: '128 kbps AAC',
+    bitrate: '96 kbps AAC',
     favicon: 'https://www.kusc.org/favicon.ico',
     isCustom: false,
     isFavorite: false
   },
   {
     id: 'king_classical',
-    name: 'Classical KING FM (Seattle)',
+    name: 'Classical KING 98.1 FM (Seattle)',
     description: '24/7 commercial-free classical masterworks and orchestral performances.',
-    streamUrl: 'https://king.streamguys1.com/king-aac-128',
+    streamUrl: 'https://classicalking.streamguys1.com/king-fm-aac',
     homepageUrl: 'https://www.king.org',
     genre: 'Classical / Instrumental',
     country: 'USA',
@@ -252,15 +252,171 @@ export const CURATED_STATIONS = [
     isFavorite: false
   },
   {
+    id: 'wqxr_classical',
+    name: 'WQXR 105.9 FM (New York Classical)',
+    description: 'New York City classical music station, live concerts, and orchestral performances.',
+    streamUrl: 'https://stream.wqxr.org/wqxr-web',
+    homepageUrl: 'https://www.wqxr.org',
+    genre: 'Classical / Instrumental',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.wqxr.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
     id: 'jazz24',
     name: 'Jazz24 (Pacific Northwest / KNKX)',
     description: '24/7 jazz masters from Miles Davis and Ella Fitzgerald to modern icons.',
-    streamUrl: 'https://live.wostreaming.net/direct/ppm-jazz24aac-ibc1',
+    streamUrl: 'https://knkx-live-a.edge.audiocdn.com/6285_128k',
     homepageUrl: 'https://www.jazz24.org',
     genre: 'Jazz / Blues',
     country: 'USA',
-    bitrate: '128 kbps AAC',
+    bitrate: '128 kbps',
     favicon: 'https://www.jazz24.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'knkx_jazz_npr',
+    name: 'KNKX 88.5 FM (Seattle / Tacoma)',
+    description: 'Public radio connecting the Pacific Northwest with jazz, blues, and NPR news.',
+    streamUrl: 'https://knkx-live-a.edge.audiocdn.com/6284_128k',
+    homepageUrl: 'https://www.knkx.org',
+    genre: 'Jazz / Blues / NPR',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.knkx.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_poptron',
+    name: 'SomaFM: PopTron',
+    description: 'Electropop and indie dance rock with bouncy basslines and catchy hooks.',
+    streamUrl: 'https://ice1.somafm.com/poptron-128-mp3',
+    homepageUrl: 'https://somafm.com/poptron/',
+    genre: 'Electropop / Indie Dance',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_indiepop',
+    name: 'SomaFM: Indie Pop Rocks!',
+    description: 'New and classic favorite indie pop tracks with guitars and infectious melodies.',
+    streamUrl: 'https://ice1.somafm.com/indiepop-128-mp3',
+    homepageUrl: 'https://somafm.com/indiepop/',
+    genre: 'Indie Pop / Rock',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_beatblender',
+    name: 'SomaFM: Beat Blender',
+    description: 'A late-night blend of deep house, downtempo, and hypnotic electronic rhythms.',
+    streamUrl: 'https://ice1.somafm.com/beatblender-128-mp3',
+    homepageUrl: 'https://somafm.com/beatblender/',
+    genre: 'Deep House / Downtempo',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_7soul',
+    name: 'SomaFM: Seven Inch Soul',
+    description: 'Vintage and rare soul 45s from the 1960s and 70s on authentic vinyl.',
+    streamUrl: 'https://ice1.somafm.com/7soul-128-mp3',
+    homepageUrl: 'https://somafm.com/7soul/',
+    genre: 'Soul / Funk',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_seventies',
+    name: 'SomaFM: Left Coast 70s',
+    description: 'Mellow 1970s album rock, Laurel Canyon vibes, and yacht rock harmonies.',
+    streamUrl: 'https://ice1.somafm.com/seventies-128-mp3',
+    homepageUrl: 'https://somafm.com/seventies/',
+    genre: 'Rock / 70s Mellow',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_folkfwd',
+    name: 'SomaFM: Folk Forward',
+    description: 'Indie folk, acoustic songwriter melodies, and modern roots music.',
+    streamUrl: 'https://ice1.somafm.com/folkfwd-128-mp3',
+    homepageUrl: 'https://somafm.com/folkfwd/',
+    genre: 'Folk / Americana',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_bootliquor',
+    name: 'SomaFM: Boot Liquor',
+    description: 'Americana roots, outlaw country, cowpunk, and roots-rock for twang lovers.',
+    streamUrl: 'https://ice1.somafm.com/bootliquor-128-mp3',
+    homepageUrl: 'https://somafm.com/bootliquor/',
+    genre: 'Americana / Country',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_thistle',
+    name: 'SomaFM: ThistleRadio',
+    description: 'Celtic roots, modern trad, Irish jigs, Scottish reels, and world folk melodies.',
+    streamUrl: 'https://ice1.somafm.com/thistle-128-mp3',
+    homepageUrl: 'https://somafm.com/thistle/',
+    genre: 'Celtic / World Folk',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_fluid',
+    name: 'SomaFM: Fluid',
+    description: 'Soothing instrumental hip-hop, future soul, liquid trap, and beat-centric chill.',
+    streamUrl: 'https://ice1.somafm.com/fluid-128-mp3',
+    homepageUrl: 'https://somafm.com/fluid/',
+    genre: 'Lo-Fi / Hip-Hop / Soul',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_sf1033',
+    name: 'SomaFM: SF 10-33',
+    description: 'Ambient electronic soundscapes woven with San Francisco public safety scanners.',
+    streamUrl: 'https://ice1.somafm.com/sf1033-128-mp3',
+    homepageUrl: 'https://somafm.com/sf1033/',
+    genre: 'Ambient / Police Scanner',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
     isFavorite: false
   },
@@ -298,22 +454,132 @@ export const RADIO_GENRES = [
   'Alternative / Indie',
   'Ambient / Drone',
   'Ambient / Electronica',
+  'Ambient / Police Scanner',
+  'Americana / Country',
+  'Celtic / World Folk',
   'Classical / Instrumental',
   'Deep Ambient / Space',
+  'Deep House / Downtempo',
   'Downtempo / Chillout',
   'Eclectic / Rock',
   'Electronic / Industrial',
+  'Electropop / Indie Dance',
+  'Folk / Americana',
+  'Indie Pop / Rock',
   'Jazz / Blues',
+  'Jazz / Blues / NPR',
+  'Lo-Fi / Hip-Hop / Soul',
   'Lounge / Exotica',
   'News / English Talk',
   'News / Public Radio',
   'NuJazz / Modern Jazz',
+  'Rock / 70s Mellow',
   'Rock / Alternative',
+  'Soul / Funk',
   'Spy / Lounge / Trip-Hop',
   'Synthwave / Instrumental',
   'Vocal Chill / Ambient',
-  'World Fusion'
+  'World Fusion',
+  'World Fusion / Asian Chill'
 ];
+
+/**
+ * Generates a clean, colorblind-safe SVG fallback data URI artwork for a radio station based on its genre.
+ * @param {Object} [station]
+ * @returns {string} Data URI with embedded SVG
+ */
+export function getStationFallbackArtwork(station = {}) {
+  const genre = (station.genre || '').toLowerCase();
+  const name = station.name || 'Radio';
+
+  let bgGradientStart = '#1e3a8a'; // Deep blue
+  let bgGradientEnd = '#0f172a';   // Midnight
+  let iconSvg = '';
+  let badgeText = 'RADIO';
+
+  if (genre.includes('classical')) {
+    bgGradientStart = '#1e3a8a';
+    bgGradientEnd = '#172554';
+    badgeText = 'CLASSIC';
+    iconSvg = `
+      <circle cx="96" cy="96" r="44" stroke="#38bdf8" stroke-width="6" fill="none" opacity="0.4"/>
+      <path d="M84 60v52a16 16 0 1 1-10-15 16 16 0 0 1 10 3V72l32-10v40a16 16 0 1 1-10-15 16 16 0 0 1 10 3V54L84 60z" fill="#38bdf8"/>
+    `;
+  } else if (genre.includes('jazz') || genre.includes('blues')) {
+    bgGradientStart = '#581c87';
+    bgGradientEnd = '#2e1065';
+    badgeText = 'JAZZ';
+    iconSvg = `
+      <path d="M72 136a20 20 0 1 0 20-20H80V56l48-12v64a20 20 0 1 0 20-20H136V36L72 52v84z" fill="#fbbf24"/>
+    `;
+  } else if (genre.includes('ambient') || genre.includes('drone') || genre.includes('space')) {
+    bgGradientStart = '#0f172a';
+    bgGradientEnd = '#0284c7';
+    badgeText = 'AMBIENT';
+    iconSvg = `
+      <path d="M40 96c14-24 28-24 42 0s28 24 42 0 28-24 42 0" stroke="#38bdf8" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <circle cx="96" cy="64" r="8" fill="#fbbf24"/>
+      <circle cx="64" cy="128" r="5" fill="#38bdf8"/>
+      <circle cx="132" cy="124" r="6" fill="#38bdf8"/>
+    `;
+  } else if (genre.includes('rock') || genre.includes('indie') || genre.includes('70s')) {
+    bgGradientStart = '#7c2d12';
+    bgGradientEnd = '#431407';
+    badgeText = 'ROCK';
+    iconSvg = `
+      <path d="M128 48l16 16-16 16-16-16 16-16zm-20 36l8 8-40 40c-6 6-16 6-22 0l-6-6c-6-6-6-16 0-22l40-40 8 8 12-12-8-8 12-12 8 8 12-12-24-24z" fill="#f97316"/>
+    `;
+  } else if (genre.includes('electronic') || genre.includes('dance') || genre.includes('house') || genre.includes('synth')) {
+    bgGradientStart = '#065f46';
+    bgGradientEnd = '#022c22';
+    badgeText = 'ELECTRO';
+    iconSvg = `
+      <rect x="52" y="80" width="12" height="48" rx="4" fill="#34d399"/>
+      <rect x="76" y="56" width="12" height="72" rx="4" fill="#38bdf8"/>
+      <rect x="100" y="44" width="12" height="84" rx="4" fill="#fbbf24"/>
+      <rect x="124" y="68" width="12" height="60" rx="4" fill="#f43f5e"/>
+    `;
+  } else if (genre.includes('news') || genre.includes('talk') || genre.includes('npr')) {
+    bgGradientStart = '#1e293b';
+    bgGradientEnd = '#0f172a';
+    badgeText = 'NEWS';
+    iconSvg = `
+      <circle cx="96" cy="96" r="16" fill="#38bdf8"/>
+      <path d="M72 72a34 34 0 0 0 0 48M120 72a34 34 0 0 1 0 48M56 56a56 56 0 0 0 0 80M136 56a56 56 0 0 1 0 80" stroke="#94a3b8" stroke-width="6" stroke-linecap="round" fill="none"/>
+    `;
+  } else if (genre.includes('soul') || genre.includes('funk') || genre.includes('world') || genre.includes('folk')) {
+    bgGradientStart = '#831843';
+    bgGradientEnd = '#500724';
+    badgeText = 'GROOVE';
+    iconSvg = `
+      <circle cx="96" cy="96" r="48" fill="#fda4af" opacity="0.2"/>
+      <circle cx="96" cy="96" r="32" stroke="#f43f5e" stroke-width="6" fill="none"/>
+      <circle cx="96" cy="96" r="10" fill="#fbbf24"/>
+    `;
+  } else {
+    badgeText = 'RADIO';
+    iconSvg = `
+      <circle cx="96" cy="96" r="40" stroke="#38bdf8" stroke-width="6" fill="none"/>
+      <polygon points="86,76 116,96 86,116" fill="#38bdf8"/>
+    `;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+    <defs>
+      <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${bgGradientStart}"/>
+        <stop offset="100%" stop-color="${bgGradientEnd}"/>
+      </linearGradient>
+    </defs>
+    <rect width="192" height="192" rx="16" fill="url(#grad)"/>
+    <rect x="12" y="12" width="168" height="168" rx="12" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+    ${iconSvg}
+    <rect x="24" y="148" width="144" height="24" rx="6" fill="rgba(0,0,0,0.5)"/>
+    <text x="96" y="164" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5" text-anchor="middle">${badgeText}</text>
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
 
 export async function loadStations(db) {
   if (!db) return CURATED_STATIONS.map((s) => ({ ...s }));
@@ -324,16 +590,40 @@ export async function loadStations(db) {
       return CURATED_STATIONS.map((s) => ({ ...s }));
     }
 
+    const curatedMap = new Map(CURATED_STATIONS.map((s) => [s.id, s]));
+    let modified = false;
+
+    // Check existing records: update outdated URLs/metadata for curated stations while preserving user isFavorite
+    for (let i = 0; i < saved.length; i++) {
+      const station = saved[i];
+      if (curatedMap.has(station.id)) {
+        const curated = curatedMap.get(station.id);
+        if (
+          station.streamUrl !== curated.streamUrl ||
+          station.name !== curated.name ||
+          station.genre !== curated.genre ||
+          station.favicon !== curated.favicon ||
+          station.bitrate !== curated.bitrate
+        ) {
+          saved[i] = {
+            ...curated,
+            isFavorite: Boolean(station.isFavorite)
+          };
+          modified = true;
+        }
+      }
+    }
+
     // Merge any newly introduced curated stations into existing database records
     const existingIds = new Set(saved.map((s) => s.id));
-    let hasNew = false;
     for (const curated of CURATED_STATIONS) {
       if (!existingIds.has(curated.id)) {
         saved.push({ ...curated });
-        hasNew = true;
+        modified = true;
       }
     }
-    if (hasNew) {
+
+    if (modified) {
       await db.saveStations(saved);
     }
     return saved.map((s) => ({ ...s }));

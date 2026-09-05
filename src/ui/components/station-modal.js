@@ -2,7 +2,7 @@
  * LocalJam - Radio Station & Live Stream Details Modal Component
  */
 
-import { toggleFavoriteStation } from '../../radio/stations.js';
+import { toggleFavoriteStation, getStationFallbackArtwork } from '../../radio/stations.js';
 import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
 
@@ -133,7 +133,14 @@ export function createStationModal({ onToggleEq, onToggleViz } = {}) {
     const streamUrl = station.streamUrl || station.url || '';
     const isPlaying = audioEngine.isRadio && audioEngine.isPlaying;
 
-    if (faviconImg) faviconImg.src = station.favicon || 'public/icons/icon-192.svg';
+    const fallbackArt = getStationFallbackArtwork(station);
+    if (faviconImg) {
+      faviconImg.src = station.favicon || fallbackArt;
+      faviconImg.onerror = () => {
+        faviconImg.onerror = null;
+        faviconImg.src = fallbackArt;
+      };
+    }
     if (titleEl) titleEl.textContent = station.name || 'Internet Radio Station';
     if (subtitleEl) subtitleEl.textContent = `${station.genre || 'Radio'} • ${station.country || 'Global'}`;
     if (descEl) descEl.textContent = station.description || 'Live streaming radio station.';
