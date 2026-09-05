@@ -1,6 +1,6 @@
 {
   "name": "localjam",
-  "version": "1.0.0",
+  "version": "2026-09-04-001",
   "description": "Privacy-first, local-first music and media player PWA",
   "type": "module",
   "scripts": {
