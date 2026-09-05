@@ -134,7 +134,7 @@ test('UI Views - renderHistoryView displays listening history', async () => {
   assert.ok(view.innerHTML.includes('Played Recently'));
 });
 
-test('UI Views - renderRadioView displays curated streams and star action controls', async () => {
+test('UI Views - renderRadioView displays curated streams, search, sort, and star controls', async () => {
   db.getSetting = async () => [];
 
   const view = await renderRadioView();
@@ -142,6 +142,8 @@ test('UI Views - renderRadioView displays curated streams and star action contro
   assert.ok(view.innerHTML.includes('Radio Paradise'));
   assert.ok(view.innerHTML.includes('btn-star-station'));
   assert.ok(view.innerHTML.includes('Starred Streams'));
+  assert.ok(view.innerHTML.includes('radio-search-input'));
+  assert.ok(view.innerHTML.includes('radio-sort-select'));
   assert.ok(view.innerHTML.includes('radio-card'));
   assert.ok(view.innerHTML.includes('data-station-url'));
   assert.ok(view.innerHTML.includes('btn-play-card'));

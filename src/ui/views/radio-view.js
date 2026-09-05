@@ -2,7 +2,13 @@
  * LocalJam - Internet Radio View
  */
 
-import { loadStations, addCustomStation, toggleFavoriteStation, RADIO_GENRES } from '../../radio/stations.js';
+import {
+  loadStations,
+  addCustomStation,
+  toggleFavoriteStation,
+  RADIO_GENRES,
+  getStationFallbackArtwork
+} from '../../radio/stations.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { db } from '../../storage/db.js';
 
@@ -11,19 +17,97 @@ export async function renderRadioView() {
   container.className = 'page-container';
 
   let selectedGenre = 'All';
+  let searchQuery = '';
+  let sortOrder = 'default';
   let allStations = await loadStations(db);
 
-  function getFilteredStations() {
+  function getFilteredAndSortedStations() {
+    let list = [...allStations];
+
+    // 1. Genre filtering
     if (selectedGenre === 'Favorites') {
-      return allStations.filter((s) => Boolean(s.isFavorite));
+      list = list.filter((s) => Boolean(s.isFavorite));
+    } else if (selectedGenre !== 'All') {
+      list = list.filter((s) => s.genre && s.genre.toLowerCase().includes(selectedGenre.toLowerCase()));
     }
-    if (selectedGenre === 'All') return allStations;
-    return allStations.filter((s) => s.genre && s.genre.toLowerCase().includes(selectedGenre.toLowerCase()));
+
+    // 2. Search query filtering (name, genre, description, country)
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((s) => {
+        const name = (s.name || '').toLowerCase();
+        const genre = (s.genre || '').toLowerCase();
+        const desc = (s.description || '').toLowerCase();
+        const country = (s.country || '').toLowerCase();
+        return name.includes(q) || genre.includes(q) || desc.includes(q) || country.includes(q);
+      });
+    }
+
+    // 3. Sorting
+    if (sortOrder === 'name-asc') {
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortOrder === 'name-desc') {
+      list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+    } else if (sortOrder === 'genre-asc') {
+      list.sort((a, b) => (a.genre || '').localeCompare(b.genre || '') || (a.name || '').localeCompare(b.name || ''));
+    } else if (sortOrder === 'bitrate-desc') {
+      list.sort((a, b) => {
+        const getNum = (str) => parseInt((str || '').match(/\d+/)?.[0] || '0', 10);
+        return getNum(b.bitrate) - getNum(a.bitrate) || (a.name || '').localeCompare(b.name || '');
+      });
+    }
+
+    return list;
+  }
+
+  function renderCard(station, currentRadio) {
+    const stationUrl = station.streamUrl || station.url;
+    const currentUrl = currentRadio ? (currentRadio.streamUrl || currentRadio.url) : null;
+    const isPlayingThis = currentUrl === stationUrl && audioEngine.isPlaying;
+    const isFav = Boolean(station.isFavorite);
+    const fallbackArt = getStationFallbackArtwork(station);
+    const artworkSrc = station.favicon || fallbackArt;
+
+    return `
+      <div class="media-card radio-card ${isPlayingThis ? 'playing' : ''}" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" data-station-name="${escapeHtml(station.name)}">
+        <div class="media-card-art-wrapper">
+          <img src="${artworkSrc}" alt="${escapeHtml(station.name)}" class="media-card-art" onerror="this.onerror=null; this.src='${fallbackArt}';" />
+          <button class="btn-play-card" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" aria-label="${isPlayingThis ? 'Pause' : 'Play'} ${escapeHtml(station.name)}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              ${
+                isPlayingThis
+                  ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'
+                  : '<polygon points="5 3 19 12 5 21 5 3"></polygon>'
+              }
+            </svg>
+          </button>
+        </div>
+        <div class="media-card-info">
+          <div class="media-card-title" style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;">${escapeHtml(station.name)}</span>
+            <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+              ${isPlayingThis ? '<span class="status-badge badge-active" style="font-size: 10px;">[LIVE]</span>' : ''}
+              <button class="btn-star-station" data-station-id="${station.id}" aria-label="${isFav ? 'Unstar' : 'Star'} ${escapeHtml(station.name)}" style="background: none; border: none; cursor: pointer; color: ${isFav ? '#fbbf24' : 'var(--text-secondary)'}; padding: 2px; display: inline-flex; align-items: center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="media-card-sub">${escapeHtml(station.genre)} • ${escapeHtml(station.country || 'Global')}</div>
+        </div>
+      </div>
+    `;
   }
 
   function render() {
-    const stations = getFilteredStations();
+    const stations = getFilteredAndSortedStations();
     const currentRadio = audioEngine.isRadio ? audioEngine.currentStation : null;
+
+    const isStarredFilterActive = selectedGenre === 'Favorites';
+    const starredStations = stations.filter((s) => Boolean(s.isFavorite));
+    const otherStations = stations.filter((s) => !s.isFavorite);
+    const showGroupedSections = !isStarredFilterActive && starredStations.length > 0;
 
     container.innerHTML = `
       <div class="view-header">
@@ -43,6 +127,35 @@ export async function renderRadioView() {
         </div>
       </div>
 
+      <!-- Search & Sort Controls Toolbar -->
+      <div class="radio-toolbar">
+        <div class="radio-search-wrapper">
+          <svg class="radio-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="search"
+            id="radio-search-input"
+            class="radio-search-input"
+            placeholder="Search stations by name, genre, or country..."
+            value="${escapeHtml(searchQuery)}"
+            aria-label="Search radio stations"
+          />
+        </div>
+
+        <div class="radio-sort-wrapper">
+          <label for="radio-sort-select" class="radio-sort-label">Sort by:</label>
+          <select id="radio-sort-select" class="radio-sort-select" aria-label="Sort radio stations">
+            <option value="default" ${sortOrder === 'default' ? 'selected' : ''}>Default Order</option>
+            <option value="name-asc" ${sortOrder === 'name-asc' ? 'selected' : ''}>Name (A - Z)</option>
+            <option value="name-desc" ${sortOrder === 'name-desc' ? 'selected' : ''}>Name (Z - A)</option>
+            <option value="genre-asc" ${sortOrder === 'genre-asc' ? 'selected' : ''}>Genre (A - Z)</option>
+            <option value="bitrate-desc" ${sortOrder === 'bitrate-desc' ? 'selected' : ''}>Bitrate (High - Low)</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Genre & Favorite Filter Pills -->
       <div class="filter-pills-bar" style="display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 4px;">
         <button class="btn-filter-pill ${selectedGenre === 'All' ? 'active' : ''}" data-genre="All">All Streams</button>
@@ -59,15 +172,15 @@ export async function renderRadioView() {
         <h3 style="margin-bottom: 12px; font-size: 16px;">Add Custom Radio Stream</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr 120px auto; gap: 12px; align-items: end;">
           <div>
-            <label class="form-label">Station Name</label>
+            <label class="form-label" for="custom-name-input">Station Name</label>
             <input type="text" id="custom-name-input" class="form-input" placeholder="My Ambient Stream" />
           </div>
           <div>
-            <label class="form-label">HTTPS Stream URL</label>
+            <label class="form-label" for="custom-url-input">HTTPS Stream URL</label>
             <input type="url" id="custom-url-input" class="form-input" placeholder="https://stream.example.org/live" />
           </div>
           <div>
-            <label class="form-label">Genre</label>
+            <label class="form-label" for="custom-genre-input">Genre</label>
             <input type="text" id="custom-genre-input" class="form-input" placeholder="Ambient" />
           </div>
           <div style="display: flex; gap: 8px;">
@@ -77,54 +190,53 @@ export async function renderRadioView() {
         </div>
       </div>
 
-      <!-- Stations Grid -->
+      <!-- Grouped or Flat Stations Content -->
       ${
         stations.length === 0
           ? `
         <div class="empty-state-card">
-          <p>${selectedGenre === 'Favorites' ? 'No starred radio streams yet. Click the star icon on any station to save it here.' : 'No stations found in this category.'}</p>
+          <p>${
+            selectedGenre === 'Favorites'
+              ? 'No starred radio streams yet. Click the star icon on any station to save it here.'
+              : searchQuery
+              ? `No stations match "${escapeHtml(searchQuery)}".`
+              : 'No stations found in this category.'
+          }</p>
         </div>
+      `
+          : showGroupedSections
+          ? `
+        <!-- Section 1: Starred Stations -->
+        <div class="radio-section-header">
+          <h2 class="radio-section-title">
+            <span>★ Starred Radio Stations</span>
+          </h2>
+          <span class="radio-section-count">${starredStations.length} stream${starredStations.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="card-grid" style="margin-bottom: 32px;">
+          ${starredStations.map((s) => renderCard(s, currentRadio)).join('')}
+        </div>
+
+        <!-- Section 2: Remaining / All Stations -->
+        ${
+          otherStations.length > 0
+            ? `
+          <div class="radio-section-header">
+            <h2 class="radio-section-title">
+              <span>${searchQuery || selectedGenre !== 'All' ? 'Other Matching Streams' : 'All Radio Streams'}</span>
+            </h2>
+            <span class="radio-section-count">${otherStations.length} stream${otherStations.length === 1 ? '' : 's'}</span>
+          </div>
+          <div class="card-grid">
+            ${otherStations.map((s) => renderCard(s, currentRadio)).join('')}
+          </div>
+        `
+            : ''
+        }
       `
           : `
         <div class="card-grid">
-          ${stations
-            .map((station) => {
-              const stationUrl = station.streamUrl || station.url;
-              const currentUrl = currentRadio ? (currentRadio.streamUrl || currentRadio.url) : null;
-              const isPlayingThis = currentUrl === stationUrl && audioEngine.isPlaying;
-              const isFav = Boolean(station.isFavorite);
-              return `
-              <div class="media-card radio-card ${isPlayingThis ? 'playing' : ''}" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" data-station-name="${escapeHtml(station.name)}">
-                <div class="media-card-art-wrapper">
-                  <img src="${station.favicon || 'public/icons/icon-192.svg'}" alt="${escapeHtml(station.name)}" class="media-card-art" />
-                  <button class="btn-play-card" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" aria-label="${isPlayingThis ? 'Pause' : 'Play'} ${escapeHtml(station.name)}">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                      ${
-                        isPlayingThis
-                          ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'
-                          : '<polygon points="5 3 19 12 5 21 5 3"></polygon>'
-                      }
-                    </svg>
-                  </button>
-                </div>
-                <div class="media-card-info">
-                  <div class="media-card-title" style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;">${escapeHtml(station.name)}</span>
-                    <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
-                      ${isPlayingThis ? '<span class="status-badge badge-active" style="font-size: 10px;">[LIVE]</span>' : ''}
-                      <button class="btn-star-station" data-station-id="${station.id}" aria-label="${isFav ? 'Unstar' : 'Star'} ${escapeHtml(station.name)}" style="background: none; border: none; cursor: pointer; color: ${isFav ? '#fbbf24' : 'var(--text-secondary)'}; padding: 2px; display: inline-flex; align-items: center;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="media-card-sub">${escapeHtml(station.genre)} • ${escapeHtml(station.country || 'Global')}</div>
-                </div>
-              </div>
-            `;
-            })
-            .join('')}
+          ${stations.map((s) => renderCard(s, currentRadio)).join('')}
         </div>
       `
       }
@@ -176,6 +288,32 @@ export async function renderRadioView() {
   }
 
   function attachEvents() {
+    // Search input listener
+    const searchInput = container.querySelector('#radio-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        const cursor = e.target.selectionStart;
+        render();
+        const updatedInput = container.querySelector('#radio-search-input');
+        if (updatedInput) {
+          updatedInput.focus();
+          if (typeof cursor === 'number') {
+            updatedInput.setSelectionRange(cursor, cursor);
+          }
+        }
+      });
+    }
+
+    // Sort select listener
+    const sortSelect = container.querySelector('#radio-sort-select');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', (e) => {
+        sortOrder = e.target.value;
+        render();
+      });
+    }
+
     // Genre & Favorite filter pills
     container.querySelectorAll('.btn-filter-pill').forEach((pill) => {
       pill.addEventListener('click', () => {
@@ -228,12 +366,12 @@ export async function renderRadioView() {
           streamUrl: url,
           genre,
           country: 'Custom',
-          favicon: 'public/icons/icon-192.svg',
+          favicon: '',
           isCustom: true,
           isFavorite: false
         };
 
-        // Initiate audio playback immediately within the user click gesture
+        // Initiate audio playback immediately within user click gesture
         audioEngine.playRadio(newStation);
         formCard.style.display = 'none';
 
@@ -321,3 +459,4 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+

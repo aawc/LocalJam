@@ -20,7 +20,15 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 4: Release Workflow YAML Parsing Failure (Indentation Fix)** `[DONE]`
   - *Description:* Resolve GitHub Actions check suite parsing failure in `.github/workflows/release.yml` caused by unindented heredoc lines breaking out of the `run: |` block scalar. Format release notes generation with indented `{ echo ... } > release_notes.md` command grouping.
-  - *Associated Commits:* `[PENDING]`
+  - *Associated Commits:* `7df8d9d`
+
+- [x] **Issue 5: Version Number on Page Showing Older Release** `[DONE]`
+  - *Description:* Ensure the version number displayed on the page and in the release notes dialog dynamically synchronizes with deployed release metadata (`version.json`) rather than relying exclusively on static imports. Generate dynamic version metadata during GitHub Pages deployment.
+  - *Associated Commits:* `a145b10`
+
+- [x] **Issue 6: Classical KUSC, KING FM, and Jazz24 Stream Endpoints & Thumbnail Fallback Rendering** `[DONE]`
+  - *Description:* Resolve audio playback failures for Classical KUSC, Classical KING FM, and Jazz24 by migrating to verified HTTPS endpoints. Add genre-specific SVG fallback artwork and `onerror` image recovery so station cards never show broken thumbnails.
+  - *Associated Commits:* `e09a85b`
 
 ---
 
@@ -49,3 +57,15 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 - [x] **FR 6: Radio Station / Track Details Modal on Clicking Active Station Name** `[DONE]`
   - *Description:* Clicking the name of a radio station while it is actively playing pops up a details modal screen presenting rich metadata about the station, live stream status, genre/bitrate info, stream link, and currently playing track info.
   - *Associated Commits:* `0e42f2e`
+
+- [x] **FR 7: Internet Radio Directory Expansion (12+ Verified HTTPS Streams)** `[DONE]`
+  - *Description:* Expand curated internet radio directory with high-fidelity streams including WQXR 105.9 FM, KNKX 88.5 FM, SomaFM PopTron, Indie Pop Rocks, Beat Blender, Seven Inch Soul, Left Coast 70s, Folk Forward, Boot Liquor, ThistleRadio, Fluid, and SF 10-33.
+  - *Associated Commits:* `e09a85b`
+
+- [x] **FR 8: Radio Station Real-Time Search & Multi-Criteria Sorting** `[DONE]`
+  - *Description:* Add interactive real-time search filtering across station names, genres, descriptions, and countries, paired with multi-criteria sorting (Default, Name A-Z, Name Z-A, Genre A-Z, Bitrate).
+  - *Associated Commits:* `[PENDING]`
+
+- [x] **FR 9: Dedicated Starred Radio Stations Grouping & Reactive Rendering** `[DONE]`
+  - *Description:* Display starred radio stations first in a dedicated section at the top of the radio view with dynamic item count, followed by all remaining stations, updating reactively on star toggles without interrupting playback.
+  - *Associated Commits:* `[PENDING]`
