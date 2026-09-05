@@ -104,7 +104,7 @@ export async function renderSettingsView() {
     <div class="settings-section hero-card" style="margin-bottom: 24px; padding: 24px;">
       <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-primary);">Visual Accessibility</h2>
       <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
-        LocalJam is engineered from the ground up for red-green colorblindness accessibility using dual-coded status labels (<span class="status-badge badge-active">[PASS]</span>, <span class="status-badge badge-missing">[MISSING]</span>, <span class="status-badge badge-error">[FAIL]</span>) and high-contrast focus indicators.
+        LocalJam provides red-green color blindness accessibility with dual-coded status labels (<span class="status-badge badge-active">[PASS]</span>, <span class="status-badge badge-missing">[MISSING]</span>, <span class="status-badge badge-error">[FAIL]</span>) and high-contrast visual focus indicators.
       </p>
     </div>
 
@@ -112,7 +112,7 @@ export async function renderSettingsView() {
     <div class="settings-section hero-card" style="padding: 24px; border-color: rgba(244, 63, 94, 0.3);">
       <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--status-error);">Danger Zone</h2>
       <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">
-        Resetting the database clears IndexedDB metadata, history, and playlists. Original audio files on your device are completely untouched.
+        Resetting the database clears indexed metadata, history, and playlists. Original audio files on your device are not modified or deleted.
       </p>
       <button id="btn-reset-db" class="btn btn-secondary" style="color: var(--status-error); border-color: var(--status-error);">
         Reset Library Database

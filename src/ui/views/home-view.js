@@ -22,9 +22,9 @@ export async function renderHomeView() {
   container.innerHTML = `
     <div class="hero-card">
       <div class="hero-content">
-        <h1 class="hero-title">Your Music, Pure & Local.</h1>
+        <h1 class="hero-title">Local Audio Player</h1>
         <p class="hero-subtitle">
-          High-fidelity, privacy-first audio playback directly from your local drive. Zero cloud uploads, zero telemetry.
+          Audio playback directly from your local drive.
         </p>
         <div class="hero-actions">
           <button id="hero-scan-folder-btn" class="btn btn-primary">

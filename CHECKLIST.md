@@ -30,6 +30,22 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Resolve audio playback failures for Classical KUSC, Classical KING FM, and Jazz24 by migrating to verified HTTPS endpoints. Add genre-specific SVG fallback artwork and `onerror` image recovery so station cards never show broken thumbnails.
   - *Associated Commits:* `e09a85b`
 
+- [x] **Issue 7: Application Footer Cleanup (Remove [LOCAL-FIRST], Subtitle, and GitHub Link)** `[DONE]`
+  - *Description:* Streamline application footer by removing `[LOCAL-FIRST]` badge, `"Zero tracking • Local storage authoritative"` label, and `"GitHub"` external repository link, leaving a clean, minimal release version button that opens the release notes dialog.
+  - *Associated Commits:* `5beae4c`
+
+- [x] **Issue 8: Radio Station High-Level Genre Sections & Navigation** `[DONE]`
+  - *Description:* Reorganize radio stations into clean, high-level genre categories (Ambient, Rock, Classical, Jazz, Electronic, Folk & Roots, Lounge, News & Talk, Soul & Funk, World) instead of compound subgenres (e.g., "Ambient / Electronics"), with organized section headings and responsive genre filter pills.
+  - *Associated Commits:* `2731460`
+
+- [x] **Issue 9: Fullscreen Audio Visualizer Mode** `[DONE]`
+  - *Description:* Enable true fullscreen display for the audio visualizer overlay using the Fullscreen API, with a dedicated fullscreen toggle button, keyboard shortcut (`F`), canvas double-click trigger, and clean exit lifecycle.
+  - *Associated Commits:* `f2d3b90`
+
+- [x] **Issue 10: Professional Copy Refinement (Remove Promotional Hyperbole)** `[DONE]`
+  - *Description:* Refine user-facing copy across Home view, Radio view, Settings view, and app headers to use clear, elegant, and professional language without hyperbole.
+  - *Associated Commits:* `5beae4c`, `2731460`, `f2d3b90`
+
 ---
 
 ## Feature Requests

@@ -77,8 +77,9 @@ test('UI Views - renderHomeView generates dashboard container', async () => {
 
   const view = await renderHomeView();
   assert.equal(view.className, 'page-container');
-  assert.ok(view.innerHTML.includes('Your Music, Pure & Local'));
+  assert.ok(view.innerHTML.includes('Local Audio Player'));
   assert.ok(view.innerHTML.includes('Shuffle Library (1)'));
+  assert.ok(!view.innerHTML.includes('Zero cloud uploads'));
 });
 
 test('UI Views - renderSongsView supports query filtering', async () => {
@@ -139,6 +140,8 @@ test('UI Views - renderRadioView displays curated streams, search, sort, and sta
 
   const view = await renderRadioView();
   assert.ok(view.innerHTML.includes('Internet Radio'));
+  assert.ok(view.innerHTML.includes('Curated live internet radio streams'));
+  assert.ok(!view.innerHTML.includes('zero tracking'));
   assert.ok(view.innerHTML.includes('Radio Paradise'));
   assert.ok(view.innerHTML.includes('btn-star-station'));
   assert.ok(view.innerHTML.includes('Starred Streams'));
@@ -147,6 +150,8 @@ test('UI Views - renderRadioView displays curated streams, search, sort, and sta
   assert.ok(view.innerHTML.includes('radio-card'));
   assert.ok(view.innerHTML.includes('data-station-url'));
   assert.ok(view.innerHTML.includes('btn-play-card'));
+  assert.ok(view.innerHTML.includes('Ambient'));
+  assert.ok(view.innerHTML.includes('Rock'));
 });
 
 test('UI Views - renderSettingsView displays diagnostics and storage tier', async () => {
