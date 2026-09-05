@@ -64,8 +64,8 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **FR 8: Radio Station Real-Time Search & Multi-Criteria Sorting** `[DONE]`
   - *Description:* Add interactive real-time search filtering across station names, genres, descriptions, and countries, paired with multi-criteria sorting (Default, Name A-Z, Name Z-A, Genre A-Z, Bitrate).
-  - *Associated Commits:* `[PENDING]`
+  - *Associated Commits:* `2ab1654`
 
 - [x] **FR 9: Dedicated Starred Radio Stations Grouping & Reactive Rendering** `[DONE]`
   - *Description:* Display starred radio stations first in a dedicated section at the top of the radio view with dynamic item count, followed by all remaining stations, updating reactively on star toggles without interrupting playback.
-  - *Associated Commits:* `[PENDING]`
+  - *Associated Commits:* `2ab1654`
