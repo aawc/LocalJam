@@ -500,7 +500,7 @@ export class AudioEngine {
    * @param {Uint8Array} dataArray
    */
   getByteFrequencyData(dataArray) {
-    if (this.analyser) {
+    if (this.analyser && this.isPlaying) {
       this.analyser.getByteFrequencyData(dataArray);
     } else {
       dataArray.fill(0);
@@ -512,7 +512,7 @@ export class AudioEngine {
    * @param {Uint8Array} dataArray
    */
   getByteTimeDomainData(dataArray) {
-    if (this.analyser) {
+    if (this.analyser && this.isPlaying) {
       this.analyser.getByteTimeDomainData(dataArray);
     } else {
       dataArray.fill(128);

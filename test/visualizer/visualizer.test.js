@@ -103,7 +103,7 @@ test('Audio Visualizer Engine Suite', async (t) => {
     assert.ok(visualizer.stars.length > 0);
   });
 
-  await t.test('Dynamically resizes canvas, applies DPR transforms, and generates ambient waves when idle', () => {
+  await t.test('Dynamically resizes canvas, applies DPR transforms, and preserves calm state when idle', () => {
     let transformArgs = null;
     const { canvas, ctx } = createMockCanvas(400, 200);
     ctx.setTransform = (a, b, c, d, e, f) => {
@@ -120,12 +120,34 @@ test('Audio Visualizer Engine Suite', async (t) => {
     assert.equal(visualizer.height, 350);
     assert.ok(transformArgs !== null);
 
-    // Verifies ambient idle waves populated frequency and time domain data
+    // Verifies no fake ambient waves are synthesized when idle/stopped
     let nonZeroFreq = 0;
     for (let i = 0; i < visualizer.freqData.length; i++) {
       if (visualizer.freqData[i] > 0) nonZeroFreq++;
     }
-    assert.ok(nonZeroFreq > 0, 'Idle mode should synthesize non-zero ambient frequency values');
+    assert.equal(nonZeroFreq, 0, 'Idle mode must not synthesize fake frequency oscillations');
+  });
+
+  await t.test('Accurately reflects real audio frequency and time domain data during playback', () => {
+    const { canvas, operations } = createMockCanvas(800, 400);
+    const visualizer = new AudioVisualizer(canvas);
+    visualizer.isRunning = true;
+
+    // Simulate real audio frequency input
+    visualizer.freqData.fill(180);
+    visualizer.timeData.fill(200);
+    visualizer.setMode('bars');
+    visualizer.renderBars(800, 400);
+
+    // Peak levels should reflect the active bar heights
+    assert.ok(visualizer.peakLevels[0] > 10, 'Peak levels should track audio bar heights');
+    assert.ok(operations.some((op) => op[0] === 'fillRect'));
+
+    // Wave mode should use real time-domain data
+    operations.length = 0;
+    visualizer.setMode('wave');
+    visualizer.renderWave(800, 400);
+    assert.ok(operations.some((op) => op[0] === 'lineTo' && op[2] > 200));
   });
 
   await t.test('Handles start, pause, and destroy lifecycle cleanly', () => {

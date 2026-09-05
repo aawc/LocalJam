@@ -137,31 +137,9 @@ export class AudioVisualizer {
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
     }
-
     if (audioEngine) {
       audioEngine.getByteFrequencyData(this.freqData);
       audioEngine.getByteTimeDomainData(this.timeData);
-    }
-
-    // Check if audio has energy or is in idle/paused state
-    let totalEnergy = 0;
-    for (let i = 0; i < 64; i++) {
-      totalEnergy += this.freqData[i];
-    }
-    const isIdle = totalEnergy < 10;
-    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-
-    if (isIdle) {
-      // Synthesize smooth ambient harmonic waves for visual feedback
-      for (let i = 0; i < this.freqData.length; i++) {
-        const wave1 = Math.sin(i * 0.05 + now * 2);
-        const wave2 = Math.cos(i * 0.08 - now * 1.5);
-        this.freqData[i] = Math.max(0, Math.min(255, Math.floor((wave1 * 0.5 + wave2 * 0.5 + 1) * 35)));
-      }
-      for (let i = 0; i < this.timeData.length; i++) {
-        const wave = Math.sin(i * 0.03 + now * 3) * 20;
-        this.timeData[i] = Math.max(0, Math.min(255, Math.floor(128 + wave)));
-      }
     }
 
     const w = this.width || 800;
@@ -209,7 +187,7 @@ export class AudioVisualizer {
 
     for (let i = 0; i < barCount; i++) {
       const val = this.freqData[i * step] || 0;
-      const barHeight = Math.max(4, (val / 255) * (h * 0.85));
+      const barHeight = Math.max(2, (val / 255) * (h * 0.85));
       const x = i * (barWidth + gap) + gap / 2;
       const y = h - barHeight;
 
@@ -227,7 +205,7 @@ export class AudioVisualizer {
       if (barHeight > this.peakLevels[i]) {
         this.peakLevels[i] = barHeight;
       } else {
-        this.peakLevels[i] = Math.max(0, this.peakLevels[i] - 1.5);
+        this.peakLevels[i] = Math.max(barHeight, this.peakLevels[i] - 1.5);
       }
 
       const peakY = h - this.peakLevels[i] - 3;
@@ -318,7 +296,9 @@ export class AudioVisualizer {
 
     let energySum = 0;
     for (let i = 0; i < 32; i++) energySum += this.freqData[i];
-    const speed = 2 + (energySum / 32 / 255) * 15;
+    const isPlaying = Boolean(audioEngine && audioEngine.isPlaying);
+    const baseSpeed = isPlaying ? 1.5 : 0.5;
+    const speed = baseSpeed + (energySum / 32 / 255) * 15;
 
     this.ctx.fillStyle = '#f8fafc';
 

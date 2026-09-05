@@ -68,4 +68,46 @@ test('Audio Engine State & Control Suite', async (t) => {
     assert.equal(engine.currentObjectUrl, null);
     assert.equal(engine.isRadio, true);
   });
+
+  await t.test('Returns silence for frequency and time-domain data when not actively playing', () => {
+    const engine = new AudioEngine();
+    const freqBuf = new Uint8Array(64).fill(255);
+    const timeBuf = new Uint8Array(64).fill(0);
+
+    engine.isPlaying = false;
+    engine.getByteFrequencyData(freqBuf);
+    engine.getByteTimeDomainData(timeBuf);
+
+    assert.ok(freqBuf.every((v) => v === 0), 'Frequency data should be zero when stopped/paused');
+    assert.ok(timeBuf.every((v) => v === 128), 'Time-domain data should be 128 (center line) when stopped/paused');
+  });
+
+  await t.test('Delegates to analyser when actively playing and analyser is connected', () => {
+    const engine = new AudioEngine();
+    let freqCalled = false;
+    let timeCalled = false;
+
+    engine.analyser = {
+      getByteFrequencyData: (arr) => {
+        freqCalled = true;
+        arr.fill(150);
+      },
+      getByteTimeDomainData: (arr) => {
+        timeCalled = true;
+        arr.fill(75);
+      }
+    };
+    engine.isPlaying = true;
+
+    const freqBuf = new Uint8Array(32);
+    const timeBuf = new Uint8Array(32);
+
+    engine.getByteFrequencyData(freqBuf);
+    engine.getByteTimeDomainData(timeBuf);
+
+    assert.equal(freqCalled, true);
+    assert.equal(timeCalled, true);
+    assert.equal(freqBuf[0], 150);
+    assert.equal(timeBuf[0], 75);
+  });
 });
