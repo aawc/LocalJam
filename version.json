@@ -1,15 +1,74 @@
 {
-  "version": "2026-09-04-003",
+  "version": "v2026.09.009",
   "releaseDate": "2026-09-04",
+  "title": "LocalJam v2026.09.009",
   "commits": [
-    "7df8d9d",
-    "b7e58e6",
-    "0fbf4ff",
-    "1809639",
-    "0e42f2e",
-    "dda7bd2",
-    "47d22ee",
-    "f8bd490",
-    "4535f30"
+    {
+      "hash": "6c6aec9",
+      "message": "refactor(ui): refine user-facing copy across views to professional tone"
+    },
+    {
+      "hash": "f2d3b90",
+      "message": "feat(ui): add fullscreen display mode and keyboard toggle to audio visualizer"
+    },
+    {
+      "hash": "2731460",
+      "message": "feat(radio): categorize radio stations into high-level genre sections and filter pills"
+    },
+    {
+      "hash": "5beae4c",
+      "message": "fix(ui): streamline application footer by removing promotional badge, tagline, and external link"
+    },
+    {
+      "hash": "a5096df",
+      "message": "docs: synchronize task execution checklist with recent atomic commits"
+    },
+    {
+      "hash": "2ab1654",
+      "message": "feat(ui): add radio search filtering, multi-criteria sorting, and starred stations grouping"
+    },
+    {
+      "hash": "e09a85b",
+      "message": "feat(radio): expand curated streams, fix station endpoints, and add SVG fallback artwork"
+    },
+    {
+      "hash": "a145b10",
+      "message": "feat(version): dynamically synchronize runtime release metadata from deployed version.json"
+    },
+    {
+      "hash": "7df8d9d",
+      "message": "fix(ci): format release notes generation as indented block and update checklist"
+    },
+    {
+      "hash": "b7e58e6",
+      "message": "release: bump version to 2026-09-04-002 and update release notes"
+    },
+    {
+      "hash": "0fbf4ff",
+      "message": "ci(release): generate dynamic semantic tag v$yyyy.$mm.$nnn and push tag to repository"
+    },
+    {
+      "hash": "1809639",
+      "message": "docs: synchronize documentation, version metadata, and task checklist"
+    },
+    {
+      "hash": "0e42f2e",
+      "message": "feat(ui): add radio station details modal triggered on active station click"
+    },
+    {
+      "hash": "dda7bd2",
+      "message": "feat(radio): expand curated internet radio streams with English and instrumental stations"
+    },
+    {
+      "hash": "47d22ee",
+      "message": "feat(pwa): add automatic release update detection and refresh prompt"
+    }
+  ],
+  "notes": [
+    "Fixed SomaFM (Illinois Street Lounge, Secret Agent, Lush, Space Station, Deep Space One, Suburbs of Goa) and BBC Radio 6 stream endpoints.",
+    "Categorized radio stations into 10 high-level genre sections with clean navigation and search filtering.",
+    "Added fullscreen display mode with keyboard shortcut (F) and canvas double-click to Audio Visualizer.",
+    "Streamlined application footer and refined user interface copy across all views.",
+    "Continuous automated release detection and one-click refresh notification."
   ]
 }

@@ -106,5 +106,13 @@ test("GitHub Actions Pages Deploy Workflow Suite (.github/workflows/deploy.yml)"
       content.includes("TAG_NAME="),
       "Workflow must construct dynamic semantic TAG_NAME"
     );
+    assert.ok(
+      content.includes("fetch-depth: 0"),
+      "Workflow must fetch full git history to build commit log"
+    );
+    assert.ok(
+      content.includes("git log"),
+      "Workflow must extract git commits for deployment release notes"
+    );
   });
 });

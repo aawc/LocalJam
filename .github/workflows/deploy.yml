@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Generate Deployment Version Metadata
         run: |
@@ -30,19 +32,44 @@ jobs:
           MM=$(date -u +%m)
           NNN=$(printf "%03d" ${{ github.run_number }})
           TAG_NAME="v${YYYY}.${MM}.${NNN}"
+          RELEASE_DATE=$(date -u +%Y-%m-%d)
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
-          RELEASE_DATE=$(date -u +%Y-%m-%d)
 
-          {
-            echo "{"
-            echo "  \"version\": \"${TAG_NAME}\","
-            echo "  \"releaseDate\": \"${RELEASE_DATE}\","
-            echo "  \"commits\": ["
-            echo "    \"${SHORT_SHA}\""
-            echo "  ]"
-            echo "}"
-          } > version.json
+          node -e "
+            const cp = require('child_process');
+            const fs = require('fs');
+
+            const tagName = '${TAG_NAME}';
+            const releaseDate = '${RELEASE_DATE}';
+
+            let commits = [];
+            try {
+              const raw = cp.execSync('git log -n 15 --pretty=format:%h%x09%s').toString().trim();
+              commits = raw.split('\n').filter(Boolean).map(line => {
+                const [hash, ...rest] = line.split('\t');
+                return { hash: (hash || '').trim(), message: rest.join('\t').trim() };
+              });
+            } catch (e) {
+              commits = [{ hash: '${SHORT_SHA}', message: 'Deployment update' }];
+            }
+
+            const payload = {
+              version: tagName,
+              releaseDate: releaseDate,
+              title: 'LocalJam ' + tagName,
+              commits: commits,
+              notes: [
+                'Fixed SomaFM (Illinois Street Lounge, Secret Agent, Lush, Space Station, Deep Space One, Suburbs of Goa) and BBC Radio 6 stream endpoints.',
+                'Categorized radio stations into 10 high-level genre sections with clean navigation and search filtering.',
+                'Added fullscreen display mode with keyboard shortcut (F) and canvas double-click to Audio Visualizer.',
+                'Streamlined application footer and refined user interface copy across all views.',
+                'Continuous automated release detection and one-click refresh notification.'
+              ]
+            };
+
+            fs.writeFileSync('version.json', JSON.stringify(payload, null, 2));
+          "
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
