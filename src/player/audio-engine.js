@@ -33,6 +33,8 @@ export class AudioEngine {
     this.analyser = null;
     this.sourceA = null;
     this.sourceB = null;
+    this.sourceRadio = null;
+    this.gainRadio = null;
     this.webAudioInitialized = false;
 
     // Track active object URLs for memory leak protection
@@ -51,7 +53,8 @@ export class AudioEngine {
   initAudioElements() {
     [this.audioA, this.audioB].forEach((audio, idx) => {
       audio.preload = 'metadata';
-      audio.crossOrigin = 'anonymous';
+      // Do not set crossOrigin = 'anonymous' on local audio elements because blob: URLs
+      // have no remote CORS origin, which causes Web Audio createMediaElementSource to zero out samples.
 
       audio.addEventListener('timeupdate', () => {
         if (this.getActiveAudio() === audio) {
@@ -88,6 +91,9 @@ export class AudioEngine {
         }
       });
     });
+
+    this.radioAudio.preload = 'none';
+    this.radioAudio.crossOrigin = 'anonymous';
 
     this.radioAudio.addEventListener('error', (e) => {
       console.error(`[AudioEngine] Radio error: ${this.radioAudio.error?.message}`);
@@ -134,6 +140,18 @@ export class AudioEngine {
       const preEqGain = this.audioCtx.createGain();
       this.gainA.connect(preEqGain);
       this.gainB.connect(preEqGain);
+
+      if (this.radioAudio) {
+        try {
+          this.sourceRadio = this.audioCtx.createMediaElementSource(this.radioAudio);
+          this.gainRadio = this.audioCtx.createGain();
+          this.sourceRadio.connect(this.gainRadio);
+          this.gainRadio.connect(preEqGain);
+          this.gainRadio.gain.value = 1;
+        } catch (radioErr) {
+          console.warn(`[AudioEngine] Radio Web Audio routing notice: ${radioErr?.message}`);
+        }
+      }
 
       equalizer.connect(this.audioCtx, preEqGain, this.masterGain);
 
@@ -301,15 +319,11 @@ export class AudioEngine {
   async playRadio(station) {
     if (!station || !station.streamUrl) return;
 
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume().catch(() => {});
-    }
-
     this.isRadio = true;
     this.currentStation = station;
     this.currentTrack = null;
 
-    // Revoke local object URL to prevent memory leaks during radio sessions
+    // Revoke local object URL immediately to prevent memory leaks during radio sessions
     if (this.currentObjectUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
       URL.revokeObjectURL(this.currentObjectUrl);
       this.activeObjectUrls.delete(this.currentObjectUrl);
@@ -319,7 +333,17 @@ export class AudioEngine {
     if (this.audioA) this.audioA.pause();
     if (this.audioB) this.audioB.pause();
 
+    await this.initWebAudio();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      try {
+        await this.audioCtx.resume();
+      } catch (resumeErr) {
+        console.warn(`[AudioEngine] AudioContext resume warning in playRadio: ${resumeErr?.message}`);
+      }
+    }
+
     if (this.radioAudio) {
+      this.radioAudio.crossOrigin = 'anonymous';
       this.radioAudio.src = station.streamUrl;
       this.radioAudio.volume = this.muted ? 0 : this.volume;
 
@@ -329,10 +353,27 @@ export class AudioEngine {
         this.updateMediaSessionRadio(station);
         this.notifyState();
       } catch (err) {
-        if (err?.name !== 'AbortError') {
+        if (err?.name === 'AbortError') {
+          return;
+        }
+        if (err?.name === 'NotAllowedError' || err?.message?.includes('user gesture')) {
           console.error(`[AudioEngine] Radio stream playback failed: ${err?.message}`);
           this.isPlaying = false;
           this.notifyState();
+        } else {
+          // Attempt fallback playback without crossOrigin if stream server lacks CORS headers
+          try {
+            this.radioAudio.removeAttribute('crossOrigin');
+            this.radioAudio.src = station.streamUrl;
+            await this.radioAudio.play();
+            this.isPlaying = true;
+            this.updateMediaSessionRadio(station);
+            this.notifyState();
+          } catch (fallbackErr) {
+            console.error(`[AudioEngine] Radio stream playback failed: ${fallbackErr?.message}`);
+            this.isPlaying = false;
+            this.notifyState();
+          }
         }
       }
     }

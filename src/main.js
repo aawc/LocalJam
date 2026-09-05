@@ -97,7 +97,19 @@ export async function initApp() {
     // 7. Initialize Global Keyboard Shortcuts
     keyboardManager.init();
 
-    // 8. Register Service Worker for PWA
+    // 8. One-time Global User Interaction Audio Unlock
+    const unlockWebAudio = () => {
+      if (audioEngine && !audioEngine.webAudioInitialized) {
+        audioEngine.initWebAudio().catch(() => {});
+      } else if (audioEngine && audioEngine.audioCtx && audioEngine.audioCtx.state === 'suspended') {
+        audioEngine.audioCtx.resume().catch(() => {});
+      }
+    };
+    ['pointerdown', 'touchstart', 'keydown'].forEach((evt) => {
+      document.addEventListener(evt, unlockWebAudio, { once: true, passive: true });
+    });
+
+    // 9. Register Service Worker for PWA
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
         navigator.serviceWorker

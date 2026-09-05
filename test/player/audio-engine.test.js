@@ -137,8 +137,91 @@ test('Audio Engine State & Control Suite', async (t) => {
     }
 
     const station = { id: 'abort_station', name: 'Abort Radio', streamUrl: 'https://stream.example.org/abort' };
-    // Should not throw or crash
     await engine.playRadio(station);
     assert.equal(engine.isRadio, true);
+  });
+
+  await t.test('Local audio elements do not enforce crossOrigin to protect blob URL streams', () => {
+    const engine = new AudioEngine();
+    if (engine.audioA) {
+      assert.notEqual(engine.audioA.crossOrigin, 'anonymous', 'audioA must not force anonymous crossOrigin on blob URLs');
+    }
+    if (engine.audioB) {
+      assert.notEqual(engine.audioB.crossOrigin, 'anonymous', 'audioB must not force anonymous crossOrigin on blob URLs');
+    }
+  });
+
+  await t.test('initWebAudio connects radio audio to Web Audio analyser pipeline', async () => {
+    const prevWindow = globalThis.window;
+    try {
+      const engine = new AudioEngine();
+      let mediaSourceCreated = false;
+      let connectedToGain = false;
+
+      globalThis.window = {
+        AudioContext: class {
+          constructor() {
+            this.state = 'running';
+            this.destination = {};
+          }
+          createGain() {
+            return { gain: { value: 1 }, connect: () => {} };
+          }
+          createAnalyser() {
+            return { fftSize: 2048, smoothingTimeConstant: 0.85, connect: () => {} };
+          }
+          createMediaElementSource(el) {
+            mediaSourceCreated = true;
+            return {
+              connect: (target) => {
+                connectedToGain = true;
+              }
+            };
+          }
+        }
+      };
+
+      engine.radioAudio = {
+        preload: 'none',
+        crossOrigin: 'anonymous',
+        addEventListener: () => {}
+      };
+
+      await engine.initWebAudio();
+      assert.equal(mediaSourceCreated, true);
+      assert.equal(connectedToGain, true);
+      assert.ok(engine.analyser);
+    } finally {
+      globalThis.window = prevWindow;
+    }
+  });
+
+  await t.test('playRadio executes fallback without crossOrigin if initial play fails with CORS error', async () => {
+    const engine = new AudioEngine();
+    let playAttempts = 0;
+    let removedCrossOrigin = false;
+
+    engine.radioAudio = {
+      src: '',
+      volume: 1,
+      crossOrigin: 'anonymous',
+      removeAttribute: (attr) => {
+        if (attr === 'crossOrigin') removedCrossOrigin = true;
+      },
+      play: async () => {
+        playAttempts++;
+        if (playAttempts === 1) {
+          throw new Error('CORS error: Access-Control-Allow-Origin missing');
+        }
+        return Promise.resolve();
+      }
+    };
+
+    const station = { id: 'cors_station', name: 'CORS Radio', streamUrl: 'https://stream.example.org/nocors' };
+    await engine.playRadio(station);
+
+    assert.equal(playAttempts, 2, 'Should attempt fallback play');
+    assert.equal(removedCrossOrigin, true, 'Should strip crossOrigin on fallback');
+    assert.equal(engine.isPlaying, true);
   });
 });
