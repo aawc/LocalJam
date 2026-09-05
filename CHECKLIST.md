@@ -62,6 +62,10 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Resolve local track and internet radio stream playback failures on Android (Chrome and Brave, including normal and Incognito windows). Add `playsInline` attributes across media elements, establish global touch/pointer unlock handlers to awaken `AudioContext`, decouple radio streams from Web Audio graph to prevent CORS muting, and trigger `.play()` synchronously in user gesture dispatch chains.
   - *Associated Commits:* `6baed6b`
 
+- [/] **Issue 15: Strict Security Review & Vulnerability Remediation** `[IN_PROGRESS]`
+  - *Description:* Perform a comprehensive security audit of repository, server (`server.js`), static hosting on GitHub Pages, and client-side web application. Document all 11 vulnerability findings in `SECURITY_REPORT.md` across 4 severity tiers (Critical path traversal, High CSP/DOM XSS, Medium HTML escaping/MIME validation/inline handlers, Low/Info security headers and error masking), commit report, and implement complete remediations with automated test verification.
+  - *Associated Commits:* `[PENDING]`
+
 ---
 
 ## Feature Requests
