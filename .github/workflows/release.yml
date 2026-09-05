@@ -47,23 +47,25 @@ jobs:
           git push origin "${TAG_NAME}" --force
 
           # Create release notes
-          cat << EOF > release_notes.md
-## ${RELEASE_TITLE}
+          {
+            echo "## ${RELEASE_TITLE}"
+            echo ""
+            echo "### Live Deployment & App Access"
+            echo "- 🌐 **Web App:** [https://varun.khaneja.org/LocalJam/](https://varun.khaneja.org/LocalJam/)"
+            echo "- 🏷️ **Release Tag:** [${TAG_NAME}](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})"
+            echo "- 📦 **Repository Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+            echo ""
+            echo "### Commit Details"
+            echo "**Subject:** \`${COMMIT_MSG_SUBJECT}\`"
+            echo "**Date:** \`${COMMIT_DATE}\`"
+          } > release_notes.md
 
-### Live Deployment & App Access
-- 🌐 **Web App:** [https://varun.khaneja.org/LocalJam/](https://varun.khaneja.org/LocalJam/)
-- 🏷️ **Release Tag:** [${TAG_NAME}](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})
-- 📦 **Repository Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-
-### Commit Details
-EOF
-
-          echo "**Subject:** \`${COMMIT_MSG_SUBJECT}\`" >> release_notes.md
-          echo "**Date:** \`${COMMIT_DATE}\`" >> release_notes.md
           if [ -n "$COMMIT_MSG_BODY" ]; then
-            echo "" >> release_notes.md
-            echo "### Commit Message" >> release_notes.md
-            printf '%s\n' "$COMMIT_MSG_BODY" >> release_notes.md
+            {
+              echo ""
+              echo "### Commit Message"
+              printf '%s\n' "$COMMIT_MSG_BODY"
+            } >> release_notes.md
           fi
 
           # Create a standalone offline distribution zip

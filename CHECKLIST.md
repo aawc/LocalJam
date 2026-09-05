@@ -18,6 +18,10 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Replace commit message / SHA256 release naming in `.github/workflows/release.yml`. Dynamically generate timestamped semantic tag `v$yyyy.$mm.$nnn` using bash date commands and zero-padded GitHub run number (`$(printf "%03d" ${{ github.run_number }})`), push the tag back to the repository, and bundle release assets named with the tag.
   - *Associated Commits:* `0fbf4ff`
 
+- [x] **Issue 4: Release Workflow YAML Parsing Failure (Indentation Fix)** `[DONE]`
+  - *Description:* Resolve GitHub Actions check suite parsing failure in `.github/workflows/release.yml` caused by unindented heredoc lines breaking out of the `run: |` block scalar. Format release notes generation with indented `{ echo ... } > release_notes.md` command grouping.
+  - *Associated Commits:* `[PENDING]`
+
 ---
 
 ## Feature Requests
