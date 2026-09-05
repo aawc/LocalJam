@@ -90,3 +90,42 @@ export function parseReleaseName(version) {
     sequence: parseInt(parts[3], 10)
   };
 }
+
+/**
+ * Validates if a semantic release tag conforms to vYYYY.MM.NNN pattern.
+ * @param {string} tag
+ * @returns {boolean}
+ */
+export function isValidSemanticTag(tag) {
+  if (typeof tag !== "string") return false;
+  return /^v\d{4}\.(?:0[1-9]|1[0-2])\.\d{3,}$/.test(tag);
+}
+
+/**
+ * Formats a semantic release tag from a date and run number.
+ * @param {Date} [date=new Date()]
+ * @param {number} [runNumber=1]
+ * @returns {string}
+ */
+export function formatSemanticTag(date = new Date(), runNumber = 1) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const seq = String(Math.max(1, runNumber)).padStart(3, "0");
+  return `v${year}.${month}.${seq}`;
+}
+
+/**
+ * Parses a semantic release tag into year, month, and sequence number.
+ * @param {string} tag
+ * @returns {{ year: string, month: string, runNumber: number } | null}
+ */
+export function parseSemanticTag(tag) {
+  if (!isValidSemanticTag(tag)) return null;
+  const match = tag.match(/^v(\d{4})\.(\d{2})\.(\d+)$/);
+  if (!match) return null;
+  return {
+    year: match[1],
+    month: match[2],
+    runNumber: parseInt(match[3], 10)
+  };
+}

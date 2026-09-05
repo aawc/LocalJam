@@ -246,7 +246,7 @@ LocalJam is engineered to run seamlessly as an offline PWA on any subpath or cus
 
 1. **Relative Path Resolution:** All asset links in `index.html`, CSS, and JavaScript use relative paths (`./`) rather than root-relative paths (`/`), ensuring instant functionality under `https://<username>.github.io/LocalJam/`.
 2. **Hash-Based Client Router:** Uses `/#/home`, `/#/songs`, `/#/albums`, `/#/artists`, `/#/genres`, `/#/playlists`, `/#/favorites`, `/#/history`, `/#/radio`, `/#/settings`. Hash routing prevents 404 errors on GitHub Pages without requiring server rewrite configuration.
-3. **Standardized Release Scheme (`YYYY-MM-DD-NNN`):** Structured date-based release naming and persistent footer component with interactive release notes modal detailing included commit hashes.
+3. **Standardized Release Scheme & Dynamic Semantic Tagging (`v$yyyy.$mm.$nnn`):** Automated GitHub Actions workflow (`.github/workflows/release.yml`) dynamically generating timestamped semantic tags (`v$yyyy.$mm.$nnn`) using bash date commands and zero-padded GitHub run numbers (`$(printf "%03d" ${{ github.run_number }})`), pushing the tag back to the repository, and building release zip packages. Persistent footer component with interactive release notes modal detailing included commit hashes.
 4. **Cache-First App Shell Service Worker & Update Detection:**
    - Caches HTML, CSS, JavaScript modules, fonts, and SVG icons.
    - Network-First strategy for `version.json` allowing immediate background release detection.

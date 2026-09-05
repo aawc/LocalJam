@@ -5,7 +5,10 @@ import {
   CURRENT_RELEASE,
   isValidReleaseName,
   formatReleaseName,
-  parseReleaseName
+  parseReleaseName,
+  isValidSemanticTag,
+  formatSemanticTag,
+  parseSemanticTag
 } from "../src/version.js";
 
 test("Release Versioning & Naming Convention Suite", async (t) => {
@@ -42,6 +45,33 @@ test("Release Versioning & Naming Convention Suite", async (t) => {
     assert.equal(parsed.sequence, 7);
 
     assert.equal(parseReleaseName("invalid-name"), null);
+  });
+
+  await t.test("formatSemanticTag and isValidSemanticTag handle vYYYY.MM.NNN semantic tags", () => {
+    const testDate = new Date(Date.UTC(2026, 8, 4)); // Sept 4, 2026
+    assert.equal(formatSemanticTag(testDate, 1), "v2026.09.001");
+    assert.equal(formatSemanticTag(testDate, 42), "v2026.09.042");
+    assert.equal(formatSemanticTag(testDate, 1005), "v2026.09.1005");
+
+    assert.equal(isValidSemanticTag("v2026.09.001"), true);
+    assert.equal(isValidSemanticTag("v2026.12.042"), true);
+    assert.equal(isValidSemanticTag("v2026.09.1005"), true);
+
+    // Invalid semantic tags
+    assert.equal(isValidSemanticTag("2026-09-04-001"), false);
+    assert.equal(isValidSemanticTag("v1.0.0"), false);
+    assert.equal(isValidSemanticTag("v2026.13.001"), false); // Invalid month
+    assert.equal(isValidSemanticTag("v2026.9.1"), false);
+    assert.equal(isValidSemanticTag(null), false);
+    assert.equal(isValidSemanticTag(""), false);
+
+    const parsed = parseSemanticTag("v2026.09.042");
+    assert.ok(parsed);
+    assert.equal(parsed.year, "2026");
+    assert.equal(parsed.month, "09");
+    assert.equal(parsed.runNumber, 42);
+
+    assert.equal(parseSemanticTag("invalid"), null);
   });
 
   await t.test("CURRENT_RELEASE contains valid metadata, commit history, and notes", () => {

@@ -40,6 +40,10 @@
    - Hash-based routing (`/#/`).
    - Cache-first Service Worker (`sw.js`).
 
+7. **Release Automation & Dynamic Semantic Tagging:**
+   - GitHub Actions workflow (`.github/workflows/release.yml`) dynamically generates timestamped semantic tags (`v$yyyy.$mm.$nnn`) using bash date commands and zero-padded GitHub run numbers (`$(printf "%03d" ${{ github.run_number }})`).
+   - Automatically pushes release tags to repository (`git push origin "${TAG_NAME}"`) and bundles standalone offline zip distributions.
+
 ---
 
 ## Public Repository & Sanitization Standards

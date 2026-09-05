@@ -23,10 +23,13 @@ test('Hygiene - no corporate email or internal tracking strings in repository', 
     'README.md',
     'PROMPT.md',
     'GEMINI.md',
+    'CHECKLIST.md',
     'index.html',
     'manifest.webmanifest',
     'sw.js',
-    'server.js'
+    'server.js',
+    '.github/workflows/release.yml',
+    'test/release-workflow.test.js'
   ];
 
   for (const relPath of filesToCheck) {
