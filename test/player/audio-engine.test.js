@@ -141,87 +141,75 @@ test('Audio Engine State & Control Suite', async (t) => {
     assert.equal(engine.isRadio, true);
   });
 
-  await t.test('Local audio elements do not enforce crossOrigin to protect blob URL streams', () => {
+  await t.test('Local and radio audio elements configure playsInline and do not enforce crossOrigin', () => {
     const engine = new AudioEngine();
     if (engine.audioA) {
+      assert.equal(engine.audioA.playsInline, true);
       assert.notEqual(engine.audioA.crossOrigin, 'anonymous', 'audioA must not force anonymous crossOrigin on blob URLs');
     }
     if (engine.audioB) {
+      assert.equal(engine.audioB.playsInline, true);
       assert.notEqual(engine.audioB.crossOrigin, 'anonymous', 'audioB must not force anonymous crossOrigin on blob URLs');
+    }
+    if (engine.radioAudio) {
+      assert.equal(engine.radioAudio.playsInline, true);
+      assert.notEqual(engine.radioAudio.crossOrigin, 'anonymous', 'radioAudio must not force anonymous crossOrigin');
     }
   });
 
-  await t.test('initWebAudio connects radio audio to Web Audio analyser pipeline', async () => {
+  await t.test('unlock method resumes suspended AudioContext or initializes WebAudio', async () => {
     const prevWindow = globalThis.window;
     try {
-      const engine = new AudioEngine();
-      let mediaSourceCreated = false;
-      let connectedToGain = false;
-
+      let resumed = false;
       globalThis.window = {
         AudioContext: class {
           constructor() {
-            this.state = 'running';
+            this.state = 'suspended';
             this.destination = {};
           }
-          createGain() {
-            return { gain: { value: 1 }, connect: () => {} };
-          }
-          createAnalyser() {
-            return { fftSize: 2048, smoothingTimeConstant: 0.85, connect: () => {} };
-          }
-          createMediaElementSource(el) {
-            mediaSourceCreated = true;
-            return {
-              connect: (target) => {
-                connectedToGain = true;
-              }
-            };
+          createGain() { return { gain: { value: 1 }, connect: () => {} }; }
+          createAnalyser() { return { fftSize: 2048, smoothingTimeConstant: 0.85, connect: () => {} }; }
+          createMediaElementSource() { return { connect: () => {} }; }
+          resume() {
+            resumed = true;
+            this.state = 'running';
+            return Promise.resolve();
           }
         }
       };
 
-      engine.radioAudio = {
-        preload: 'none',
-        crossOrigin: 'anonymous',
-        addEventListener: () => {}
-      };
-
+      const engine = new AudioEngine();
       await engine.initWebAudio();
-      assert.equal(mediaSourceCreated, true);
-      assert.equal(connectedToGain, true);
-      assert.ok(engine.analyser);
+      assert.equal(resumed, true);
+
+      engine.audioCtx.state = 'suspended';
+      resumed = false;
+      engine.unlock();
+      assert.equal(resumed, true);
     } finally {
       globalThis.window = prevWindow;
     }
   });
 
-  await t.test('playRadio executes fallback without crossOrigin if initial play fails with CORS error', async () => {
+  await t.test('playRadio streams audio directly without crossOrigin blockers', async () => {
     const engine = new AudioEngine();
-    let playAttempts = 0;
-    let removedCrossOrigin = false;
+    let playCalled = false;
 
     engine.radioAudio = {
       src: '',
       volume: 1,
-      crossOrigin: 'anonymous',
-      removeAttribute: (attr) => {
-        if (attr === 'crossOrigin') removedCrossOrigin = true;
-      },
+      removeAttribute: () => {},
       play: async () => {
-        playAttempts++;
-        if (playAttempts === 1) {
-          throw new Error('CORS error: Access-Control-Allow-Origin missing');
-        }
+        playCalled = true;
         return Promise.resolve();
       }
     };
 
-    const station = { id: 'cors_station', name: 'CORS Radio', streamUrl: 'https://stream.example.org/nocors' };
+    const station = { id: 'clean_station', name: 'Clean Radio', streamUrl: 'https://stream.example.org/live' };
     await engine.playRadio(station);
 
-    assert.equal(playAttempts, 2, 'Should attempt fallback play');
-    assert.equal(removedCrossOrigin, true, 'Should strip crossOrigin on fallback');
+    assert.equal(playCalled, true);
     assert.equal(engine.isPlaying, true);
+    assert.equal(engine.radioAudio.src, 'https://stream.example.org/live');
   });
 });

@@ -148,16 +148,14 @@ export async function initApp() {
     // 7. Initialize Global Keyboard Shortcuts
     keyboardManager.init();
 
-    // 8. One-time Global User Interaction Audio Unlock
-    const unlockWebAudio = () => {
-      if (audioEngine && !audioEngine.webAudioInitialized) {
-        audioEngine.initWebAudio().catch(() => {});
-      } else if (audioEngine && audioEngine.audioCtx && audioEngine.audioCtx.state === 'suspended') {
-        audioEngine.audioCtx.resume().catch(() => {});
+    // 8. Global User Interaction Audio Unlock for Mobile & Desktop
+    const unlockAudio = () => {
+      if (audioEngine && typeof audioEngine.unlock === 'function') {
+        audioEngine.unlock();
       }
     };
-    ['pointerdown', 'touchstart', 'keydown'].forEach((evt) => {
-      document.addEventListener(evt, unlockWebAudio, { once: true, passive: true });
+    ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach((evt) => {
+      document.addEventListener(evt, unlockAudio, { passive: true });
     });
 
     // 9. Initialize Update Checker & Register Service Worker for PWA

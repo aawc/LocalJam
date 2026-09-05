@@ -33,8 +33,6 @@ export class AudioEngine {
     this.analyser = null;
     this.sourceA = null;
     this.sourceB = null;
-    this.sourceRadio = null;
-    this.gainRadio = null;
     this.webAudioInitialized = false;
 
     // Track active object URLs for memory leak protection
@@ -51,10 +49,14 @@ export class AudioEngine {
   }
 
   initAudioElements() {
-    [this.audioA, this.audioB].forEach((audio, idx) => {
-      audio.preload = 'metadata';
-      // Do not set crossOrigin = 'anonymous' on local audio elements because blob: URLs
-      // have no remote CORS origin, which causes Web Audio createMediaElementSource to zero out samples.
+    [this.audioA, this.audioB, this.radioAudio].forEach((audio, idx) => {
+      if (!audio) return;
+      audio.preload = idx === 2 ? 'none' : 'metadata';
+      audio.playsInline = true;
+      if (typeof audio.setAttribute === 'function') {
+        audio.setAttribute('playsinline', '');
+        audio.setAttribute('webkit-playsinline', '');
+      }
 
       audio.addEventListener('timeupdate', () => {
         if (this.getActiveAudio() === audio) {
@@ -69,10 +71,10 @@ export class AudioEngine {
         }
       });
 
-      audio.addEventListener('error', (e) => {
+      audio.addEventListener('error', () => {
         if (this.getActiveAudio() === audio) {
           const err = audio.error;
-          console.error(`[AudioEngine] Player ${idx === 0 ? 'A' : 'B'} error (code ${err?.code}): ${err?.message}`);
+          console.error(`[AudioEngine] ${idx === 2 ? 'Radio' : idx === 0 ? 'Player A' : 'Player B'} error (code ${err?.code}): ${err?.message}`);
           this.notifyState();
         }
       });
@@ -91,24 +93,14 @@ export class AudioEngine {
         }
       });
     });
+  }
 
-    this.radioAudio.preload = 'none';
-    this.radioAudio.crossOrigin = 'anonymous';
-
-    this.radioAudio.addEventListener('error', (e) => {
-      console.error(`[AudioEngine] Radio error: ${this.radioAudio.error?.message}`);
-      this.notifyState();
-    });
-
-    this.radioAudio.addEventListener('play', () => {
-      this.isPlaying = true;
-      this.notifyState();
-    });
-
-    this.radioAudio.addEventListener('pause', () => {
-      this.isPlaying = false;
-      this.notifyState();
-    });
+  unlock() {
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(() => {});
+    } else if (!this.webAudioInitialized) {
+      this.initWebAudio().catch(() => {});
+    }
   }
 
   async initWebAudio() {
@@ -140,18 +132,6 @@ export class AudioEngine {
       const preEqGain = this.audioCtx.createGain();
       this.gainA.connect(preEqGain);
       this.gainB.connect(preEqGain);
-
-      if (this.radioAudio) {
-        try {
-          this.sourceRadio = this.audioCtx.createMediaElementSource(this.radioAudio);
-          this.gainRadio = this.audioCtx.createGain();
-          this.sourceRadio.connect(this.gainRadio);
-          this.gainRadio.connect(preEqGain);
-          this.gainRadio.gain.value = 1;
-        } catch (radioErr) {
-          console.warn(`[AudioEngine] Radio Web Audio routing notice: ${radioErr?.message}`);
-        }
-      }
 
       equalizer.connect(this.audioCtx, preEqGain, this.masterGain);
 
@@ -227,6 +207,9 @@ export class AudioEngine {
       this.radioAudio.src = '';
     }
 
+    // Trigger background audio unlock
+    this.unlock();
+
     // Obtain File object
     let file = null;
     try {
@@ -276,7 +259,10 @@ export class AudioEngine {
 
     try {
       if (nextAudio) {
-        await nextAudio.play();
+        const playPromise = nextAudio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
       }
 
       // Handle Crossfade Gain Transition if Web Audio is active
@@ -317,7 +303,9 @@ export class AudioEngine {
    * @param {any} station
    */
   async playRadio(station) {
-    if (!station || !station.streamUrl) return;
+    if (!station) return;
+    const streamUrl = station.streamUrl || station.url;
+    if (!streamUrl) return;
 
     this.isRadio = true;
     this.currentStation = station;
@@ -333,61 +321,51 @@ export class AudioEngine {
     if (this.audioA) this.audioA.pause();
     if (this.audioB) this.audioB.pause();
 
-    await this.initWebAudio();
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      try {
-        await this.audioCtx.resume();
-      } catch (resumeErr) {
-        console.warn(`[AudioEngine] AudioContext resume warning in playRadio: ${resumeErr?.message}`);
-      }
-    }
+    // Trigger background audio unlock
+    this.unlock();
 
     if (this.radioAudio) {
-      this.radioAudio.crossOrigin = 'anonymous';
-      this.radioAudio.src = station.streamUrl;
+      if (typeof this.radioAudio.removeAttribute === 'function') {
+        this.radioAudio.removeAttribute('crossOrigin');
+      }
+      this.radioAudio.src = streamUrl;
       this.radioAudio.volume = this.muted ? 0 : this.volume;
 
       try {
-        await this.radioAudio.play();
+        const playPromise = this.radioAudio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
         this.isPlaying = true;
         this.updateMediaSessionRadio(station);
         this.notifyState();
+
+        if (station && station.id) {
+          station.lastPlayedAt = Date.now();
+          if (db && typeof db.recordStationPlay === 'function') {
+            db.recordStationPlay(station.id).catch(() => {});
+          }
+        }
       } catch (err) {
         if (err?.name === 'AbortError') {
           return;
         }
-        if (err?.name === 'NotAllowedError' || err?.message?.includes('user gesture')) {
-          console.error(`[AudioEngine] Radio stream playback failed: ${err?.message}`);
-          this.isPlaying = false;
-          this.notifyState();
-        } else {
-          // Attempt fallback playback without crossOrigin if stream server lacks CORS headers
-          try {
-            this.radioAudio.removeAttribute('crossOrigin');
-            this.radioAudio.src = station.streamUrl;
-            await this.radioAudio.play();
-            this.isPlaying = true;
-            this.updateMediaSessionRadio(station);
-            this.notifyState();
-          } catch (fallbackErr) {
-            console.error(`[AudioEngine] Radio stream playback failed: ${fallbackErr?.message}`);
-            this.isPlaying = false;
-            this.notifyState();
-          }
-        }
+        console.error(`[AudioEngine] Radio stream playback failed: ${err?.message}`);
+        this.isPlaying = false;
+        this.notifyState();
       }
     }
   }
 
   async play() {
-    await this.initWebAudio();
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      await this.audioCtx.resume();
-    }
+    this.unlock();
     const audio = this.getActiveAudio();
     if (audio && audio.src) {
       try {
-        await audio.play();
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
         this.isPlaying = true;
         this.notifyState();
       } catch (err) {
