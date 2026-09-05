@@ -58,6 +58,10 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Optimize update checker in `update-banner.js` and `main.js` to perform initial check on boot, poll every 30 seconds, trigger `registration.update()` on focus, and reactively prompt the user with a high-contrast toast banner whenever a new version is published.
   - *Associated Commits:* `fe21f9f`
 
+- [x] **Issue 14: Mobile Playback Failure on Android Chrome and Brave** `[DONE]`
+  - *Description:* Resolve local track and internet radio stream playback failures on Android (Chrome and Brave, including normal and Incognito windows). Add `playsInline` attributes across media elements, establish global touch/pointer unlock handlers to awaken `AudioContext`, decouple radio streams from Web Audio graph to prevent CORS muting, and trigger `.play()` synchronously in user gesture dispatch chains.
+  - *Associated Commits:* `6baed6b`
+
 ---
 
 ## Feature Requests
@@ -97,3 +101,24 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 - [x] **FR 9: Dedicated Starred Radio Stations Grouping & Reactive Rendering** `[DONE]`
   - *Description:* Display starred radio stations first in a dedicated section at the top of the radio view with dynamic item count, followed by all remaining stations, updating reactively on star toggles without interrupting playback.
   - *Associated Commits:* `2ab1654`
+
+- [x] **FR 10: Move App Version Information from Main Page to Settings About Section** `[DONE]`
+  - *Description:* Remove release version display from the persistent main page footer and add a dedicated "About LocalJam" section in the Settings view showing the running version, release date, and interactive Release Notes modal dialog trigger.
+  - *Associated Commits:* `f6af12b`
+
+- [x] **FR 11: Remove Visual Accessibility Section from Settings View** `[DONE]`
+  - *Description:* Remove the redundant "Visual Accessibility" section from the Settings view while retaining all color-blind accessible UI labels and focus indicators.
+  - *Associated Commits:* `f6af12b`
+
+- [x] **FR 12: Recently Played Radio Streams Section above Starred Stations** `[DONE]`
+  - *Description:* Add a "Recently Played" stream section rendered above the "★ Starred Radio Stations" section in the Radio view, persisting `lastPlayedAt` timestamps in IndexedDB whenever a radio station is played.
+  - *Associated Commits:* `c5a5fb0`
+
+- [x] **FR 13: Expand Top Navigation Search Bar Width** `[DONE]`
+  - *Description:* Expand the width of `.search-box` and `.search-box-wrapper` in the top header from 360px to 520px for improved search query visibility.
+  - *Associated Commits:* `6b0d0ec`
+
+- [x] **FR 14: Move GitHub Repository Link to Settings About Section** `[DONE]`
+  - *Description:* Relocate the external GitHub repository link from the top navigation bar to the new "About LocalJam" section in the Settings view.
+  - *Associated Commits:* `f6af12b`
+
