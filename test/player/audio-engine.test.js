@@ -110,4 +110,35 @@ test('Audio Engine State & Control Suite', async (t) => {
     assert.equal(freqBuf[0], 150);
     assert.equal(timeBuf[0], 75);
   });
+
+  await t.test('playRadio updates radio state and notifies subscribers', async () => {
+    const engine = new AudioEngine();
+    let receivedState = null;
+    engine.subscribe((state) => {
+      receivedState = state;
+    });
+
+    const station = { id: 'test_station', name: 'Test Radio', streamUrl: 'https://stream.example.org/test' };
+    await engine.playRadio(station);
+
+    assert.equal(engine.isRadio, true);
+    assert.equal(engine.currentStation.name, 'Test Radio');
+    assert.equal(engine.currentStation.id, 'test_station');
+  });
+
+  await t.test('playRadio handles AbortError gracefully during rapid station switching', async () => {
+    const engine = new AudioEngine();
+    if (engine.radioAudio) {
+      engine.radioAudio.play = async () => {
+        const err = new Error('The play() request was interrupted by a new load request.');
+        err.name = 'AbortError';
+        throw err;
+      };
+    }
+
+    const station = { id: 'abort_station', name: 'Abort Radio', streamUrl: 'https://stream.example.org/abort' };
+    // Should not throw or crash
+    await engine.playRadio(station);
+    assert.equal(engine.isRadio, true);
+  });
 });

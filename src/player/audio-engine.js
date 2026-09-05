@@ -301,6 +301,10 @@ export class AudioEngine {
   async playRadio(station) {
     if (!station || !station.streamUrl) return;
 
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(() => {});
+    }
+
     this.isRadio = true;
     this.currentStation = station;
     this.currentTrack = null;
@@ -325,9 +329,11 @@ export class AudioEngine {
         this.updateMediaSessionRadio(station);
         this.notifyState();
       } catch (err) {
-        console.error(`[AudioEngine] Radio stream playback failed: ${err?.message}`);
-        this.isPlaying = false;
-        this.notifyState();
+        if (err?.name !== 'AbortError') {
+          console.error(`[AudioEngine] Radio stream playback failed: ${err?.message}`);
+          this.isPlaying = false;
+          this.notifyState();
+        }
       }
     }
   }

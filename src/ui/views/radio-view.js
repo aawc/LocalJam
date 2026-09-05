@@ -94,10 +94,10 @@ export async function renderRadioView() {
               const isPlayingThis = currentUrl === stationUrl && audioEngine.isPlaying;
               const isFav = Boolean(station.isFavorite);
               return `
-              <div class="media-card radio-card ${isPlayingThis ? 'playing' : ''}" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}">
+              <div class="media-card radio-card ${isPlayingThis ? 'playing' : ''}" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" data-station-name="${escapeHtml(station.name)}">
                 <div class="media-card-art-wrapper">
                   <img src="${station.favicon || 'public/icons/icon-192.svg'}" alt="${escapeHtml(station.name)}" class="media-card-art" />
-                  <button class="btn-play-card" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" aria-label="Play ${escapeHtml(station.name)}">
+                  <button class="btn-play-card" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" aria-label="${isPlayingThis ? 'Pause' : 'Play'} ${escapeHtml(station.name)}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                       ${
                         isPlayingThis
@@ -131,6 +131,43 @@ export async function renderRadioView() {
     `;
 
     attachEvents();
+  }
+
+  function updatePlayingState() {
+    const currentRadio = audioEngine.isRadio ? audioEngine.currentStation : null;
+    const currentUrl = currentRadio ? (currentRadio.streamUrl || currentRadio.url) : null;
+
+    container.querySelectorAll('.radio-card').forEach((card) => {
+      const stationUrl = card.dataset.stationUrl;
+      const isPlayingThis = Boolean(currentUrl && stationUrl === currentUrl && audioEngine.isPlaying);
+      card.classList.toggle('playing', isPlayingThis);
+
+      const playBtn = card.querySelector('.btn-play-card');
+      if (playBtn) {
+        playBtn.setAttribute('aria-label', `${isPlayingThis ? 'Pause' : 'Play'} ${card.dataset.stationName || 'Station'}`);
+        playBtn.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            ${
+              isPlayingThis
+                ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'
+                : '<polygon points="5 3 19 12 5 21 5 3"></polygon>'
+            }
+          </svg>
+        `;
+      }
+
+      const liveBadge = card.querySelector('.badge-active');
+      const titleWrapper = card.querySelector('.media-card-title > div');
+      if (isPlayingThis && !liveBadge && titleWrapper) {
+        const badge = document.createElement('span');
+        badge.className = 'status-badge badge-active';
+        badge.style.fontSize = '10px';
+        badge.textContent = '[LIVE]';
+        titleWrapper.insertBefore(badge, titleWrapper.firstChild);
+      } else if (!isPlayingThis && liveBadge) {
+        liveBadge.remove();
+      }
+    });
   }
 
   function attachEvents() {
@@ -180,21 +217,31 @@ export async function renderRadioView() {
           return;
         }
 
-        const newStation = await addCustomStation(
-          {
-            name,
-            streamUrl: url,
-            genre,
-            country: 'Custom',
-            favicon: 'public/icons/icon-192.svg'
-          },
-          db
-        );
+        const newStation = {
+          id: 'custom_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+          name,
+          streamUrl: url,
+          genre,
+          country: 'Custom',
+          favicon: 'public/icons/icon-192.svg',
+          isCustom: true,
+          isFavorite: false
+        };
 
-        allStations = await loadStations(db);
-        formCard.style.display = 'none';
+        // Initiate audio playback immediately within the user click gesture
         audioEngine.playRadio(newStation);
-        render();
+        formCard.style.display = 'none';
+
+        try {
+          const savedStation = await addCustomStation(newStation, db);
+          if (audioEngine.isRadio && audioEngine.currentStation && audioEngine.currentStation.streamUrl === url) {
+            audioEngine.currentStation = savedStation;
+          }
+          allStations = await loadStations(db);
+          render();
+        } catch (err) {
+          console.error('[RadioView] Failed to save custom station:', err);
+        }
       });
     }
 
@@ -219,14 +266,28 @@ export async function renderRadioView() {
       const stationId = card.dataset.stationId;
       const station = allStations.find((s) => s.id === stationId);
 
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-star-station')) return;
         if (station) {
-          audioEngine.playRadio(station);
-          render();
+          const currentUrl = audioEngine.isRadio && audioEngine.currentStation ? (audioEngine.currentStation.streamUrl || audioEngine.currentStation.url) : null;
+          const targetUrl = station.streamUrl || station.url;
+          if (currentUrl === targetUrl && audioEngine.isPlaying) {
+            audioEngine.pause();
+          } else {
+            audioEngine.playRadio(station);
+          }
         }
       });
     });
   }
+
+  const unsubscribe = audioEngine.subscribe(() => {
+    if (typeof container.isConnected === 'boolean' && !container.isConnected) {
+      unsubscribe();
+      return;
+    }
+    updatePlayingState();
+  });
 
   render();
   return container;
