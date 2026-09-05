@@ -104,6 +104,27 @@ test('Internet Radio Stations Suite', async (t) => {
 
     const jazz24 = CURATED_STATIONS.find((s) => s.id === 'jazz24');
     assert.ok(jazz24.streamUrl.includes('audiocdn.com'));
+
+    const secretAgent = CURATED_STATIONS.find((s) => s.id === 'soma_secret_agent');
+    assert.equal(secretAgent.streamUrl, 'https://ice1.somafm.com/secretagent-128-mp3');
+
+    const illinoisStreet = CURATED_STATIONS.find((s) => s.id === 'soma_illinois_street');
+    assert.equal(illinoisStreet.streamUrl, 'https://ice1.somafm.com/illstreet-128-mp3');
+
+    const lush = CURATED_STATIONS.find((s) => s.id === 'soma_lush');
+    assert.equal(lush.streamUrl, 'https://ice1.somafm.com/lush-128-mp3');
+
+    const spaceStation = CURATED_STATIONS.find((s) => s.id === 'soma_spacestation');
+    assert.equal(spaceStation.streamUrl, 'https://ice1.somafm.com/spacestation-128-mp3');
+
+    const deepSpace = CURATED_STATIONS.find((s) => s.id === 'soma_deepspaceone');
+    assert.equal(deepSpace.streamUrl, 'https://ice1.somafm.com/deepspaceone-128-mp3');
+
+    const suburbs = CURATED_STATIONS.find((s) => s.id === 'soma_suburbs');
+    assert.equal(suburbs.streamUrl, 'https://ice1.somafm.com/suburbsofgoa-128-mp3');
+
+    const bbc6 = CURATED_STATIONS.find((s) => s.id === 'bbc_radio_6');
+    assert.equal(bbc6.streamUrl, 'https://stream.live.vc.bbcmedia.co.uk/bbc_6music');
   });
 
   await t.test('getStationFallbackArtwork produces valid, accessible SVG data URIs for each genre', () => {
