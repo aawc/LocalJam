@@ -53,7 +53,9 @@ if (typeof document === 'undefined') {
         addEventListener() {}
       };
       return el;
-    }
+    },
+    addEventListener() {},
+    removeEventListener() {}
   };
 }
 
@@ -108,7 +110,11 @@ test('UI Components - createVisualizerOverlay renders visualizer overlay', () =>
   assert.equal(typeof viz.open, 'function');
   assert.equal(typeof viz.close, 'function');
   assert.equal(typeof viz.toggle, 'function');
+  assert.equal(typeof viz.toggleFullscreen, 'function');
+  assert.equal(typeof viz.isFullscreenActive, 'function');
   assert.ok(viz.element.innerHTML.includes('visualizer-canvas'));
+  assert.ok(viz.element.innerHTML.includes('btn-toggle-visualizer-fullscreen'));
+  assert.ok(viz.element.innerHTML.includes('Enter Fullscreen'));
 });
 
 test('UI Components - createQueueDrawer renders queue drawer component', () => {
