@@ -20,8 +20,10 @@ LocalJam is a privacy-first, local-first music and media player built as a Progr
   - Real-time canvas audio visualizers (Spectrum Bars, Oscilloscope Waveform, Circular Nebula, Starfield).
   - Media Session API integration with lockscreen album art and timeline synchronization.
   - Seamless memory management with automatic `URL.revokeObjectURL()` lifecycle.
-- **Internet Radio:** Curated HTTPS internet radio stations (Radio Paradise, SomaFM, DEF CON Radio, BBC Radio 6, KEXP) with CORS-resilient direct playback.
+- **Internet Radio & Live Station Details:** Curated high-fidelity HTTPS internet radio stations (Radio Paradise, SomaFM, KEXP, BBC Radio 6, Classical KUSC, Classical KING FM, Jazz24, WNYC, BBC World Service) with live stream details modal on active station click and CORS-resilient playback.
 - **Red-Green Color Blindness Accessible:** Designed with dual-coded status indicators (color + distinct SVG icons + text labels), high-contrast dark theme, and visible focus rings.
+- **Standardized Release Management & Notes:** Structured `YYYY-MM-DD-NNN` versioning, persistent application footer displaying active release badge, and integrated release notes modal listing commit history and highlights.
+- **Automatic Update Detection & Refresh Toast:** Background update checker with Service Worker `updatefound` listeners and `version.json` polling providing one-click seamless application refresh.
 - **Global Keyboard Controls:** Complete hotkey matrix for playback, volume, seeking, queue, equalizer, visualizer, and search.
 - **100% Offline PWA & GitHub Pages Ready:** Cache-first Service Worker with hash-based client routing (`/#/`) and relative asset paths for effortless deployment to GitHub Pages subpaths.
 

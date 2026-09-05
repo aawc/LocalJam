@@ -204,7 +204,7 @@ LocalJam implements a hybrid Web Audio API and HTMLAudioElement playback engine:
    - Oscilloscope Waveform
    - Circular Frequency Nebula
    - Audio Starfield
-4. **Internet Radio & CORS Resilience:** Curated HTTPS radio streams (Radio Paradise Main, Mellow, Rock, World/Eclectic; SomaFM Groove Salad, DEF CON Radio; BBC Radio 6; KEXP). If an external stream blocks Web Audio CORS, audio falls back to direct `HTMLAudioElement` speaker output without crashing the player.
+4. **Internet Radio & Live Station Details Modal:** Curated HTTPS radio streams (Radio Paradise Main, Mellow, Rock, World; SomaFM Groove Salad, DEF CON, Lush, Space Station, Deep Space One, Synphaera, Sonic Universe, Suburbs of Goa, Illinois Street Lounge; KEXP Seattle; BBC Radio 6; Classical KUSC; Classical KING FM; Jazz24; WNYC 93.9 FM; BBC World Service). Clicking active playing radio station launches comprehensive metadata inspection modal with stream details, direct links, and audio engine status. If an external stream blocks Web Audio CORS, audio falls back to direct `HTMLAudioElement` speaker output without crashing the player.
 5. **Media Session API Integration:** Sets lockscreen metadata (title, artist, album, multi-size artwork icons) and handles action events (`play`, `pause`, `previoustrack`, `nexttrack`, `seekbackward`, `seekforward`, `seekto`). Synchronizes position state via `navigator.mediaSession.setPositionState()`.
 
 ---
@@ -216,9 +216,9 @@ LocalJam enforces complete red-green color blindness accessibility (Protanopia, 
 ### Color-Blind Safe Design System
 - **Dual-Coding Mandate:** Never convey status using color alone. Every indicator pairs color with distinct SVG icons and explicit text labels:
   - `[PASS]` / `[AVAILABLE]`: Cyan/Teal (`#38bdf8`) + Checkmark `✓`
-  - `[WARN]` / `[RECONNECT]`: Amber (`#fbbf24`) + Triangle `▲`
+  - `[WARN]` / `[RECONNECT]` / `[UPDATE AVAILABLE]`: Amber (`#fbbf24`) + Triangle `▲`
   - `[FAIL]` / `[MISSING]`: Rose/Magenta (`#f43f5e`) + Slashed Circle `⊘`
-  - `[PLAYING]`: Purple (`#a855f7`) + Sound Wave Bars `ılı`
+  - `[PLAYING]` / `[LIVE]`: Purple (`#a855f7`) / Cyan (`#38bdf8`) + Sound Wave Bars `ılı`
 - **High Contrast Dark Theme:**
   - Background: `#0b0f17` | Card/Surface: `#131a26` | Border: `#1e293b`
   - Text Primary: `#f8fafc` | Text Muted: `#94a3b8`
@@ -240,17 +240,19 @@ LocalJam enforces complete red-green color blindness accessibility (Protanopia, 
 
 ---
 
-## 8. PWA, Service Worker & GitHub Pages Subpath Specification
+## 8. PWA, Release Management & Auto-Update Specification
 
 LocalJam is engineered to run seamlessly as an offline PWA on any subpath or custom domain:
 
 1. **Relative Path Resolution:** All asset links in `index.html`, CSS, and JavaScript use relative paths (`./`) rather than root-relative paths (`/`), ensuring instant functionality under `https://<username>.github.io/LocalJam/`.
 2. **Hash-Based Client Router:** Uses `/#/home`, `/#/songs`, `/#/albums`, `/#/artists`, `/#/genres`, `/#/playlists`, `/#/favorites`, `/#/history`, `/#/radio`, `/#/settings`. Hash routing prevents 404 errors on GitHub Pages without requiring server rewrite configuration.
-3. **Cache-First App Shell Service Worker:**
+3. **Standardized Release Scheme (`YYYY-MM-DD-NNN`):** Structured date-based release naming and persistent footer component with interactive release notes modal detailing included commit hashes.
+4. **Cache-First App Shell Service Worker & Update Detection:**
    - Caches HTML, CSS, JavaScript modules, fonts, and SVG icons.
+   - Network-First strategy for `version.json` allowing immediate background release detection.
+   - Non-intrusive update banner with `[UPDATE AVAILABLE]` notification and instant reload prompt.
    - Explicitly bypasses `blob:`, `data:`, and streaming internet radio audio URLs from Cache Storage.
-   - Includes update notification when a new service worker version is waiting.
-4. **Web App Manifest (`manifest.webmanifest`):**
+5. **Web App Manifest (`manifest.webmanifest`):**
    - Configures `display: "standalone"`, `start_url: "./index.html"`, `theme_color: "#0b0f17"`, and standard icon sets (192x192, 512x512, maskable).
 
 ---

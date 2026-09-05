@@ -11,6 +11,26 @@ export const CURRENT_RELEASE = {
   title: "LocalJam 2026-09-04-001",
   commits: [
     {
+      hash: "0e42f2e",
+      message: "feat(ui): add radio station details modal triggered on active station click"
+    },
+    {
+      hash: "dda7bd2",
+      message: "feat(radio): expand curated internet radio streams with English and instrumental stations"
+    },
+    {
+      hash: "47d22ee",
+      message: "feat(pwa): add automatic release update detection and refresh prompt"
+    },
+    {
+      hash: "f8bd490",
+      message: "feat(ui): add application footer with active release badge and release notes modal"
+    },
+    {
+      hash: "4535f30",
+      message: "feat(release): standardize release naming convention to YYYY-MM-DD-NNN"
+    },
+    {
       hash: "0f064f7",
       message: "fix(player): route radio to web audio graph and eliminate blob cors zeroing"
     },
@@ -21,21 +41,15 @@ export const CURRENT_RELEASE = {
     {
       hash: "651972a",
       message: "fix: couple audio visualizer strictly to active audio playback"
-    },
-    {
-      hash: "4586919",
-      message: "fix(player): resolve visualizer canvas sizing, radio starring, and history timestamp tracking"
-    },
-    {
-      hash: "5da1530",
-      message: "fix(storage): implement db.init alias and complete IndexedDB store interface"
     }
   ],
   notes: [
-    "Resolved radio playback gesture issue by routing streams into Web Audio and introducing one-time gesture unlock.",
-    "Eliminated CORS sample zeroing on local blob audio and coupled visualizer strictly to real Web Audio FFT data.",
-    "Added persistent application footer displaying active release ID and release notes with commit details.",
-    "Integrated automated release detection with user-friendly refresh prompts for Web and PWA."
+    "Added interactive Radio Station Details Modal on active station click with metadata and controls.",
+    "Expanded curated live radio directory with 12 high-fidelity English and instrumental streams.",
+    "Added automated background release detection with instant refresh prompt for Web and PWA.",
+    "Integrated persistent bottom application footer with active release badge and release notes dialog.",
+    "Adopted standardized YYYY-MM-DD-NNN release naming scheme.",
+    "Resolved radio playback gesture and Web Audio routing; fixed visualizer audio coupling."
   ]
 };
 
