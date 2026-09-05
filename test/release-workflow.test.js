@@ -83,3 +83,28 @@ test("GitHub Actions Release Workflow Suite (.github/workflows/release.yml)", as
     );
   });
 });
+
+test("GitHub Actions Pages Deploy Workflow Suite (.github/workflows/deploy.yml)", async (t) => {
+  const deployPath = path.join(ROOT_DIR, ".github/workflows/deploy.yml");
+
+  await t.test("Deploy workflow file exists on disk", () => {
+    assert.ok(fs.existsSync(deployPath), ".github/workflows/deploy.yml must exist");
+  });
+
+  const content = fs.readFileSync(deployPath, "utf8");
+
+  await t.test("Deploy workflow dynamically generates deployment version.json metadata", () => {
+    assert.ok(
+      content.includes("Generate Deployment Version Metadata"),
+      "Workflow must include step to generate deployment version metadata"
+    );
+    assert.ok(
+      content.includes("version.json"),
+      "Workflow must write version.json before deploying"
+    );
+    assert.ok(
+      content.includes("TAG_NAME="),
+      "Workflow must construct dynamic semantic TAG_NAME"
+    );
+  });
+});

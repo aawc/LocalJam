@@ -24,6 +24,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Generate Deployment Version Metadata
+        run: |
+          YYYY=$(date -u +%Y)
+          MM=$(date -u +%m)
+          NNN=$(printf "%03d" ${{ github.run_number }})
+          TAG_NAME="v${YYYY}.${MM}.${NNN}"
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          RELEASE_DATE=$(date -u +%Y-%m-%d)
+
+          {
+            echo "{"
+            echo "  \"version\": \"${TAG_NAME}\","
+            echo "  \"releaseDate\": \"${RELEASE_DATE}\","
+            echo "  \"commits\": ["
+            echo "    \"${SHORT_SHA}\""
+            echo "  ]"
+            echo "}"
+          } > version.json
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

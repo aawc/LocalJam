@@ -3,13 +3,21 @@
  * Standard format: YYYY-MM-DD-NNN (e.g. 2026-09-04-001)
  */
 
-export const APP_VERSION = "2026-09-04-002";
+export const APP_VERSION = "2026-09-04-003";
 
 export const CURRENT_RELEASE = {
-  version: "2026-09-04-002",
+  version: "2026-09-04-003",
   releaseDate: "2026-09-04",
-  title: "LocalJam 2026-09-04-002",
+  title: "LocalJam 2026-09-04-003",
   commits: [
+    {
+      hash: "7df8d9d",
+      message: "fix(ci): format release notes generation as indented block and update checklist"
+    },
+    {
+      hash: "b7e58e6",
+      message: "release: bump version to 2026-09-04-002 and update release notes"
+    },
     {
       hash: "0fbf4ff",
       message: "ci(release): generate dynamic semantic tag v$yyyy.$mm.$nnn and push tag to repository"
@@ -37,28 +45,16 @@ export const CURRENT_RELEASE = {
     {
       hash: "4535f30",
       message: "feat(release): standardize release naming convention to YYYY-MM-DD-NNN"
-    },
-    {
-      hash: "0f064f7",
-      message: "fix(player): route radio to web audio graph and eliminate blob cors zeroing"
-    },
-    {
-      hash: "a30d644",
-      message: "fix: preserve user gesture activation for radio stream playback"
-    },
-    {
-      hash: "651972a",
-      message: "fix: couple audio visualizer strictly to active audio playback"
     }
   ],
   notes: [
-    "Implemented automated dynamic semantic tagging (v$yyyy.$mm.$nnn) and repository tag pushing in GitHub Actions.",
-    "Added interactive Radio Station Details Modal on active station click with metadata and controls.",
-    "Expanded curated live radio directory with 12 high-fidelity English and instrumental streams.",
-    "Added automated background release detection with instant refresh prompt for Web and PWA.",
-    "Integrated persistent bottom application footer with active release badge and release notes dialog.",
-    "Adopted standardized YYYY-MM-DD-NNN release naming scheme.",
-    "Resolved radio playback gesture and Web Audio routing; fixed visualizer audio coupling."
+    "Fixed Classical KUSC, KING FM, and Jazz24 audio streams with verified direct HTTPS endpoints.",
+    "Added 12 new high-fidelity curated radio streams across Classical, Jazz, Indie Rock, Ambient, Soul, and World genres.",
+    "Implemented real-time station search filtering and multi-criteria sorting (Name A-Z, Genre, Bitrate).",
+    "Added dedicated Starred Radio Stations top section grouping with dynamic stream counts and instant reactivity.",
+    "Added accessible SVG fallback artwork and onerror image recovery for 100% reliable thumbnail rendering.",
+    "Added dynamic version synchronization for GitHub Pages deployments and live footer release badge updates.",
+    "Fixed GitHub Actions release notes formatting with indented command grouping."
   ]
 };
 
@@ -137,4 +133,13 @@ export function parseSemanticTag(tag) {
     month: match[2],
     runNumber: parseInt(match[3], 10)
   };
+}
+
+/**
+ * Validates if a version string is either a valid release name (YYYY-MM-DD-NNN) or semantic tag (vYYYY.MM.NNN).
+ * @param {string} version
+ * @returns {boolean}
+ */
+export function isValidVersion(version) {
+  return isValidReleaseName(version) || isValidSemanticTag(version);
 }

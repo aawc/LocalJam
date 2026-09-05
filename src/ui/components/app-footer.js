@@ -99,10 +99,48 @@ export function createAppFooter() {
     });
   }
 
+  function updateVersion(versionData) {
+    if (!versionData || typeof versionData !== "object") return;
+    const version = versionData.version || CURRENT_RELEASE.version;
+    const releaseDate = versionData.releaseDate || CURRENT_RELEASE.releaseDate;
+
+    if (openBtn) {
+      openBtn.setAttribute("aria-label", `View release notes for ${version}`);
+      const versionSpan = openBtn.querySelector(".footer-release-version");
+      if (versionSpan) {
+        versionSpan.textContent = version;
+      }
+    }
+
+    const modalSubtitle = footer.querySelector(".modal-subtitle");
+    if (modalSubtitle) {
+      modalSubtitle.textContent = `LocalJam Version ${version} • ${releaseDate}`;
+    }
+
+    if (Array.isArray(versionData.commits) && versionData.commits.length > 0) {
+      const commitsList = footer.querySelector(".release-commits-list");
+      if (commitsList) {
+        commitsList.innerHTML = versionData.commits
+          .map((c) => {
+            const hash = typeof c === "string" ? c : c.hash;
+            const msg = typeof c === "string" ? "" : c.message;
+            return `
+              <div class="commit-item">
+                <code class="commit-hash">[${escapeHtml(hash)}]</code>
+                ${msg ? `<span class="commit-msg">${escapeHtml(msg)}</span>` : ""}
+              </div>
+            `;
+          })
+          .join("");
+      }
+    }
+  }
+
   return {
     element: footer,
     open: openModal,
-    close: closeModal
+    close: closeModal,
+    updateVersion
   };
 }
 

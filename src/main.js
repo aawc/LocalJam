@@ -77,6 +77,20 @@ export async function initApp() {
       document.body.appendChild(appFooter.element);
     }
 
+    // Dynamically fetch deployed version.json to synchronize runtime release display
+    if (typeof fetch === 'function') {
+      fetch(`./version.json?_t=${Date.now()}`, { cache: 'no-cache' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((verData) => {
+          if (verData && verData.version && typeof appFooter.updateVersion === 'function') {
+            appFooter.updateVersion(verData);
+          }
+        })
+        .catch((err) => {
+          console.warn('[LocalJam] Could not fetch remote version.json:', err?.message || err);
+        });
+    }
+
     const updateBanner = createUpdateBanner();
     document.body.appendChild(updateBanner.element);
 

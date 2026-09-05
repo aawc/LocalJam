@@ -43,12 +43,42 @@ test("App Footer & Release Notes Modal Suite", async (t) => {
     assert.ok(footerComponent.element);
     assert.equal(typeof footerComponent.open, "function");
     assert.equal(typeof footerComponent.close, "function");
+    assert.equal(typeof footerComponent.updateVersion, "function");
 
     footerComponent.open();
     assert.equal(modalMock.style.display, "flex");
 
     footerComponent.close();
     assert.equal(modalMock.style.display, "none");
+
+    // Test updateVersion dynamic synchronization
+    const versionSpanMock = { textContent: "" };
+    const modalSubtitleMock = { textContent: "" };
+    const commitsListMock = { innerHTML: "" };
+
+    openBtnMock.querySelector = (sel) => {
+      if (sel === ".footer-release-version") return versionSpanMock;
+      return null;
+    };
+    openBtnMock.setAttribute = (k, v) => { openBtnMock[k] = v; };
+
+    footerComponent.element.querySelector = (sel) => {
+      if (sel === ".modal-subtitle") return modalSubtitleMock;
+      if (sel === ".release-commits-list") return commitsListMock;
+      return null;
+    };
+
+    footerComponent.updateVersion({
+      version: "v2026.09.008",
+      releaseDate: "2026-09-04",
+      commits: ["0fbf4ff", "7df8d9d"]
+    });
+
+    assert.equal(versionSpanMock.textContent, "v2026.09.008");
+    assert.equal(openBtnMock["aria-label"], "View release notes for v2026.09.008");
+    assert.equal(modalSubtitleMock.textContent, "LocalJam Version v2026.09.008 • 2026-09-04");
+    assert.ok(commitsListMock.innerHTML.includes("0fbf4ff"));
+    assert.ok(commitsListMock.innerHTML.includes("7df8d9d"));
   } finally {
     globalThis.document = prevDoc;
   }

@@ -2,7 +2,7 @@
  * LocalJam - Automatic Release Update Detection & Refresh Banner Component
  */
 
-import { APP_VERSION, isValidReleaseName } from "../../version.js";
+import { APP_VERSION, isValidReleaseName, isValidSemanticTag } from "../../version.js";
 
 export function createUpdateBanner() {
   const container = document.createElement("div");
@@ -84,7 +84,12 @@ export async function checkRemoteVersion(currentVersion = APP_VERSION, versionEn
     const res = await fetch(url, { cache: "no-cache" });
     if (!res.ok) return null;
     const data = await res.json();
-    if (data && data.version && data.version !== currentVersion && isValidReleaseName(data.version)) {
+    if (
+      data &&
+      data.version &&
+      data.version !== currentVersion &&
+      (isValidReleaseName(data.version) || isValidSemanticTag(data.version))
+    ) {
       return data.version;
     }
     return null;
