@@ -154,7 +154,30 @@ test('UI Views - renderRadioView displays curated streams, search, sort, and sta
   assert.ok(view.innerHTML.includes('Rock'));
 });
 
-test('UI Views - renderSettingsView displays diagnostics and storage tier', async () => {
+test('UI Views - renderRadioView displays Recently Played section when stations have lastPlayedAt', async () => {
+  const prevGetStations = db.getStations;
+  try {
+    db.getStations = async () => [
+      { id: 'soma_groove_salad', name: 'SomaFM: Groove Salad', genre: 'Ambient / Chillout', streamUrl: 'https://ice1.somafm.com/groovesalad-128-mp3', isFavorite: true, lastPlayedAt: Date.now() - 1000 },
+      { id: 'soma_defcon', name: 'SomaFM: DEF CON Radio', genre: 'Electronic / Industrial', streamUrl: 'https://ice1.somafm.com/defcon-128-mp3', isFavorite: false, lastPlayedAt: Date.now() - 5000 },
+      { id: 'rp_main', name: 'Radio Paradise', genre: 'Eclectic Rock', streamUrl: 'https://stream.radioparadise.com/mp3-320', isFavorite: true }
+    ];
+
+    const view = await renderRadioView();
+    assert.ok(view.innerHTML.includes('Recently Played'));
+    assert.ok(view.innerHTML.includes('★ Starred Radio Stations'));
+    // Ensure Recently Played comes before Starred section in HTML output
+    const recentIndex = view.innerHTML.indexOf('Recently Played');
+    const starredIndex = view.innerHTML.indexOf('★ Starred Radio Stations');
+    assert.ok(recentIndex !== -1);
+    assert.ok(starredIndex !== -1);
+    assert.ok(recentIndex < starredIndex, 'Recently Played section must appear above Starred Radio Stations');
+  } finally {
+    db.getStations = prevGetStations;
+  }
+});
+
+test('UI Views - renderSettingsView displays diagnostics, storage tier, and about section', async () => {
   db.getAllTracks = async () => [];
   db.getAllDirectoryHandles = async () => [];
 
@@ -162,4 +185,8 @@ test('UI Views - renderSettingsView displays diagnostics and storage tier', asyn
   assert.ok(view.innerHTML.includes('Settings & Diagnostics'));
   assert.ok(view.innerHTML.includes('Storage Engine Status'));
   assert.ok(view.innerHTML.includes('Crossfade Duration'));
+  assert.ok(view.innerHTML.includes('About LocalJam'));
+  assert.ok(view.innerHTML.includes('Release Notes'));
+  assert.ok(view.innerHTML.includes('https://github.com/aawc/LocalJam'));
+  assert.ok(!view.innerHTML.includes('Visual Accessibility'));
 });

@@ -5,6 +5,7 @@
 import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { reconciler } from '../../storage/reconciler.js';
+import { CURRENT_RELEASE } from '../../version.js';
 
 export async function renderSettingsView() {
   const container = document.createElement('div');
@@ -17,11 +18,54 @@ export async function renderSettingsView() {
   const hasFSAA = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
   const currentCrossfade = audioEngine.crossfadeDuration || 2;
 
+  let activeVersion = CURRENT_RELEASE.version;
+  let activeReleaseDate = CURRENT_RELEASE.releaseDate;
+  if (typeof window !== 'undefined' && window.localjamActiveVersionData) {
+    activeVersion = window.localjamActiveVersionData.version || activeVersion;
+    activeReleaseDate = window.localjamActiveVersionData.releaseDate || activeReleaseDate;
+  }
+
   container.innerHTML = `
     <div class="view-header">
       <div>
         <h1 class="view-title">Settings & Diagnostics</h1>
         <div class="view-subtitle">Storage architecture, audio engine parameters, and library maintenance</div>
+      </div>
+    </div>
+
+    <!-- About LocalJam -->
+    <div class="settings-section hero-card" style="margin-bottom: 24px; padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h2 style="font-size: 18px; margin-bottom: 6px; color: var(--text-primary);">About LocalJam</h2>
+          <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">
+            Local-first audio player Progressive Web App
+          </div>
+          <div style="font-size: 13px; color: var(--text-primary); margin-bottom: 4px;">
+            <strong>Version:</strong> <span id="settings-app-version">${escapeHtml(activeVersion)}</span>
+          </div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            <strong>Released:</strong> <span id="settings-release-date">${escapeHtml(activeReleaseDate)}</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button id="btn-open-release-notes" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Release Notes
+          </button>
+          <a href="https://github.com/aawc/LocalJam" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="display: inline-flex; align-items: center; text-decoration: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            GitHub
+          </a>
+        </div>
       </div>
     </div>
 
@@ -100,14 +144,6 @@ export async function renderSettingsView() {
       </div>
     </div>
 
-    <!-- Accessibility & Theme -->
-    <div class="settings-section hero-card" style="margin-bottom: 24px; padding: 24px;">
-      <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-primary);">Visual Accessibility</h2>
-      <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
-        LocalJam provides red-green color blindness accessibility with dual-coded status labels (<span class="status-badge badge-active">[PASS]</span>, <span class="status-badge badge-missing">[MISSING]</span>, <span class="status-badge badge-error">[FAIL]</span>) and high-contrast visual focus indicators.
-      </p>
-    </div>
-
     <!-- Database Reset -->
     <div class="settings-section hero-card" style="padding: 24px; border-color: rgba(244, 63, 94, 0.3);">
       <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--status-error);">Danger Zone</h2>
@@ -121,11 +157,20 @@ export async function renderSettingsView() {
   `;
 
   // Attach handlers
+  const releaseNotesBtn = container.querySelector('#btn-open-release-notes');
   const crossfadeSlider = container.querySelector('#crossfade-slider');
   const crossfadeLabel = container.querySelector('#crossfade-val-label');
   const rescanBtn = container.querySelector('#btn-rescan-library');
   const folderInput = container.querySelector('#settings-folder-input');
   const resetDbBtn = container.querySelector('#btn-reset-db');
+
+  if (releaseNotesBtn) {
+    releaseNotesBtn.addEventListener('click', () => {
+      if (typeof window !== 'undefined' && window.localjamReleaseNotesModal) {
+        window.localjamReleaseNotesModal.open();
+      }
+    });
+  }
 
   crossfadeSlider.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);

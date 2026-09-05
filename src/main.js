@@ -70,12 +70,10 @@ export async function initApp() {
     const queueDrawer = createQueueDrawer();
     document.body.appendChild(queueDrawer.element);
 
-    const appFooter = createAppFooter();
-    const appMain = document.querySelector('.app-main');
-    if (appMain) {
-      appMain.appendChild(appFooter.element);
-    } else {
-      document.body.appendChild(appFooter.element);
+    const releaseNotesModal = createAppFooter();
+    document.body.appendChild(releaseNotesModal.element);
+    if (typeof window !== 'undefined') {
+      window.localjamReleaseNotesModal = releaseNotesModal;
     }
 
     let updateCheckerInstance = null;
@@ -88,8 +86,19 @@ export async function initApp() {
         .then((verData) => {
           if (verData && verData.version) {
             activeDeployedVersion = verData.version;
-            if (typeof appFooter.updateVersion === 'function') {
-              appFooter.updateVersion(verData);
+            if (typeof window !== 'undefined') {
+              window.localjamActiveVersionData = verData;
+            }
+            if (typeof releaseNotesModal.updateVersion === 'function') {
+              releaseNotesModal.updateVersion(verData);
+            }
+            const settingsAppVer = document.getElementById('settings-app-version');
+            if (settingsAppVer) {
+              settingsAppVer.textContent = verData.version;
+            }
+            const settingsReleaseDate = document.getElementById('settings-release-date');
+            if (settingsReleaseDate && verData.releaseDate) {
+              settingsReleaseDate.textContent = verData.releaseDate;
             }
             if (updateCheckerInstance && typeof updateCheckerInstance.setActiveVersion === 'function') {
               updateCheckerInstance.setActiveVersion(verData.version);

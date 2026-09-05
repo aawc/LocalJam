@@ -5,20 +5,10 @@
 import { CURRENT_RELEASE } from "../../version.js";
 
 export function createAppFooter() {
-  const footer = document.createElement("div");
-  footer.id = "app-footer-wrapper";
-  footer.className = "app-footer-wrapper";
+  const container = document.createElement("div");
+  container.id = "release-notes-dialog-wrapper";
 
-  footer.innerHTML = `
-    <footer class="app-footer" role="contentinfo" aria-label="Application Release Info">
-      <div class="footer-left">
-        <button id="btn-open-release-notes" class="footer-release-btn" aria-label="View release notes for ${CURRENT_RELEASE.version}">
-          <span class="footer-release-tag">Release:</span>
-          <span class="footer-release-version">${CURRENT_RELEASE.version}</span>
-        </button>
-      </div>
-    </footer>
-
+  container.innerHTML = `
     <!-- Release Notes Modal Dialog -->
     <div id="release-notes-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="release-notes-title">
       <div class="modal-card">
@@ -62,10 +52,9 @@ export function createAppFooter() {
     </div>
   `;
 
-  const modal = footer.querySelector("#release-notes-modal");
-  const openBtn = footer.querySelector("#btn-open-release-notes");
-  const closeBtn = footer.querySelector("#btn-close-release-notes");
-  const doneBtn = footer.querySelector("#btn-done-release-notes");
+  const modal = container.querySelector("#release-notes-modal");
+  const closeBtn = container.querySelector("#btn-close-release-notes");
+  const doneBtn = container.querySelector("#btn-done-release-notes");
 
   function openModal() {
     if (modal) {
@@ -77,11 +66,9 @@ export function createAppFooter() {
   function closeModal() {
     if (modal) {
       modal.style.display = "none";
-      if (openBtn) openBtn.focus();
     }
   }
 
-  if (openBtn) openBtn.addEventListener("click", openModal);
   if (closeBtn) closeBtn.addEventListener("click", closeModal);
   if (doneBtn) doneBtn.addEventListener("click", closeModal);
 
@@ -96,21 +83,13 @@ export function createAppFooter() {
     const version = versionData.version || CURRENT_RELEASE.version;
     const releaseDate = versionData.releaseDate || CURRENT_RELEASE.releaseDate;
 
-    if (openBtn) {
-      openBtn.setAttribute("aria-label", `View release notes for ${version}`);
-      const versionSpan = openBtn.querySelector(".footer-release-version");
-      if (versionSpan) {
-        versionSpan.textContent = version;
-      }
-    }
-
-    const modalSubtitle = footer.querySelector(".modal-subtitle");
+    const modalSubtitle = container.querySelector(".modal-subtitle");
     if (modalSubtitle) {
       modalSubtitle.textContent = `LocalJam Version ${version} • ${releaseDate}`;
     }
 
     if (Array.isArray(versionData.commits) && versionData.commits.length > 0) {
-      const commitsList = footer.querySelector(".release-commits-list");
+      const commitsList = container.querySelector(".release-commits-list");
       if (commitsList) {
         commitsList.innerHTML = versionData.commits
           .map((c) => {
@@ -129,7 +108,7 @@ export function createAppFooter() {
   }
 
   return {
-    element: footer,
+    element: container,
     open: openModal,
     close: closeModal,
     updateVersion

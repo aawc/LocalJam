@@ -45,12 +45,10 @@ test("App Footer & Release Notes Modal Suite", async (t) => {
     assert.equal(typeof footerComponent.close, "function");
     assert.equal(typeof footerComponent.updateVersion, "function");
 
-    // Verify footer elements cleanup
-    assert.ok(!footerComponent.element.innerHTML.includes("[LOCAL-FIRST]"), "Footer must not contain [LOCAL-FIRST]");
-    assert.ok(!footerComponent.element.innerHTML.includes("Zero tracking"), "Footer must not contain Zero tracking");
-    assert.ok(!footerComponent.element.innerHTML.includes('class="footer-link"'), "Footer must not contain footer-link");
-    assert.ok(!footerComponent.element.innerHTML.includes('class="footer-badge"'), "Footer must not contain footer-badge");
-    assert.ok(!footerComponent.element.innerHTML.includes('class="footer-text"'), "Footer must not contain footer-text");
+    // Verify modal overlay presence
+    assert.ok(footerComponent.element.innerHTML.includes("release-notes-modal"));
+    assert.ok(!footerComponent.element.innerHTML.includes("[LOCAL-FIRST]"), "Modal wrapper must not contain [LOCAL-FIRST]");
+    assert.ok(!footerComponent.element.innerHTML.includes("Zero tracking"), "Modal wrapper must not contain Zero tracking");
 
     footerComponent.open();
     assert.equal(modalMock.style.display, "flex");
@@ -59,15 +57,8 @@ test("App Footer & Release Notes Modal Suite", async (t) => {
     assert.equal(modalMock.style.display, "none");
 
     // Test updateVersion dynamic synchronization
-    const versionSpanMock = { textContent: "" };
     const modalSubtitleMock = { textContent: "" };
     const commitsListMock = { innerHTML: "" };
-
-    openBtnMock.querySelector = (sel) => {
-      if (sel === ".footer-release-version") return versionSpanMock;
-      return null;
-    };
-    openBtnMock.setAttribute = (k, v) => { openBtnMock[k] = v; };
 
     footerComponent.element.querySelector = (sel) => {
       if (sel === ".modal-subtitle") return modalSubtitleMock;
@@ -81,8 +72,6 @@ test("App Footer & Release Notes Modal Suite", async (t) => {
       commits: ["0fbf4ff", "7df8d9d"]
     });
 
-    assert.equal(versionSpanMock.textContent, "v2026.09.008");
-    assert.equal(openBtnMock["aria-label"], "View release notes for v2026.09.008");
     assert.equal(modalSubtitleMock.textContent, "LocalJam Version v2026.09.008 • 2026-09-04");
     assert.ok(commitsListMock.innerHTML.includes("0fbf4ff"));
     assert.ok(commitsListMock.innerHTML.includes("7df8d9d"));
