@@ -16,7 +16,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 3: Dynamic Semantic Release Tagging (`v$yyyy.$mm.$nnn`) & Tag Push** `[DONE]`
   - *Description:* Replace commit message / SHA256 release naming in `.github/workflows/release.yml`. Dynamically generate timestamped semantic tag `v$yyyy.$mm.$nnn` using bash date commands and zero-padded GitHub run number (`$(printf "%03d" ${{ github.run_number }})`), push the tag back to the repository, and bundle release assets named with the tag.
-  - *Associated Commits:* `[PENDING]`
+  - *Associated Commits:* `0fbf4ff`
 
 ---
 

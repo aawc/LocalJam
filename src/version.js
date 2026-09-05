@@ -3,13 +3,21 @@
  * Standard format: YYYY-MM-DD-NNN (e.g. 2026-09-04-001)
  */
 
-export const APP_VERSION = "2026-09-04-001";
+export const APP_VERSION = "2026-09-04-002";
 
 export const CURRENT_RELEASE = {
-  version: "2026-09-04-001",
+  version: "2026-09-04-002",
   releaseDate: "2026-09-04",
-  title: "LocalJam 2026-09-04-001",
+  title: "LocalJam 2026-09-04-002",
   commits: [
+    {
+      hash: "0fbf4ff",
+      message: "ci(release): generate dynamic semantic tag v$yyyy.$mm.$nnn and push tag to repository"
+    },
+    {
+      hash: "1809639",
+      message: "docs: synchronize documentation, version metadata, and task checklist"
+    },
     {
       hash: "0e42f2e",
       message: "feat(ui): add radio station details modal triggered on active station click"
@@ -44,6 +52,7 @@ export const CURRENT_RELEASE = {
     }
   ],
   notes: [
+    "Implemented automated dynamic semantic tagging (v$yyyy.$mm.$nnn) and repository tag pushing in GitHub Actions.",
     "Added interactive Radio Station Details Modal on active station click with metadata and controls.",
     "Expanded curated live radio directory with 12 high-fidelity English and instrumental streams.",
     "Added automated background release detection with instant refresh prompt for Web and PWA.",
