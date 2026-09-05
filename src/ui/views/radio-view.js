@@ -158,14 +158,19 @@ export async function renderRadioView() {
 
       const liveBadge = card.querySelector('.badge-active');
       const titleWrapper = card.querySelector('.media-card-title > div');
-      if (isPlayingThis && !liveBadge && titleWrapper) {
-        const badge = document.createElement('span');
-        badge.className = 'status-badge badge-active';
-        badge.style.fontSize = '10px';
-        badge.textContent = '[LIVE]';
-        titleWrapper.insertBefore(badge, titleWrapper.firstChild);
-      } else if (!isPlayingThis && liveBadge) {
-        liveBadge.remove();
+      const titleSpan = card.querySelector('.media-card-title span');
+      if (isPlayingThis) {
+        if (titleSpan) titleSpan.setAttribute('title', 'Click for station details');
+        if (!liveBadge && titleWrapper) {
+          const badge = document.createElement('span');
+          badge.className = 'status-badge badge-active';
+          badge.style.fontSize = '10px';
+          badge.textContent = '[LIVE]';
+          titleWrapper.insertBefore(badge, titleWrapper.firstChild);
+        }
+      } else {
+        if (titleSpan) titleSpan.removeAttribute('title');
+        if (liveBadge) liveBadge.remove();
       }
     });
   }
@@ -265,6 +270,21 @@ export async function renderRadioView() {
     container.querySelectorAll('.radio-card').forEach((card) => {
       const stationId = card.dataset.stationId;
       const station = allStations.find((s) => s.id === stationId);
+
+      // Clicking station title while playing opens station details modal
+      const titleSpan = card.querySelector('.media-card-title span');
+      if (titleSpan) {
+        titleSpan.addEventListener('click', (e) => {
+          const currentUrl = audioEngine.isRadio && audioEngine.currentStation ? (audioEngine.currentStation.streamUrl || audioEngine.currentStation.url) : null;
+          const targetUrl = station ? (station.streamUrl || station.url) : null;
+          if (currentUrl && targetUrl && currentUrl === targetUrl && audioEngine.isPlaying) {
+            e.stopPropagation();
+            if (typeof window !== 'undefined' && window.localjamStationModal) {
+              window.localjamStationModal.open(station);
+            }
+          }
+        });
+      }
 
       card.addEventListener('click', (e) => {
         if (e.target.closest('.btn-star-station')) return;

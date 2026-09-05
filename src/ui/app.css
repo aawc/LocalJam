@@ -1209,3 +1209,84 @@ html, body {
     opacity: 1;
   }
 }
+
+/* Station Details Modal & Interactive Station Title */
+.station-modal-card {
+  width: 580px;
+  max-width: 90vw;
+}
+
+.station-modal-art {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background-color: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.station-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .station-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.station-detail-item {
+  background-color: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.station-detail-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.station-detail-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.station-title-interactive {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.station-title-interactive:hover {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+}
+
+.station-title-interactive:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.radio-card.playing .media-card-title span {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.radio-card.playing .media-card-title span:hover {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+}

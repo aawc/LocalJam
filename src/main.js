@@ -13,6 +13,7 @@ import { createUpdateBanner, initUpdateChecker } from './ui/components/update-ba
 import { createEqModal } from './ui/components/eq-modal.js';
 import { createVisualizerOverlay } from './ui/components/visualizer-overlay.js';
 import { createQueueDrawer } from './ui/components/queue-drawer.js';
+import { createStationModal } from './ui/components/station-modal.js';
 
 import { renderHomeView } from './ui/views/home-view.js';
 import { renderSongsView } from './ui/views/songs-view.js';
@@ -41,16 +42,29 @@ export async function initApp() {
     router.registerRoute('settings', renderSettingsView);
 
     // 3. Mount UI Components
-    const playerBarMount = document.getElementById('player-bar-container');
-    if (playerBarMount) {
-      playerBarMount.appendChild(createPlayerBar());
-    }
-
     const eqModal = createEqModal();
     document.body.appendChild(eqModal.element);
 
     const visualizerOverlay = createVisualizerOverlay();
     document.body.appendChild(visualizerOverlay.element);
+
+    const stationModal = createStationModal({
+      onToggleEq: () => eqModal.toggle(),
+      onToggleViz: () => visualizerOverlay.toggle()
+    });
+    document.body.appendChild(stationModal.element);
+    if (typeof window !== 'undefined') {
+      window.localjamStationModal = stationModal;
+    }
+
+    const playerBarMount = document.getElementById('player-bar-container');
+    if (playerBarMount) {
+      playerBarMount.appendChild(
+        createPlayerBar({
+          onOpenStationDetails: (station) => stationModal.open(station)
+        })
+      );
+    }
 
     const queueDrawer = createQueueDrawer();
     document.body.appendChild(queueDrawer.element);

@@ -7,7 +7,7 @@ import { queueManager } from '../../player/queue.js';
 import { db } from '../../storage/db.js';
 import { toggleFavoriteStation } from '../../radio/stations.js';
 
-export function createPlayerBar() {
+export function createPlayerBar({ onOpenStationDetails } = {}) {
   const bar = document.createElement('div');
   bar.className = 'player-bar';
   bar.setAttribute('role', 'region');
@@ -182,6 +182,27 @@ export function createPlayerBar() {
     }
   };
 
+  titleEl.onclick = () => {
+    if (audioEngine.isRadio && audioEngine.currentStation) {
+      if (typeof onOpenStationDetails === 'function') {
+        onOpenStationDetails(audioEngine.currentStation);
+      } else if (typeof window !== 'undefined' && window.localjamStationModal) {
+        window.localjamStationModal.open(audioEngine.currentStation);
+      }
+    }
+  };
+
+  titleEl.onkeydown = (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && audioEngine.isRadio && audioEngine.currentStation) {
+      e.preventDefault();
+      if (typeof onOpenStationDetails === 'function') {
+        onOpenStationDetails(audioEngine.currentStation);
+      } else if (typeof window !== 'undefined' && window.localjamStationModal) {
+        window.localjamStationModal.open(audioEngine.currentStation);
+      }
+    }
+  };
+
   // Subscribe to Audio Engine state
   audioEngine.subscribe((state) => {
     iconPlay.style.display = state.isPlaying ? 'none' : 'block';
@@ -190,6 +211,12 @@ export function createPlayerBar() {
 
     if (state.isRadio && state.currentStation) {
       titleEl.textContent = state.currentStation.name;
+      titleEl.classList.add('station-title-interactive');
+      titleEl.setAttribute('role', 'button');
+      titleEl.setAttribute('tabindex', '0');
+      titleEl.setAttribute('title', 'Click for station details');
+      titleEl.setAttribute('aria-label', `View details for ${state.currentStation.name}`);
+
       artistEl.textContent = state.currentStation.genre + ' • Live Radio';
       artImg.src = state.currentStation.favicon || 'public/icons/icon-192.svg';
       durationLabel.textContent = 'LIVE';
@@ -200,6 +227,12 @@ export function createPlayerBar() {
       if (svg) svg.setAttribute('fill', isFav ? 'currentColor' : 'none');
     } else if (state.currentTrack) {
       titleEl.textContent = state.currentTrack.title || state.currentTrack.filename;
+      titleEl.classList.remove('station-title-interactive');
+      titleEl.removeAttribute('role');
+      titleEl.removeAttribute('tabindex');
+      titleEl.removeAttribute('title');
+      titleEl.removeAttribute('aria-label');
+
       artistEl.textContent = state.currentTrack.artist || 'Unknown Artist';
       seekSlider.disabled = false;
 

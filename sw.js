@@ -22,6 +22,7 @@ const APP_SHELL_ASSETS = [
   './src/ui/components/player-bar.js',
   './src/ui/components/app-footer.js',
   './src/ui/components/update-banner.js',
+  './src/ui/components/station-modal.js',
   './src/ui/components/eq-modal.js',
   './src/ui/components/visualizer-overlay.js',
   './src/ui/components/queue-drawer.js',
@@ -106,7 +107,11 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('radioparadise.com') ||
     url.hostname.includes('somafm.com') ||
     url.hostname.includes('streamguys1.com') ||
-    url.hostname.includes('bbci.co.uk')
+    url.hostname.includes('streamguys.com') ||
+    url.hostname.includes('bbci.co.uk') ||
+    url.hostname.includes('bbcmedia.co.uk') ||
+    url.hostname.includes('wnyc.org') ||
+    url.hostname.includes('wostreaming.net')
   ) {
     return;
   }

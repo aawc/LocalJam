@@ -81,7 +81,10 @@ function createMockElement(selector) {
 }
 
 test('UI Components - createPlayerBar renders player bar structure', () => {
-  const bar = createPlayerBar();
+  let openedStation = null;
+  const bar = createPlayerBar({
+    onOpenStationDetails: (st) => { openedStation = st; }
+  });
   assert.equal(bar.className, 'player-bar');
   assert.equal(bar.getAttribute('role'), 'region');
   assert.equal(bar.getAttribute('aria-label'), 'Audio Player Controls');
