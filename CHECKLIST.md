@@ -64,7 +64,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 15: Strict Security Review & Vulnerability Remediation** `[DONE]`
   - *Description:* Perform a comprehensive security audit of repository, server (`server.js`), static hosting on GitHub Pages, and client-side web application. Document all 11 vulnerability findings in `SECURITY_REPORT.md` across 4 severity tiers (Critical path traversal, High CSP/DOM XSS, Medium HTML escaping/MIME validation/inline handlers, Low/Info security headers and error masking), commit report, and implement complete remediations with automated test verification.
-  - *Associated Commits:* `51360b0`, `[PENDING]`
+  - *Associated Commits:* `51360b0`, `721bc8f`
 
 ---
 
