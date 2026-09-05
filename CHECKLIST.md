@@ -56,7 +56,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 13: Instant & Continuous Release Update Detection & Refresh Prompt** `[DONE]`
   - *Description:* Optimize update checker in `update-banner.js` and `main.js` to perform initial check on boot, poll every 30 seconds, trigger `registration.update()` on focus, and reactively prompt the user with a high-contrast toast banner whenever a new version is published.
-  - *Associated Commits:* Pending
+  - *Associated Commits:* `fe21f9f`
 
 ---
 
