@@ -13,6 +13,7 @@ import {
 } from '../../radio/stations.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { db } from '../../storage/db.js';
+import { escapeHtml, isValidHttpUrl } from '../../utils/sanitize.js';
 
 export async function renderRadioView() {
   const container = document.createElement('div');
@@ -78,7 +79,7 @@ export async function renderRadioView() {
     return `
       <div class="media-card radio-card ${isPlayingThis ? 'playing' : ''}" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" data-station-name="${escapeHtml(station.name)}">
         <div class="media-card-art-wrapper">
-          <img src="${artworkSrc}" alt="${escapeHtml(station.name)}" class="media-card-art" onerror="this.onerror=null; this.src='${fallbackArt}';" />
+          <img src="${escapeHtml(artworkSrc)}" alt="${escapeHtml(station.name)}" class="media-card-art" data-fallback="${escapeHtml(fallbackArt)}" />
           <button class="btn-play-card" data-station-id="${station.id}" data-station-url="${escapeHtml(stationUrl)}" aria-label="${isPlayingThis ? 'Pause' : 'Play'} ${escapeHtml(station.name)}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               ${
@@ -448,8 +449,8 @@ export async function renderRadioView() {
           return;
         }
 
-        if (!url.startsWith('https://')) {
-          alert('Stream URL must start with https://');
+        if (!isValidHttpUrl(url) || !url.startsWith('https://')) {
+          alert('Stream URL must be a valid HTTPS URL (starting with https://).');
           return;
         }
 
@@ -480,6 +481,16 @@ export async function renderRadioView() {
         }
       });
     }
+
+    // Fallback artwork error listeners (replacing inline onerror)
+    container.querySelectorAll('.media-card-art').forEach((img) => {
+      img.addEventListener('error', () => {
+        const fallback = img.dataset.fallback;
+        if (fallback && img.src !== fallback) {
+          img.src = fallback;
+        }
+      });
+    });
 
     // Star / Favorite clicks
     container.querySelectorAll('.btn-star-station').forEach((btn) => {
@@ -543,14 +554,5 @@ export async function renderRadioView() {
 
   render();
   return container;
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 

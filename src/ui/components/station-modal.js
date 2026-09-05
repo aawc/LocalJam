@@ -5,6 +5,7 @@
 import { toggleFavoriteStation, getStationFallbackArtwork } from '../../radio/stations.js';
 import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
+import { sanitizeUrl } from '../../utils/sanitize.js';
 
 export function createStationModal({ onToggleEq, onToggleViz } = {}) {
   const overlay = document.createElement('div');
@@ -154,11 +155,13 @@ export function createStationModal({ onToggleEq, onToggleViz } = {}) {
     }
 
     if (homepageLink) {
-      if (station.homepageUrl) {
-        homepageLink.href = station.homepageUrl;
+      const sanitizedUrl = sanitizeUrl(station.homepageUrl, '');
+      if (sanitizedUrl && (sanitizedUrl.startsWith('http://') || sanitizedUrl.startsWith('https://'))) {
+        homepageLink.href = sanitizedUrl;
         homepageLink.style.display = 'inline-flex';
       } else {
         homepageLink.style.display = 'none';
+        homepageLink.removeAttribute('href');
       }
     }
 

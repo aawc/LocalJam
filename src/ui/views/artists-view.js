@@ -6,6 +6,7 @@ import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
 import { router } from '../router.js';
+import { escapeHtml } from '../../utils/sanitize.js';
 
 export async function renderArtistsView() {
   const container = document.createElement('div');
@@ -96,13 +97,4 @@ export async function renderArtistsView() {
   });
 
   return container;
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

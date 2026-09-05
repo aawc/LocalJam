@@ -3,6 +3,8 @@
  * High-quality, reliable HTTPS audio streams.
  */
 
+import { isValidHttpUrl, sanitizeText } from '../utils/sanitize.js';
+
 export const CURATED_STATIONS = [
   {
     id: 'rp_main',
@@ -667,20 +669,27 @@ export async function addCustomStation(station, db) {
   if (!station || typeof station !== 'object') {
     throw new Error('[Stations] Invalid station payload: object expected');
   }
-  if (!station.streamUrl || typeof station.streamUrl !== 'string' || !station.streamUrl.startsWith('https://')) {
+  const streamUrl = typeof station.streamUrl === 'string' ? station.streamUrl.trim() : '';
+  if (!streamUrl || !isValidHttpUrl(streamUrl) || !streamUrl.startsWith('https://')) {
     throw new Error('[Stations] Valid HTTPS stream URL is required');
   }
 
+  const rawHomepage = typeof station.homepageUrl === 'string' ? station.homepageUrl.trim() : '';
+  const homepageUrl = rawHomepage && isValidHttpUrl(rawHomepage) ? rawHomepage : '';
+
+  const rawFavicon = typeof station.favicon === 'string' ? station.favicon.trim() : '';
+  const favicon = rawFavicon && (isValidHttpUrl(rawFavicon) || rawFavicon.startsWith('data:image/')) ? rawFavicon : '';
+
   const newStation = {
     id: 'custom_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
-    name: station.name || 'Custom Station',
-    description: station.description || 'User added stream',
-    streamUrl: station.streamUrl,
-    homepageUrl: station.homepageUrl || '',
-    genre: station.genre || 'Custom',
-    country: station.country || 'User',
-    bitrate: station.bitrate || 'Unknown',
-    favicon: station.favicon || '',
+    name: sanitizeText(station.name, 100) || 'Custom Station',
+    description: sanitizeText(station.description, 250) || 'User added stream',
+    streamUrl,
+    homepageUrl,
+    genre: sanitizeText(station.genre, 50) || 'Custom',
+    country: sanitizeText(station.country, 50) || 'User',
+    bitrate: sanitizeText(station.bitrate, 30) || 'Unknown',
+    favicon,
     isCustom: true,
     isFavorite: false,
     lastPlayedAt: null

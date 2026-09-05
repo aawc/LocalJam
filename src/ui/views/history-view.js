@@ -5,6 +5,7 @@
 import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
+import { escapeHtml } from '../../utils/sanitize.js';
 
 export async function renderHistoryView() {
   const container = document.createElement('div');
@@ -113,13 +114,4 @@ function formatTimestamp(ts) {
   if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
   if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

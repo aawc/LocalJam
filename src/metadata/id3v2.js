@@ -3,6 +3,8 @@
  * Zero-dependency pure JavaScript binary parser for ID3v2.2, ID3v2.3, ID3v2.4, and ID3v1 tags.
  */
 
+import { sanitizeMimeType } from '../utils/sanitize.js';
+
 // Helper to decode synchsafe integer (28-bit)
 export function decodeSynchsafeInt(b0, b1, b2, b3) {
   return ((b0 & 0x7f) << 21) | ((b1 & 0x7f) << 14) | ((b2 & 0x7f) << 7) | (b3 & 0x7f);
@@ -71,6 +73,7 @@ function findNullTerminator(bytes, offset, encodingByte) {
 // Convert byte array to data URL efficiently
 export function bytesToDataUrl(bytes, mimeType = 'image/jpeg') {
   if (!bytes || bytes.length === 0) return null;
+  const safeMime = sanitizeMimeType(mimeType);
   let base64 = '';
   if (typeof Buffer !== 'undefined') {
     base64 = Buffer.from(bytes).toString('base64');
@@ -82,7 +85,7 @@ export function bytesToDataUrl(bytes, mimeType = 'image/jpeg') {
     }
     base64 = btoa(chunks.join(''));
   }
-  return `data:${mimeType};base64,${base64}`;
+  return `data:${safeMime};base64,${base64}`;
 }
 
 /**
@@ -236,7 +239,7 @@ export function parseID3v2(buffer) {
           const rawImageBytes = frameBytes.subarray(picOffset);
           if (rawImageBytes.length > 0) {
             result.artwork = {
-              mimeType,
+              mimeType: sanitizeMimeType(mimeType),
               pictureType,
               bytes: rawImageBytes,
               dataUrl: bytesToDataUrl(rawImageBytes, mimeType)

@@ -7,6 +7,7 @@ import { reconciler } from '../../storage/reconciler.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
 import { router } from '../router.js';
+import { escapeHtml } from '../../utils/sanitize.js';
 
 export async function renderHomeView() {
   const container = document.createElement('div');
@@ -61,22 +62,22 @@ export async function renderHomeView() {
 
     <!-- Stats Bar -->
     <div class="stats-grid">
-      <div class="stat-card" onclick="window.location.hash='#/songs'">
+      <a class="stat-card" href="#/songs" style="text-decoration: none; color: inherit;">
         <div class="stat-val">${activeTracks.length}</div>
         <div class="stat-label">Tracks</div>
-      </div>
-      <div class="stat-card" onclick="window.location.hash='#/albums'">
+      </a>
+      <a class="stat-card" href="#/albums" style="text-decoration: none; color: inherit;">
         <div class="stat-val">${albums.length}</div>
         <div class="stat-label">Albums</div>
-      </div>
-      <div class="stat-card" onclick="window.location.hash='#/artists'">
+      </a>
+      <a class="stat-card" href="#/artists" style="text-decoration: none; color: inherit;">
         <div class="stat-val">${artists.length}</div>
         <div class="stat-label">Artists</div>
-      </div>
-      <div class="stat-card" onclick="window.location.hash='#/playlists'">
+      </a>
+      <a class="stat-card" href="#/playlists" style="text-decoration: none; color: inherit;">
         <div class="stat-val">${playlists.length}</div>
         <div class="stat-label">Playlists</div>
-      </div>
+      </a>
     </div>
 
     <!-- Recently Played Section -->
@@ -209,13 +210,4 @@ function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

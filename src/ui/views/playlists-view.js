@@ -5,6 +5,7 @@
 import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
+import { escapeHtml } from '../../utils/sanitize.js';
 
 export async function renderPlaylistsView(params) {
   const container = document.createElement('div');
@@ -127,7 +128,7 @@ async function renderPlaylistDetail(container, playlistId) {
       <div class="view-header">
         <h1 class="view-title">Playlist Not Found</h1>
       </div>
-      <button class="btn btn-secondary" onclick="window.location.hash='#/playlists'">Back to Playlists</button>
+      <a href="#/playlists" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Back to Playlists</a>
     `;
     return;
   }
@@ -292,13 +293,4 @@ function formatTotalDuration(seconds) {
   const mins = Math.floor((seconds % 3600) / 60);
   if (hrs > 0) return `${hrs} hr ${mins} min`;
   return `${mins} min`;
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

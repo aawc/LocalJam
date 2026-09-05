@@ -6,6 +6,7 @@ import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { reconciler } from '../../storage/reconciler.js';
 import { CURRENT_RELEASE } from '../../version.js';
+import { escapeHtml } from '../../utils/sanitize.js';
 
 export async function renderSettingsView() {
   const container = document.createElement('div');
@@ -220,13 +221,4 @@ export async function renderSettingsView() {
   });
 
   return container;
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

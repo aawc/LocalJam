@@ -4,6 +4,7 @@
  */
 
 import { bytesToDataUrl } from './id3v2.js';
+import { sanitizeMimeType } from '../utils/sanitize.js';
 
 export function parseFLAC(buffer) {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
@@ -177,6 +178,7 @@ function parseFlacPicture(bytes, result) {
   // 4-byte Description length
   if (offset + 4 > bytes.length) return;
   const descLen = view.getUint32(offset, false);
+  if (offset + 4 + descLen > bytes.length) return;
   offset += 4 + descLen;
 
   // Skip 4x4 bytes: width, height, depth, colors
@@ -192,7 +194,7 @@ function parseFlacPicture(bytes, result) {
 
   if (rawImageBytes.length > 0) {
     result.artwork = {
-      mimeType,
+      mimeType: sanitizeMimeType(mimeType),
       pictureType,
       bytes: rawImageBytes,
       dataUrl: bytesToDataUrl(rawImageBytes, mimeType)

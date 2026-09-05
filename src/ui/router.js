@@ -3,6 +3,8 @@
  * 100% immune to GitHub Pages 404 subpath errors.
  */
 
+import { escapeHtml } from '../utils/sanitize.js';
+
 export class Router {
   constructor(routes = {}) {
     this.routes = routes;
@@ -76,7 +78,7 @@ export class Router {
         this.contentContainer.innerHTML = `
           <div style="padding: 40px; text-align: center;">
             <h2>Unable to load page</h2>
-            <p style="color: var(--text-secondary); margin-top: 8px;">${err?.message}</p>
+            <p style="color: var(--text-secondary); margin-top: 8px;">${escapeHtml(err?.message || 'An unexpected error occurred')}</p>
           </div>
         `;
       }

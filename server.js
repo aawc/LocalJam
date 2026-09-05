@@ -41,11 +41,18 @@ const MIME_TYPES = {
 
 export function createServer(rootDirectory = __dirname) {
   return http.createServer(async (req, res) => {
-    // Enable CORS for local testing
+    // Security & Access Control Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
     res.setHeader('Service-Worker-Allowed', '/');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' data: https: http: blob:; connect-src 'self' https: http:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';");
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -61,12 +68,12 @@ export function createServer(rootDirectory = __dirname) {
 
     let filePath = '';
     try {
-      const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+      const rawPath = (req.url || '/').split('?')[0];
       let pathname;
       try {
-        pathname = decodeURIComponent(parsedUrl.pathname);
+        pathname = decodeURIComponent(rawPath);
       } catch (uriErr) {
-        console.error(`[LocalJam Server] URI decode error: ${uriErr.message} for path ${parsedUrl.pathname}`);
+        console.error(`[LocalJam Server] URI decode error: ${uriErr.message} for path ${rawPath}`);
         res.writeHead(400, { 'Content-Type': 'text/plain' });
         res.end('400 Bad Request');
         return;
@@ -76,9 +83,20 @@ export function createServer(rootDirectory = __dirname) {
         pathname = '/index.html';
       }
 
-      // Prevent directory traversal
-      const safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
-      filePath = path.join(rootDirectory, safePath);
+      // Canonical root and path normalization to strictly prevent directory traversal (SEC-01)
+      const canonicalRoot = path.resolve(rootDirectory);
+      const cleanRelPath = pathname.replace(/^[/\\]+/, '');
+      const resolvedPath = path.resolve(canonicalRoot, cleanRelPath || 'index.html');
+
+      // Verify that the target path is strictly contained within the canonical root directory
+      if (resolvedPath !== canonicalRoot && !resolvedPath.startsWith(canonicalRoot + path.sep)) {
+        console.warn(`[LocalJam Server] Forbidden path traversal attempt blocked: ${pathname} -> ${resolvedPath}`);
+        res.writeHead(403, { 'Content-Type': 'text/plain' });
+        res.end('403 Forbidden');
+        return;
+      }
+
+      filePath = resolvedPath;
 
       // Check file existence and stats
       let stat;
@@ -86,6 +104,12 @@ export function createServer(rootDirectory = __dirname) {
         stat = await fs.promises.stat(filePath);
         if (stat.isDirectory()) {
           filePath = path.join(filePath, 'index.html');
+          const indexResolved = path.resolve(filePath);
+          if (!indexResolved.startsWith(canonicalRoot + path.sep)) {
+            res.writeHead(403, { 'Content-Type': 'text/plain' });
+            res.end('403 Forbidden');
+            return;
+          }
           stat = await fs.promises.stat(filePath);
         }
       } catch (statErr) {
@@ -162,7 +186,7 @@ export function createServer(rootDirectory = __dirname) {
           if (!res.headersSent) {
             res.writeHead(500, { 'Content-Type': 'text/plain' });
           }
-          res.end(`Stream error: ${streamErr.message}`);
+          res.end('500 Internal Server Error');
         });
         stream.pipe(res);
         return;
@@ -187,7 +211,7 @@ export function createServer(rootDirectory = __dirname) {
         if (!res.headersSent) {
           res.writeHead(500, { 'Content-Type': 'text/plain' });
         }
-        res.end(`Stream error: ${streamErr.message}`);
+        res.end('500 Internal Server Error');
       });
       stream.pipe(res);
     } catch (err) {
@@ -196,7 +220,7 @@ export function createServer(rootDirectory = __dirname) {
         const isClientError = err instanceof URIError;
         const statusCode = isClientError ? 400 : 500;
         res.writeHead(statusCode, { 'Content-Type': 'text/plain' });
-        res.end(isClientError ? '400 Bad Request' : `Internal Server Error: ${err.message}`);
+        res.end(isClientError ? '400 Bad Request' : '500 Internal Server Error');
       } else {
         res.end();
       }

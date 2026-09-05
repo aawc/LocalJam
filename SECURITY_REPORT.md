@@ -26,11 +26,11 @@ Remediation plans and concrete implementations have been formulated for all iden
 
 | Severity | Count | Impact Summary | Status |
 | :--- | :---: | :--- | :---: |
-| `[CRITICAL]` | 1 | Arbitrary filesystem read outside web root via path traversal in `server.js` | `[PENDING_FIX]` |
-| `[HIGH]` | 3 | Missing CSP on GitHub Pages, DOM XSS via `javascript:` links, inline script injection | `[PENDING_FIX]` |
-| `[MEDIUM]` | 5 | Incomplete escaping, inline event handlers, router XSS sink, unvalidated MIME types/custom stations | `[PENDING_FIX]` |
-| `[LOW]` | 1 | Missing defense-in-depth HTTP headers (`nosniff`, `SAMEORIGIN`, `Permissions-Policy`, `COOP`) | `[PENDING_FIX]` |
-| `[INFO]` | 1 | Error message disclosure in HTTP 500 response bodies | `[PENDING_FIX]` |
+| `[CRITICAL]` | 1 | Arbitrary filesystem read outside web root via path traversal in `server.js` | `[RESOLVED]` |
+| `[HIGH]` | 3 | Missing CSP on GitHub Pages, DOM XSS via `javascript:` links, inline script injection | `[RESOLVED]` |
+| `[MEDIUM]` | 5 | Incomplete escaping, inline event handlers, router XSS sink, unvalidated MIME types/custom stations | `[RESOLVED]` |
+| `[LOW]` | 1 | Missing defense-in-depth HTTP headers (`nosniff`, `SAMEORIGIN`, `Permissions-Policy`, `COOP`) | `[RESOLVED]` |
+| `[INFO]` | 1 | Error message disclosure in HTTP 500 response bodies | `[RESOLVED]` |
 
 ---
 
@@ -217,12 +217,12 @@ A dedicated automated test suite `test/security.test.js` will verify all securit
 ---
 
 ## 5. Remediation Roadmap & Execution Plan
-
+ 
 - `[x]` **Task 1:** Complete Security Audit and Commit `SECURITY_REPORT.md`.
-- `[ ]` **Task 2:** Create Centralized Sanitization Library (`src/utils/sanitize.js`).
-- `[ ]` **Task 3:** Fix Server Vulnerabilities & Add HTTP Security Headers in `server.js`.
-- `[ ]` **Task 4:** Add Content-Security-Policy `<meta>` Tag in `index.html`.
-- `[ ]` **Task 5:** Fix DOM XSS and Escaping in UI Components & Views (`station-modal.js`, `radio-view.js`, `home-view.js`, `playlists-view.js`, `router.js`, etc.).
-- `[ ]` **Task 6:** Fix MIME Type Validation & Audio Parser Bounds in `id3v2.js`, `flac.js`, `m4a.js`, and `stations.js`.
-- `[ ]` **Task 7:** Add Comprehensive Automated Security Test Suite (`test/security.test.js`) and Verify 100% Pass.
-- `[ ]` **Task 8:** Perform Subagent Code Review, Create Atomic Commits, and Push to Remote.
+- `[x]` **Task 2:** Create Centralized Sanitization Library (`src/utils/sanitize.js`).
+- `[x]` **Task 3:** Fix Server Vulnerabilities & Add HTTP Security Headers in `server.js`.
+- `[x]` **Task 4:** Add Content-Security-Policy `<meta>` Tag in `index.html`.
+- `[x]` **Task 5:** Fix DOM XSS and Escaping in UI Components & Views (`station-modal.js`, `radio-view.js`, `home-view.js`, `playlists-view.js`, `router.js`, etc.).
+- `[x]` **Task 6:** Fix MIME Type Validation & Audio Parser Bounds in `id3v2.js`, `flac.js`, `m4a.js`, and `stations.js`.
+- `[x]` **Task 7:** Add Comprehensive Automated Security Test Suite (`test/security.test.js`) and Verify 100% Pass.
+- `[x]` **Task 8:** Perform Subagent Code Review, Create Atomic Commits, and Push to Remote.

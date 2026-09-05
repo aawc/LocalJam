@@ -3,6 +3,7 @@
  */
 
 import { CURRENT_RELEASE } from "../../version.js";
+import { escapeHtml } from "../../utils/sanitize.js";
 
 export function createAppFooter() {
   const container = document.createElement("div");
@@ -113,13 +114,4 @@ export function createAppFooter() {
     close: closeModal,
     updateVersion
   };
-}
-
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

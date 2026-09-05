@@ -6,6 +6,7 @@ import { db } from '../../storage/db.js';
 import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
 import { router } from '../router.js';
+import { escapeHtml } from '../../utils/sanitize.js';
 
 export async function renderAlbumsView() {
   const container = document.createElement('div');
@@ -52,7 +53,7 @@ export async function renderAlbumsView() {
             return `
             <div class="media-card album-card" data-album-name="${escapeHtml(album.name)}">
               <div class="media-card-art-wrapper">
-                <img src="${artSrc}" alt="${escapeHtml(album.name)}" class="media-card-art" />
+                <img src="${escapeHtml(artSrc)}" alt="${escapeHtml(album.name)}" class="media-card-art" />
                 <button class="btn-play-card" data-album-name="${escapeHtml(album.name)}" aria-label="Play album ${escapeHtml(album.name)}">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -94,13 +95,4 @@ export async function renderAlbumsView() {
   });
 
   return container;
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

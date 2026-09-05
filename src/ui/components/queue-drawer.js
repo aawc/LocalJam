@@ -4,6 +4,7 @@
 
 import { queueManager } from '../../player/queue.js';
 import { audioEngine } from '../../player/audio-engine.js';
+import { escapeHtml } from '../../utils/sanitize.js';
 
 export function createQueueDrawer() {
   const drawer = document.createElement('div');
@@ -121,13 +122,4 @@ function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
