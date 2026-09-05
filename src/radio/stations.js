@@ -114,7 +114,7 @@ export const CURATED_STATIONS = [
     description: 'Where the music matters. Independent listener-powered radio.',
     streamUrl: 'https://kexp.streamguys1.com/kexp160.aac',
     homepageUrl: 'https://kexp.org',
-    genre: 'Indie / Alternative',
+    genre: 'Alternative / Indie',
     country: 'USA',
     bitrate: '160 kbps AAC',
     favicon: 'https://kexp.org/favicon.ico',
@@ -133,20 +133,186 @@ export const CURATED_STATIONS = [
     favicon: 'https://www.bbc.co.uk/favicon.ico',
     isCustom: false,
     isFavorite: false
+  },
+  {
+    id: 'soma_lush',
+    name: 'SomaFM: Lush',
+    description: 'Sensuous and mellow vocals, mostly female, with an electronic influence.',
+    streamUrl: 'https://ice1.somafm.com/lush-256-mp3',
+    homepageUrl: 'https://somafm.com/lush/',
+    genre: 'Vocal Chill / Ambient',
+    country: 'USA',
+    bitrate: '256 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_spacestation',
+    name: 'SomaFM: Space Station Soma',
+    description: 'Tune in, turn on, space out. Spaced-out ambient and mid-tempo electronica.',
+    streamUrl: 'https://ice1.somafm.com/spacestation-256-mp3',
+    homepageUrl: 'https://somafm.com/spacestation/',
+    genre: 'Ambient / Electronica',
+    country: 'USA',
+    bitrate: '256 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_deepspaceone',
+    name: 'SomaFM: Deep Space One',
+    description: 'Deep ambient electronic, experimental, and space music for exploring inner and outer space.',
+    streamUrl: 'https://ice1.somafm.com/deepspaceone-256-mp3',
+    homepageUrl: 'https://somafm.com/deepspaceone/',
+    genre: 'Deep Ambient / Space',
+    country: 'USA',
+    bitrate: '256 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_synphaera',
+    name: 'SomaFM: Synphaera Radio',
+    description: 'Space synth, chill synth, and ambient instrumental electronic music.',
+    streamUrl: 'https://ice1.somafm.com/synphaera-256-mp3',
+    homepageUrl: 'https://somafm.com/synphaera/',
+    genre: 'Synthwave / Instrumental',
+    country: 'USA',
+    bitrate: '256 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_sonic_universe',
+    name: 'SomaFM: Sonic Universe',
+    description: 'NuJazz, avant-garde, and contemporary jazz fusion.',
+    streamUrl: 'https://ice1.somafm.com/sonicuniverse-256-mp3',
+    homepageUrl: 'https://somafm.com/sonicuniverse/',
+    genre: 'NuJazz / Modern Jazz',
+    country: 'USA',
+    bitrate: '256 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_suburbs',
+    name: 'SomaFM: Suburbs of Goa',
+    description: 'Desi-influenced Asian world beats, sitars, and chill instrumental rhythms.',
+    streamUrl: 'https://ice1.somafm.com/suburbsofgoa-256-mp3',
+    homepageUrl: 'https://somafm.com/suburbsofgoa/',
+    genre: 'World Fusion / Asian Chill',
+    country: 'USA',
+    bitrate: '256 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_illinois_street',
+    name: 'SomaFM: Illinois Street Lounge',
+    description: 'Classic bachelor pad, vintage exotica, and easy listening lounge music.',
+    streamUrl: 'https://ice1.somafm.com/illstreet-256-mp3',
+    homepageUrl: 'https://somafm.com/illstreet/',
+    genre: 'Lounge / Exotica',
+    country: 'USA',
+    bitrate: '256 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'kusc_classical',
+    name: 'Classical KUSC (Los Angeles)',
+    description: 'Southern California premiere listener-supported classical music broadcast.',
+    streamUrl: 'https://kusc-stream.streamguys1.com/kusc-aac-128',
+    homepageUrl: 'https://www.kusc.org',
+    genre: 'Classical / Instrumental',
+    country: 'USA',
+    bitrate: '128 kbps AAC',
+    favicon: 'https://www.kusc.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'king_classical',
+    name: 'Classical KING FM (Seattle)',
+    description: '24/7 commercial-free classical masterworks and orchestral performances.',
+    streamUrl: 'https://king.streamguys1.com/king-aac-128',
+    homepageUrl: 'https://www.king.org',
+    genre: 'Classical / Instrumental',
+    country: 'USA',
+    bitrate: '128 kbps AAC',
+    favicon: 'https://www.king.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'jazz24',
+    name: 'Jazz24 (Pacific Northwest / KNKX)',
+    description: '24/7 jazz masters from Miles Davis and Ella Fitzgerald to modern icons.',
+    streamUrl: 'https://live.wostreaming.net/direct/ppm-jazz24aac-ibc1',
+    homepageUrl: 'https://www.jazz24.org',
+    genre: 'Jazz / Blues',
+    country: 'USA',
+    bitrate: '128 kbps AAC',
+    favicon: 'https://www.jazz24.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'wnyc_fm',
+    name: 'WNYC 93.9 FM (New York Public Radio)',
+    description: 'New York flagship NPR news, culture, public affairs, and conversations.',
+    streamUrl: 'https://fm939.wnyc.org/wnycfm-web',
+    homepageUrl: 'https://www.wnyc.org',
+    genre: 'News / Public Radio',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.wnyc.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'bbc_world_service',
+    name: 'BBC World Service',
+    description: 'International news, analysis, in-depth reports, and discussions from the BBC.',
+    streamUrl: 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service',
+    homepageUrl: 'https://www.bbc.co.uk/worldserviceradio',
+    genre: 'News / English Talk',
+    country: 'UK',
+    bitrate: '128 kbps',
+    favicon: 'https://www.bbc.co.uk/favicon.ico',
+    isCustom: false,
+    isFavorite: false
   }
 ];
 
 export const RADIO_GENRES = [
   'All',
-  'Eclectic / Rock',
   'Acoustic / Ambient',
-  'Rock / Alternative',
-  'World Fusion',
-  'Downtempo / Chillout',
-  'Electronic / Industrial',
-  'Spy / Lounge / Trip-Hop',
+  'Alternative / Indie',
   'Ambient / Drone',
-  'Indie / Alternative'
+  'Ambient / Electronica',
+  'Classical / Instrumental',
+  'Deep Ambient / Space',
+  'Downtempo / Chillout',
+  'Eclectic / Rock',
+  'Electronic / Industrial',
+  'Jazz / Blues',
+  'Lounge / Exotica',
+  'News / English Talk',
+  'News / Public Radio',
+  'NuJazz / Modern Jazz',
+  'Rock / Alternative',
+  'Spy / Lounge / Trip-Hop',
+  'Synthwave / Instrumental',
+  'Vocal Chill / Ambient',
+  'World Fusion'
 ];
 
 export async function loadStations(db) {
@@ -156,6 +322,19 @@ export async function loadStations(db) {
     if (!saved || saved.length === 0) {
       await db.saveStations(CURATED_STATIONS.map((s) => ({ ...s })));
       return CURATED_STATIONS.map((s) => ({ ...s }));
+    }
+
+    // Merge any newly introduced curated stations into existing database records
+    const existingIds = new Set(saved.map((s) => s.id));
+    let hasNew = false;
+    for (const curated of CURATED_STATIONS) {
+      if (!existingIds.has(curated.id)) {
+        saved.push({ ...curated });
+        hasNew = true;
+      }
+    }
+    if (hasNew) {
+      await db.saveStations(saved);
     }
     return saved.map((s) => ({ ...s }));
   } catch (err) {
