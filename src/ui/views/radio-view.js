@@ -150,11 +150,30 @@ export async function renderRadioView() {
       `;
     }
 
-    // When viewing 'All', separate starred stations first if present
+    // When viewing 'All', render Recently Played first if present, followed by Starred stations
+    const recentStations = stations
+      .filter((s) => typeof s.lastPlayedAt === 'number' && s.lastPlayedAt > 0)
+      .sort((a, b) => (b.lastPlayedAt || 0) - (a.lastPlayedAt || 0))
+      .slice(0, 6);
+
     const starredStations = stations.filter((s) => Boolean(s.isFavorite));
     const nonStarredStations = stations.filter((s) => !s.isFavorite);
 
     let html = '';
+
+    if (recentStations.length > 0) {
+      html += `
+        <div class="radio-section-header">
+          <h2 class="radio-section-title">
+            <span>Recently Played</span>
+          </h2>
+          <span class="radio-section-count">${recentStations.length} stream${recentStations.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="card-grid" style="margin-bottom: 32px;">
+          ${recentStations.map((s) => renderCard(s, currentRadio)).join('')}
+        </div>
+      `;
+    }
 
     if (starredStations.length > 0) {
       html += `
@@ -506,6 +525,7 @@ export async function renderRadioView() {
           if (currentUrl === targetUrl && audioEngine.isPlaying) {
             audioEngine.pause();
           } else {
+            station.lastPlayedAt = Date.now();
             audioEngine.playRadio(station);
           }
         }

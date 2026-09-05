@@ -545,6 +545,30 @@ export class LocalJamDatabase {
       req.onerror = () => reject(req.error);
     });
   }
+
+  async recordStationPlay(stationId) {
+    if (!stationId) return null;
+    try {
+      const store = await this.getStore('stations', 'readwrite');
+      return new Promise((resolve) => {
+        const getReq = store.get(stationId);
+        getReq.onsuccess = () => {
+          const station = getReq.result;
+          if (station) {
+            station.lastPlayedAt = Date.now();
+            const putReq = store.put(station);
+            putReq.onsuccess = () => resolve(station);
+            putReq.onerror = () => resolve(null);
+          } else {
+            resolve(null);
+          }
+        };
+        getReq.onerror = () => resolve(null);
+      });
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const db = new LocalJamDatabase();

@@ -5,6 +5,7 @@ import {
   loadStations,
   addCustomStation,
   toggleFavoriteStation,
+  recordStationPlay,
   HIGH_LEVEL_GENRES,
   RADIO_GENRES,
   getStationCategory,
@@ -197,6 +198,20 @@ test('Internet Radio Stations Suite', async (t) => {
 
     const unFav = await toggleFavoriteStation(custom.id, db);
     assert.equal(unFav, false);
+  });
+
+  await t.test('recordStationPlay updates lastPlayedAt timestamp on station', async () => {
+    const db = new MockRadioDB();
+    await loadStations(db);
+
+    const updated = await recordStationPlay('rp_main', db);
+    assert.ok(updated);
+    assert.equal(updated.id, 'rp_main');
+    assert.ok(typeof updated.lastPlayedAt === 'number' && updated.lastPlayedAt > 0);
+
+    const reloaded = await loadStations(db);
+    const rp = reloaded.find((s) => s.id === 'rp_main');
+    assert.equal(rp.lastPlayedAt, updated.lastPlayedAt);
   });
 });
 

@@ -632,7 +632,8 @@ export async function loadStations(db) {
         ) {
           saved[i] = {
             ...curated,
-            isFavorite: Boolean(station.isFavorite)
+            isFavorite: Boolean(station.isFavorite),
+            lastPlayedAt: station.lastPlayedAt || null
           };
           modified = true;
         }
@@ -643,13 +644,17 @@ export async function loadStations(db) {
     const existingIds = new Set(saved.map((s) => s.id));
     for (const curated of CURATED_STATIONS) {
       if (!existingIds.has(curated.id)) {
-        saved.push({ ...curated });
+        saved.push({ ...curated, lastPlayedAt: null });
         modified = true;
       }
     }
 
-    if (modified) {
-      await db.saveStations(saved);
+    if (modified && typeof db.saveStations === 'function') {
+      try {
+        await db.saveStations(saved);
+      } catch (saveErr) {
+        console.warn(`[Stations] Notice saving stations to DB: ${saveErr?.message}`);
+      }
     }
     return saved.map((s) => ({ ...s }));
   } catch (err) {
@@ -677,7 +682,8 @@ export async function addCustomStation(station, db) {
     bitrate: station.bitrate || 'Unknown',
     favicon: station.favicon || '',
     isCustom: true,
-    isFavorite: false
+    isFavorite: false,
+    lastPlayedAt: null
   };
 
   if (db) {
@@ -697,4 +703,17 @@ export async function toggleFavoriteStation(stationId, db) {
   target.isFavorite = !target.isFavorite;
   await db.saveStations(stations);
   return target.isFavorite;
+}
+
+export async function recordStationPlay(stationId, db) {
+  if (!stationId || !db) return null;
+  if (typeof db.recordStationPlay === 'function') {
+    return db.recordStationPlay(stationId);
+  }
+  const stations = await loadStations(db);
+  const target = stations.find((s) => s.id === stationId);
+  if (!target) return null;
+  target.lastPlayedAt = Date.now();
+  await db.saveStations(stations);
+  return target;
 }
