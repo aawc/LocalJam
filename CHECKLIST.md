@@ -44,7 +44,19 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 10: Professional Copy Refinement (Remove Promotional Hyperbole)** `[DONE]`
   - *Description:* Refine user-facing copy across Home view, Radio view, Settings view, and app headers to use clear, elegant, and professional language without hyperbole.
-  - *Associated Commits:* `5beae4c`, `2731460`, `f2d3b90`
+  - *Associated Commits:* `5beae4c`, `2731460`, `f2d3b90`, `6c6aec9`
+
+- [x] **Issue 11: Fix Broken SomaFM & BBC Radio 6 Stream Endpoints** `[DONE]`
+  - *Description:* Resolve 404 and 410 playback errors for SomaFM stations (Illinois Street Lounge, Secret Agent, Lush, Space Station Soma, Deep Space One, Suburbs of Goa) by updating to verified 128 kbps HTTPS MP3 endpoints, and update BBC Radio 6 Music to its active HTTPS live stream.
+  - *Associated Commits:* `6215421`
+
+- [x] **Issue 12: Comprehensive Release Commits & Highlights Metadata Generation** `[DONE]`
+  - *Description:* Ensure `version.json` and `.github/workflows/deploy.yml` dynamically extract the full list of recent git commits (hashes and commit messages) and release highlights rather than overwriting with only a single commit hash.
+  - *Associated Commits:* `380a1e6`
+
+- [x] **Issue 13: Instant & Continuous Release Update Detection & Refresh Prompt** `[DONE]`
+  - *Description:* Optimize update checker in `update-banner.js` and `main.js` to perform initial check on boot, poll every 30 seconds, trigger `registration.update()` on focus, and reactively prompt the user with a high-contrast toast banner whenever a new version is published.
+  - *Associated Commits:* Pending
 
 ---
 

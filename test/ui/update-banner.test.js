@@ -94,7 +94,7 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
       }
     };
 
-    initUpdateChecker({
+    const checker = initUpdateChecker({
       registration: mockRegistration,
       onUpdateReady: (ver) => {
         updateFoundCalled = true;
@@ -105,5 +105,49 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
 
     assert.equal(updateFoundCalled, true);
     assert.equal(receivedVersion, "New Release");
+    checker.destroy();
+  });
+
+  await t.test("initUpdateChecker polls remote version and respects setActiveVersion and destroy", async () => {
+    const prevFetch = globalThis.fetch;
+    try {
+      let notifiedVersion = null;
+      let updateCheckedCount = 0;
+
+      const mockRegistration = {
+        update: async () => {
+          updateCheckedCount++;
+        },
+        addEventListener: () => {}
+      };
+
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({ version: "v2026.09.010" })
+      });
+
+      const checker = initUpdateChecker({
+        registration: mockRegistration,
+        currentVersion: "v2026.09.009",
+        onUpdateReady: (ver) => {
+          notifiedVersion = ver;
+        },
+        pollIntervalMs: 0
+      });
+
+      assert.equal(typeof checker.poll, "function");
+      assert.equal(typeof checker.setActiveVersion, "function");
+      assert.equal(typeof checker.destroy, "function");
+
+      await checker.poll();
+
+      assert.equal(updateCheckedCount, 1);
+      assert.equal(notifiedVersion, "v2026.09.010");
+
+      checker.destroy();
+    } finally {
+      globalThis.fetch = prevFetch;
+    }
   });
 });
+

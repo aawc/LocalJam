@@ -104,10 +104,14 @@ export async function checkRemoteVersion(currentVersion = APP_VERSION, versionEn
  * @param {Object} options
  * @param {ServiceWorkerRegistration} [options.registration]
  * @param {Function} [options.onUpdateReady]
- * @param {number} [options.pollIntervalMs=300000] // 5 minutes
+ * @param {number} [options.pollIntervalMs=30000] // 30 seconds default
+ * @param {string} [options.currentVersion=APP_VERSION]
  */
-export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs = 300000 } = {}) {
+export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs = 30000, currentVersion = APP_VERSION } = {}) {
   let hasNotified = false;
+  let activeVersion = currentVersion;
+  let intervalId = null;
+  let initialTimeoutId = null;
 
   const notifyUpdate = (newVersion, worker = null) => {
     if (hasNotified) return;
@@ -138,18 +142,57 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
 
   // 2. Periodic and window focus remote version check
   const poll = async () => {
-    const newVersion = await checkRemoteVersion(APP_VERSION);
+    // Actively prompt browser Service Worker update check if registration is available
+    if (registration && typeof registration.update === "function") {
+      try {
+        await registration.update();
+      } catch {
+        // Ignore network / update errors
+      }
+    }
+
+    const newVersion = await checkRemoteVersion(activeVersion);
     if (newVersion) {
       notifyUpdate(newVersion);
     }
   };
 
+  const onFocus = () => {
+    poll();
+  };
+
   if (typeof window !== "undefined") {
-    window.addEventListener("focus", () => poll());
+    window.addEventListener("focus", onFocus);
+
+    // Initial check after short boot settle delay (1500ms)
+    initialTimeoutId = setTimeout(() => {
+      poll();
+    }, 1500);
+
     if (pollIntervalMs > 0) {
-      setInterval(poll, pollIntervalMs);
+      intervalId = setInterval(poll, pollIntervalMs);
     }
   }
 
-  return { poll };
+  const setActiveVersion = (ver) => {
+    if (ver) {
+      activeVersion = ver;
+    }
+  };
+
+  const destroy = () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    if (initialTimeoutId) {
+      clearTimeout(initialTimeoutId);
+      initialTimeoutId = null;
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("focus", onFocus);
+    }
+  };
+
+  return { poll, setActiveVersion, destroy };
 }

@@ -3,13 +3,45 @@
  * Standard format: YYYY-MM-DD-NNN (e.g. 2026-09-04-001)
  */
 
-export const APP_VERSION = "2026-09-04-003";
+export const APP_VERSION = "2026-09-04-004";
 
 export const CURRENT_RELEASE = {
-  version: "2026-09-04-003",
+  version: "2026-09-04-004",
   releaseDate: "2026-09-04",
-  title: "LocalJam 2026-09-04-003",
+  title: "LocalJam 2026-09-04-004",
   commits: [
+    {
+      hash: "6c6aec9",
+      message: "refactor(ui): refine user-facing copy across views to professional tone"
+    },
+    {
+      hash: "f2d3b90",
+      message: "feat(ui): add fullscreen display mode and keyboard toggle to audio visualizer"
+    },
+    {
+      hash: "2731460",
+      message: "feat(radio): categorize radio stations into high-level genre sections and filter pills"
+    },
+    {
+      hash: "5beae4c",
+      message: "fix(ui): streamline application footer by removing promotional badge, tagline, and external link"
+    },
+    {
+      hash: "a5096df",
+      message: "docs: synchronize task execution checklist with recent atomic commits"
+    },
+    {
+      hash: "2ab1654",
+      message: "feat(ui): add radio search filtering, multi-criteria sorting, and starred stations grouping"
+    },
+    {
+      hash: "e09a85b",
+      message: "feat(radio): expand curated streams, fix station endpoints, and add SVG fallback artwork"
+    },
+    {
+      hash: "a145b10",
+      message: "feat(version): dynamically synchronize runtime release metadata from deployed version.json"
+    },
     {
       hash: "7df8d9d",
       message: "fix(ci): format release notes generation as indented block and update checklist"
@@ -37,24 +69,14 @@ export const CURRENT_RELEASE = {
     {
       hash: "47d22ee",
       message: "feat(pwa): add automatic release update detection and refresh prompt"
-    },
-    {
-      hash: "f8bd490",
-      message: "feat(ui): add application footer with active release badge and release notes modal"
-    },
-    {
-      hash: "4535f30",
-      message: "feat(release): standardize release naming convention to YYYY-MM-DD-NNN"
     }
   ],
   notes: [
-    "Fixed Classical KUSC, KING FM, and Jazz24 audio streams with verified direct HTTPS endpoints.",
-    "Added 12 new high-fidelity curated radio streams across Classical, Jazz, Indie Rock, Ambient, Soul, and World genres.",
-    "Implemented real-time station search filtering and multi-criteria sorting (Name A-Z, Genre, Bitrate).",
-    "Added dedicated Starred Radio Stations top section grouping with dynamic stream counts and instant reactivity.",
-    "Added accessible SVG fallback artwork and onerror image recovery for 100% reliable thumbnail rendering.",
-    "Added dynamic version synchronization for GitHub Pages deployments and live footer release badge updates.",
-    "Fixed GitHub Actions release notes formatting with indented command grouping."
+    "Fixed SomaFM (Illinois Street Lounge, Secret Agent, Lush, Space Station, Deep Space One, Suburbs of Goa) and BBC Radio 6 stream endpoints.",
+    "Categorized radio stations into 10 high-level genre sections with clean navigation and search filtering.",
+    "Added fullscreen display mode with keyboard shortcut (F) and canvas double-click to Audio Visualizer.",
+    "Streamlined application footer and refined user interface copy across all views.",
+    "Continuous automated release detection and one-click refresh notification."
   ]
 };
 

@@ -24,6 +24,7 @@ import { renderFavoritesView } from './ui/views/favorites-view.js';
 import { renderHistoryView } from './ui/views/history-view.js';
 import { renderRadioView } from './ui/views/radio-view.js';
 import { renderSettingsView } from './ui/views/settings-view.js';
+import { APP_VERSION } from './version.js';
 
 export async function initApp() {
   try {
@@ -77,13 +78,22 @@ export async function initApp() {
       document.body.appendChild(appFooter.element);
     }
 
+    let updateCheckerInstance = null;
+    let activeDeployedVersion = APP_VERSION;
+
     // Dynamically fetch deployed version.json to synchronize runtime release display
     if (typeof fetch === 'function') {
       fetch(`./version.json?_t=${Date.now()}`, { cache: 'no-cache' })
         .then((res) => (res.ok ? res.json() : null))
         .then((verData) => {
-          if (verData && verData.version && typeof appFooter.updateVersion === 'function') {
-            appFooter.updateVersion(verData);
+          if (verData && verData.version) {
+            activeDeployedVersion = verData.version;
+            if (typeof appFooter.updateVersion === 'function') {
+              appFooter.updateVersion(verData);
+            }
+            if (updateCheckerInstance && typeof updateCheckerInstance.setActiveVersion === 'function') {
+              updateCheckerInstance.setActiveVersion(verData.version);
+            }
           }
         })
         .catch((err) => {
@@ -161,20 +171,23 @@ export async function initApp() {
           .register('./sw.js')
           .then((reg) => {
             console.log('[SW] ServiceWorker registered with scope:', reg.scope);
-            initUpdateChecker({
+            updateCheckerInstance = initUpdateChecker({
               registration: reg,
+              currentVersion: activeDeployedVersion,
               onUpdateReady: handleUpdateReady
             });
           })
           .catch((err) => {
             console.warn('[SW] ServiceWorker registration failed:', err);
-            initUpdateChecker({
+            updateCheckerInstance = initUpdateChecker({
+              currentVersion: activeDeployedVersion,
               onUpdateReady: handleUpdateReady
             });
           });
       });
     } else {
-      initUpdateChecker({
+      updateCheckerInstance = initUpdateChecker({
+        currentVersion: activeDeployedVersion,
         onUpdateReady: handleUpdateReady
       });
     }
