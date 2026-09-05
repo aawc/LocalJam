@@ -8,6 +8,8 @@ import { equalizer } from './player/equalizer.js';
 import { router } from './ui/router.js';
 import { keyboardManager } from './ui/keyboard.js';
 import { createPlayerBar } from './ui/components/player-bar.js';
+import { createAppFooter } from './ui/components/app-footer.js';
+import { createUpdateBanner, initUpdateChecker } from './ui/components/update-banner.js';
 import { createEqModal } from './ui/components/eq-modal.js';
 import { createVisualizerOverlay } from './ui/components/visualizer-overlay.js';
 import { createQueueDrawer } from './ui/components/queue-drawer.js';
@@ -52,6 +54,17 @@ export async function initApp() {
 
     const queueDrawer = createQueueDrawer();
     document.body.appendChild(queueDrawer.element);
+
+    const appFooter = createAppFooter();
+    const appMain = document.querySelector('.app-main');
+    if (appMain) {
+      appMain.appendChild(appFooter.element);
+    } else {
+      document.body.appendChild(appFooter.element);
+    }
+
+    const updateBanner = createUpdateBanner();
+    document.body.appendChild(updateBanner.element);
 
     // 4. Connect Toggle Triggers
     const btnToggleEq = document.getElementById('btn-toggle-eq');
@@ -109,17 +122,32 @@ export async function initApp() {
       document.addEventListener(evt, unlockWebAudio, { once: true, passive: true });
     });
 
-    // 9. Register Service Worker for PWA
+    // 9. Initialize Update Checker & Register Service Worker for PWA
+    const handleUpdateReady = (newVersion, worker) => {
+      updateBanner.show(newVersion, worker);
+    };
+
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('./sw.js')
           .then((reg) => {
             console.log('[SW] ServiceWorker registered with scope:', reg.scope);
+            initUpdateChecker({
+              registration: reg,
+              onUpdateReady: handleUpdateReady
+            });
           })
           .catch((err) => {
             console.warn('[SW] ServiceWorker registration failed:', err);
+            initUpdateChecker({
+              onUpdateReady: handleUpdateReady
+            });
           });
+      });
+    } else {
+      initUpdateChecker({
+        onUpdateReady: handleUpdateReady
       });
     }
   } catch (err) {

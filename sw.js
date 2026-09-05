@@ -8,16 +8,20 @@ const CACHE_NAME = 'localjam-v1';
 const APP_SHELL_ASSETS = [
   './',
   './index.html',
+  './version.json',
   './manifest.webmanifest',
   './favicon.svg',
   './public/icons/icon-192.svg',
   './public/icons/icon-512.svg',
   './src/main.js',
+  './src/version.js',
   './src/ui/theme.css',
   './src/ui/app.css',
   './src/ui/router.js',
   './src/ui/keyboard.js',
   './src/ui/components/player-bar.js',
+  './src/ui/components/app-footer.js',
+  './src/ui/components/update-banner.js',
   './src/ui/components/eq-modal.js',
   './src/ui/components/visualizer-overlay.js',
   './src/ui/components/queue-drawer.js',
@@ -65,6 +69,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -74,7 +84,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Bypass live radio streams, HTTP audio, range requests, and blob URLs
+  // 2. Network-First strategy for version.json to ensure immediate update detection
+  if (url.pathname.endsWith('version.json')) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // 3. Bypass live radio streams, HTTP audio, range requests, and blob URLs
   if (
     request.destination === 'audio' ||
     request.headers.has('range') ||
@@ -93,7 +111,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Cache-First with Network Fallback for App Shell Assets
+  // 4. Cache-First with Network Fallback for App Shell Assets
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
