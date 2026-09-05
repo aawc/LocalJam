@@ -16,14 +16,6 @@ export function createAppFooter() {
           <span class="footer-release-tag">Release:</span>
           <span class="footer-release-version">${CURRENT_RELEASE.version}</span>
         </button>
-        <span class="footer-badge">[LOCAL-FIRST]</span>
-      </div>
-
-      <div class="footer-right">
-        <span class="footer-text">Zero tracking • Local storage authoritative</span>
-        <a href="https://github.com/aawc/LocalJam" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="LocalJam GitHub Repository">
-          GitHub
-        </a>
       </div>
     </footer>
 

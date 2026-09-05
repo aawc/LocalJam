@@ -45,6 +45,13 @@ test("App Footer & Release Notes Modal Suite", async (t) => {
     assert.equal(typeof footerComponent.close, "function");
     assert.equal(typeof footerComponent.updateVersion, "function");
 
+    // Verify footer elements cleanup
+    assert.ok(!footerComponent.element.innerHTML.includes("[LOCAL-FIRST]"), "Footer must not contain [LOCAL-FIRST]");
+    assert.ok(!footerComponent.element.innerHTML.includes("Zero tracking"), "Footer must not contain Zero tracking");
+    assert.ok(!footerComponent.element.innerHTML.includes('class="footer-link"'), "Footer must not contain footer-link");
+    assert.ok(!footerComponent.element.innerHTML.includes('class="footer-badge"'), "Footer must not contain footer-badge");
+    assert.ok(!footerComponent.element.innerHTML.includes('class="footer-text"'), "Footer must not contain footer-text");
+
     footerComponent.open();
     assert.equal(modalMock.style.display, "flex");
 
