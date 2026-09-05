@@ -5,6 +5,9 @@ import {
   loadStations,
   addCustomStation,
   toggleFavoriteStation,
+  HIGH_LEVEL_GENRES,
+  RADIO_GENRES,
+  getStationCategory,
   getStationFallbackArtwork
 } from '../../src/radio/stations.js';
 
@@ -31,6 +34,38 @@ test('Internet Radio Stations Suite', async (t) => {
       assert.ok(station.streamUrl.startsWith('https://'), `Stream URL must use HTTPS: ${station.streamUrl}`);
       assert.ok(station.genre, 'Station must have a genre');
     }
+  });
+
+  await t.test('High-level genre taxonomy and getStationCategory classification', () => {
+    assert.deepEqual(RADIO_GENRES, HIGH_LEVEL_GENRES);
+    assert.ok(HIGH_LEVEL_GENRES.includes('Ambient'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Rock'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Classical'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Jazz'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Electronic'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Folk & Roots'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('News & Talk'));
+
+    for (const station of CURATED_STATIONS) {
+      const cat = getStationCategory(station);
+      assert.ok(
+        HIGH_LEVEL_GENRES.includes(cat),
+        `Station ${station.name} (${station.genre}) mapped to invalid category: ${cat}`
+      );
+    }
+
+    // Specific category assertions
+    assert.equal(getStationCategory({ genre: 'Ambient / Drone' }), 'Ambient');
+    assert.equal(getStationCategory({ genre: 'Rock / Alternative' }), 'Rock');
+    assert.equal(getStationCategory({ genre: 'Classical / Instrumental' }), 'Classical');
+    assert.equal(getStationCategory({ genre: 'Jazz / Blues' }), 'Jazz');
+    assert.equal(getStationCategory({ genre: 'Electronic / Industrial' }), 'Electronic');
+    assert.equal(getStationCategory({ genre: 'Folk / Americana' }), 'Folk & Roots');
+    assert.equal(getStationCategory({ genre: 'Spy / Lounge / Trip-Hop' }), 'Lounge');
+    assert.equal(getStationCategory({ genre: 'News / English Talk' }), 'News & Talk');
+    assert.equal(getStationCategory({ genre: 'Soul / Funk' }), 'Soul & Funk');
+    assert.equal(getStationCategory({ genre: 'World Fusion' }), 'World');
+    assert.equal(getStationCategory({ genre: 'Synthwave / Instrumental' }), 'Electronic');
   });
 
   await t.test('Includes Radio Paradise, SomaFM, Classical, Jazz, and News stations with verified URLs', () => {

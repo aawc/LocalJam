@@ -7,6 +7,8 @@ import {
   addCustomStation,
   toggleFavoriteStation,
   RADIO_GENRES,
+  HIGH_LEVEL_GENRES,
+  getStationCategory,
   getStationFallbackArtwork
 } from '../../radio/stations.js';
 import { audioEngine } from '../../player/audio-engine.js';
@@ -28,7 +30,11 @@ export async function renderRadioView() {
     if (selectedGenre === 'Favorites') {
       list = list.filter((s) => Boolean(s.isFavorite));
     } else if (selectedGenre !== 'All') {
-      list = list.filter((s) => s.genre && s.genre.toLowerCase().includes(selectedGenre.toLowerCase()));
+      list = list.filter((s) => {
+        const cat = getStationCategory(s);
+        const g = (s.genre || '').toLowerCase();
+        return cat === selectedGenre || g.includes(selectedGenre.toLowerCase());
+      });
     }
 
     // 2. Search query filtering (name, genre, description, country)
@@ -37,9 +43,10 @@ export async function renderRadioView() {
       list = list.filter((s) => {
         const name = (s.name || '').toLowerCase();
         const genre = (s.genre || '').toLowerCase();
+        const cat = getStationCategory(s).toLowerCase();
         const desc = (s.description || '').toLowerCase();
         const country = (s.country || '').toLowerCase();
-        return name.includes(q) || genre.includes(q) || desc.includes(q) || country.includes(q);
+        return name.includes(q) || genre.includes(q) || cat.includes(q) || desc.includes(q) || country.includes(q);
       });
     }
 
@@ -100,20 +107,135 @@ export async function renderRadioView() {
     `;
   }
 
+  function renderSections(stations, currentRadio) {
+    if (stations.length === 0) {
+      return `
+        <div class="empty-state-card">
+          <p>${
+            selectedGenre === 'Favorites'
+              ? 'No starred radio streams yet. Click the star icon on any station to save it here.'
+              : searchQuery
+              ? `No stations match "${escapeHtml(searchQuery)}".`
+              : 'No stations found in this category.'
+          }</p>
+        </div>
+      `;
+    }
+
+    if (selectedGenre === 'Favorites') {
+      return `
+        <div class="radio-section-header">
+          <h2 class="radio-section-title">
+            <span>★ Starred Radio Stations</span>
+          </h2>
+          <span class="radio-section-count">${stations.length} stream${stations.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="card-grid">
+          ${stations.map((s) => renderCard(s, currentRadio)).join('')}
+        </div>
+      `;
+    }
+
+    if (selectedGenre !== 'All') {
+      return `
+        <div class="radio-section-header">
+          <h2 class="radio-section-title">
+            <span>${escapeHtml(selectedGenre)} Streams</span>
+          </h2>
+          <span class="radio-section-count">${stations.length} stream${stations.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="card-grid">
+          ${stations.map((s) => renderCard(s, currentRadio)).join('')}
+        </div>
+      `;
+    }
+
+    // When viewing 'All', separate starred stations first if present
+    const starredStations = stations.filter((s) => Boolean(s.isFavorite));
+    const nonStarredStations = stations.filter((s) => !s.isFavorite);
+
+    let html = '';
+
+    if (starredStations.length > 0) {
+      html += `
+        <div class="radio-section-header">
+          <h2 class="radio-section-title">
+            <span>★ Starred Radio Stations</span>
+          </h2>
+          <span class="radio-section-count">${starredStations.length} stream${starredStations.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="card-grid" style="margin-bottom: 32px;">
+          ${starredStations.map((s) => renderCard(s, currentRadio)).join('')}
+        </div>
+      `;
+    }
+
+    if (sortOrder !== 'default') {
+      // If a non-default sort is explicitly selected, display a flat sorted grid
+      if (nonStarredStations.length > 0) {
+        html += `
+          <div class="radio-section-header">
+            <h2 class="radio-section-title">
+              <span>All Streams</span>
+            </h2>
+            <span class="radio-section-count">${nonStarredStations.length} stream${nonStarredStations.length === 1 ? '' : 's'}</span>
+          </div>
+          <div class="card-grid">
+            ${nonStarredStations.map((s) => renderCard(s, currentRadio)).join('')}
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    // In default sort order, group remaining stations into high-level genre sections
+    const targetPool = nonStarredStations.length > 0 ? nonStarredStations : stations;
+    const genres = HIGH_LEVEL_GENRES.filter((g) => g !== 'All');
+
+    genres.forEach((genre) => {
+      const genreItems = targetPool.filter((s) => getStationCategory(s) === genre);
+      if (genreItems.length > 0) {
+        html += `
+          <div class="radio-section-header" style="margin-top: 16px;">
+            <h2 class="radio-section-title">
+              <span>${escapeHtml(genre)}</span>
+            </h2>
+            <span class="radio-section-count">${genreItems.length} stream${genreItems.length === 1 ? '' : 's'}</span>
+          </div>
+          <div class="card-grid" style="margin-bottom: 28px;">
+            ${genreItems.map((s) => renderCard(s, currentRadio)).join('')}
+          </div>
+        `;
+      }
+    });
+
+    const otherItems = targetPool.filter((s) => getStationCategory(s) === 'Other');
+    if (otherItems.length > 0) {
+      html += `
+        <div class="radio-section-header" style="margin-top: 16px;">
+          <h2 class="radio-section-title">
+            <span>Other Streams</span>
+          </h2>
+          <span class="radio-section-count">${otherItems.length} stream${otherItems.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="card-grid" style="margin-bottom: 28px;">
+          ${otherItems.map((s) => renderCard(s, currentRadio)).join('')}
+        </div>
+      `;
+    }
+
+    return html;
+  }
+
   function render() {
     const stations = getFilteredAndSortedStations();
     const currentRadio = audioEngine.isRadio ? audioEngine.currentStation : null;
-
-    const isStarredFilterActive = selectedGenre === 'Favorites';
-    const starredStations = stations.filter((s) => Boolean(s.isFavorite));
-    const otherStations = stations.filter((s) => !s.isFavorite);
-    const showGroupedSections = !isStarredFilterActive && starredStations.length > 0;
 
     container.innerHTML = `
       <div class="view-header">
         <div>
           <h1 class="view-title">Internet Radio</h1>
-          <div class="view-subtitle">Curated live audio streams with zero tracking</div>
+          <div class="view-subtitle">Curated live internet radio streams</div>
         </div>
 
         <div class="view-actions">
@@ -191,55 +313,7 @@ export async function renderRadioView() {
       </div>
 
       <!-- Grouped or Flat Stations Content -->
-      ${
-        stations.length === 0
-          ? `
-        <div class="empty-state-card">
-          <p>${
-            selectedGenre === 'Favorites'
-              ? 'No starred radio streams yet. Click the star icon on any station to save it here.'
-              : searchQuery
-              ? `No stations match "${escapeHtml(searchQuery)}".`
-              : 'No stations found in this category.'
-          }</p>
-        </div>
-      `
-          : showGroupedSections
-          ? `
-        <!-- Section 1: Starred Stations -->
-        <div class="radio-section-header">
-          <h2 class="radio-section-title">
-            <span>★ Starred Radio Stations</span>
-          </h2>
-          <span class="radio-section-count">${starredStations.length} stream${starredStations.length === 1 ? '' : 's'}</span>
-        </div>
-        <div class="card-grid" style="margin-bottom: 32px;">
-          ${starredStations.map((s) => renderCard(s, currentRadio)).join('')}
-        </div>
-
-        <!-- Section 2: Remaining / All Stations -->
-        ${
-          otherStations.length > 0
-            ? `
-          <div class="radio-section-header">
-            <h2 class="radio-section-title">
-              <span>${searchQuery || selectedGenre !== 'All' ? 'Other Matching Streams' : 'All Radio Streams'}</span>
-            </h2>
-            <span class="radio-section-count">${otherStations.length} stream${otherStations.length === 1 ? '' : 's'}</span>
-          </div>
-          <div class="card-grid">
-            ${otherStations.map((s) => renderCard(s, currentRadio)).join('')}
-          </div>
-        `
-            : ''
-        }
-      `
-          : `
-        <div class="card-grid">
-          ${stations.map((s) => renderCard(s, currentRadio)).join('')}
-        </div>
-      `
-      }
+      ${renderSections(stations, currentRadio)}
     `;
 
     attachEvents();

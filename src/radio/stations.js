@@ -85,7 +85,7 @@ export const CURATED_STATIONS = [
   {
     id: 'soma_secret_agent',
     name: 'SomaFM: Secret Agent',
-    description: 'The soundtrack for your stylish, mysterious 007 lifestyle.',
+    description: 'Spy, lounge, and trip-hop music with an espionage theme.',
     streamUrl: 'https://ice1.somafm.com/secretagent-256-mp3',
     homepageUrl: 'https://somafm.com/secretagent/',
     genre: 'Spy / Lounge / Trip-Hop',
@@ -98,7 +98,7 @@ export const CURATED_STATIONS = [
   {
     id: 'soma_drone_zone',
     name: 'SomaFM: Drone Zone',
-    description: 'Served best chilled, safe with most medications. Atmospheric ambient.',
+    description: 'Atmospheric ambient and continuous drone soundscapes.',
     streamUrl: 'https://ice1.somafm.com/dronezone-256-mp3',
     homepageUrl: 'https://somafm.com/dronezone/',
     genre: 'Ambient / Drone',
@@ -448,40 +448,65 @@ export const CURATED_STATIONS = [
   }
 ];
 
-export const RADIO_GENRES = [
+export const HIGH_LEVEL_GENRES = [
   'All',
-  'Acoustic / Ambient',
-  'Alternative / Indie',
-  'Ambient / Drone',
-  'Ambient / Electronica',
-  'Ambient / Police Scanner',
-  'Americana / Country',
-  'Celtic / World Folk',
-  'Classical / Instrumental',
-  'Deep Ambient / Space',
-  'Deep House / Downtempo',
-  'Downtempo / Chillout',
-  'Eclectic / Rock',
-  'Electronic / Industrial',
-  'Electropop / Indie Dance',
-  'Folk / Americana',
-  'Indie Pop / Rock',
-  'Jazz / Blues',
-  'Jazz / Blues / NPR',
-  'Lo-Fi / Hip-Hop / Soul',
-  'Lounge / Exotica',
-  'News / English Talk',
-  'News / Public Radio',
-  'NuJazz / Modern Jazz',
-  'Rock / 70s Mellow',
-  'Rock / Alternative',
-  'Soul / Funk',
-  'Spy / Lounge / Trip-Hop',
-  'Synthwave / Instrumental',
-  'Vocal Chill / Ambient',
-  'World Fusion',
-  'World Fusion / Asian Chill'
+  'Ambient',
+  'Classical',
+  'Electronic',
+  'Folk & Roots',
+  'Jazz',
+  'Lounge',
+  'News & Talk',
+  'Rock',
+  'Soul & Funk',
+  'World'
 ];
+
+export const RADIO_GENRES = HIGH_LEVEL_GENRES;
+
+/**
+ * Maps a station's specific genre, title, or metadata to a clean high-level genre category.
+ * @param {Object} [station]
+ * @returns {string} High-level genre category
+ */
+export function getStationCategory(station) {
+  if (!station) return 'Other';
+  const g = (station.genre || '').toLowerCase();
+  const name = (station.name || '').toLowerCase();
+  const desc = (station.description || '').toLowerCase();
+
+  if (g.includes('classical') || desc.includes('classical') || name.includes('classical') || name.includes('kusc') || name.includes('wqxr') || name.includes('king fm')) {
+    return 'Classical';
+  }
+  if (g.includes('jazz') || g.includes('nujazz') || name.includes('jazz') || name.includes('knkx') || name.includes('sonic universe')) {
+    return 'Jazz';
+  }
+  if (g.includes('drone') || g.includes('ambient') || g.includes('chill') || g.includes('downtempo') || g.includes('space') || g.includes('scanner') || g.includes('mellow') || g.includes('fluid') || g.includes('lush')) {
+    return 'Ambient';
+  }
+  if (g.includes('electronic') || g.includes('electropop') || g.includes('synthwave') || g.includes('house') || g.includes('dance') || g.includes('industrial') || g.includes('def con') || g.includes('poptron') || g.includes('beat blender') || g.includes('synphaera')) {
+    return 'Electronic';
+  }
+  if (g.includes('folk') || g.includes('americana') || g.includes('country') || g.includes('celtic') || g.includes('roots') || g.includes('boot liquor') || g.includes('thistle')) {
+    return 'Folk & Roots';
+  }
+  if (g.includes('lounge') || g.includes('exotica') || g.includes('spy') || g.includes('trip-hop') || g.includes('illinois street') || g.includes('secret agent')) {
+    return 'Lounge';
+  }
+  if (g.includes('news') || g.includes('talk') || g.includes('public radio') || name.includes('wnyc') || name.includes('bbc world service')) {
+    return 'News & Talk';
+  }
+  if (g.includes('rock') || g.includes('indie') || g.includes('alternative') || g.includes('eclectic') || g.includes('70s') || name.includes('kexp') || name.includes('bbc radio 6') || name.includes('left coast')) {
+    return 'Rock';
+  }
+  if (g.includes('soul') || g.includes('funk') || g.includes('lo-fi') || g.includes('hip-hop') || name.includes('seven inch') || name.includes('lofi')) {
+    return 'Soul & Funk';
+  }
+  if (g.includes('world') || g.includes('asian') || g.includes('global') || g.includes('fusion') || g.includes('goa')) {
+    return 'World';
+  }
+  return 'Other';
+}
 
 /**
  * Generates a clean, colorblind-safe SVG fallback data URI artwork for a radio station based on its genre.
