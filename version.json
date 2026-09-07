@@ -4,64 +4,64 @@
   "title": "LocalJam v2026.09.040",
   "commits": [
     {
-      "hash": "6c6aec9",
-      "message": "refactor(ui): refine user-facing copy across views to professional tone"
+      "hash": "2c64f2e",
+      "message": "docs(checklist): update task execution checklist with commit hash for Issue 18"
     },
     {
-      "hash": "f2d3b90",
-      "message": "feat(ui): add fullscreen display mode and keyboard toggle to audio visualizer"
+      "hash": "d47f726",
+      "message": "fix(ci): synchronize src/version.js and sw.js cache name during deployment to prevent persistent update prompt"
     },
     {
-      "hash": "2731460",
-      "message": "feat(radio): categorize radio stations into high-level genre sections and filter pills"
+      "hash": "08f1aca",
+      "message": "docs(checklist): update task execution checklist with Issue 17 resolution"
     },
     {
-      "hash": "5beae4c",
-      "message": "fix(ui): streamline application footer by removing promotional badge, tagline, and external link"
+      "hash": "6bd4abd",
+      "message": "test(pwa): add comprehensive tests for service worker update lifecycle, banner, and station sync"
     },
     {
-      "hash": "a5096df",
-      "message": "docs: synchronize task execution checklist with recent atomic commits"
+      "hash": "3b259d6",
+      "message": "fix(pwa): fix update notification lifecycle, asset precaching, and station catalog sync"
     },
     {
-      "hash": "2ab1654",
-      "message": "feat(ui): add radio search filtering, multi-criteria sorting, and starred stations grouping"
+      "hash": "6c810c4",
+      "message": "docs(pwa): add comprehensive PWA update notification and radio catalog investigation report"
     },
     {
-      "hash": "e09a85b",
-      "message": "feat(radio): expand curated streams, fix station endpoints, and add SVG fallback artwork"
+      "hash": "97dcea4",
+      "message": "feat(ui): implement minimalist UX design improvements and expand curated radio catalog"
     },
     {
-      "hash": "a145b10",
-      "message": "feat(version): dynamically synchronize runtime release metadata from deployed version.json"
+      "hash": "dba488a",
+      "message": "docs(ux): add minimalist UX design review and improvement report"
     },
     {
-      "hash": "7df8d9d",
-      "message": "fix(ci): format release notes generation as indented block and update checklist"
+      "hash": "e6b400d",
+      "message": "docs(checklist): update task checklist with security remediation commit 721bc8f"
     },
     {
-      "hash": "b7e58e6",
-      "message": "release: bump version to 2026-09-04-002 and update release notes"
+      "hash": "721bc8f",
+      "message": "fix(security): remediate path traversal, CSP, DOM XSS, and add automated security tests"
     },
     {
-      "hash": "0fbf4ff",
-      "message": "ci(release): generate dynamic semantic tag v$yyyy.$mm.$nnn and push tag to repository"
+      "hash": "51360b0",
+      "message": "docs(security): add comprehensive security audit and vulnerability assessment report"
     },
     {
-      "hash": "1809639",
-      "message": "docs: synchronize documentation, version metadata, and task checklist"
+      "hash": "99ede2a",
+      "message": "docs: update task execution checklist with atomic commits for mobile playback and settings about refactor"
     },
     {
-      "hash": "0e42f2e",
-      "message": "feat(ui): add radio station details modal triggered on active station click"
+      "hash": "f6af12b",
+      "message": "refactor(settings): move app version and github link to about section and remove visual accessibility"
     },
     {
-      "hash": "dda7bd2",
-      "message": "feat(radio): expand curated internet radio streams with English and instrumental stations"
+      "hash": "6b0d0ec",
+      "message": "style(ui): expand top navigation search bar width to 520px"
     },
     {
-      "hash": "47d22ee",
-      "message": "feat(pwa): add automatic release update detection and refresh prompt"
+      "hash": "c5a5fb0",
+      "message": "feat(radio): add recently played streams section above starred radio stations"
     }
   ],
   "notes": [

@@ -93,14 +93,14 @@ test("GitHub Actions Pages Deploy Workflow Suite (.github/workflows/deploy.yml)"
 
   const content = fs.readFileSync(deployPath, "utf8");
 
-  await t.test("Deploy workflow dynamically generates deployment version.json metadata", () => {
+  await t.test("Deploy workflow dynamically generates deployment version.json metadata and synchronizes assets", () => {
     assert.ok(
       content.includes("Generate Deployment Version Metadata"),
       "Workflow must include step to generate deployment version metadata"
     );
     assert.ok(
-      content.includes("version.json"),
-      "Workflow must write version.json before deploying"
+      content.includes("scripts/generate-version.js"),
+      "Workflow must invoke scripts/generate-version.js to synchronize release assets"
     );
     assert.ok(
       content.includes("TAG_NAME="),
@@ -110,9 +110,11 @@ test("GitHub Actions Pages Deploy Workflow Suite (.github/workflows/deploy.yml)"
       content.includes("fetch-depth: 0"),
       "Workflow must fetch full git history to build commit log"
     );
-    assert.ok(
-      content.includes("git log"),
-      "Workflow must extract git commits for deployment release notes"
-    );
+
+    const scriptPath = path.join(ROOT_DIR, "scripts/generate-version.js");
+    assert.ok(fs.existsSync(scriptPath), "scripts/generate-version.js must exist");
+    const scriptContent = fs.readFileSync(scriptPath, "utf8");
+    assert.ok(scriptContent.includes("version.json"), "Synchronizer must generate version.json");
+    assert.ok(scriptContent.includes("git log"), "Synchronizer must extract git log history");
   });
 });
