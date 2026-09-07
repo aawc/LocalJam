@@ -81,6 +81,10 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Resolve GitHub Actions deployment workflow syntax error caused by unescaped bash double-quotes in multiline inline `node -e` script. Extract deployment metadata generation and asset synchronization into modular `scripts/generate-version.js` with comprehensive unit and integration tests.
   - *Associated Commits:* `ea9bd9a`
 
+- [x] **Issue 20: PWA Usability Enhancements: Minimalist Player Details Bar, Bottom Navigation Scroll Clearance, and Local Audio Playback Pipeline Fixes** `[DONE]`
+  - *Description:* Resolve 3 critical PWA usability defects: (1) Streamline player details bar with context-adaptive controls hiding irrelevant shuffle/repeat during live radio and replacing bulky multiline badges with a minimalist tactile LIVE capsule, (2) Fix station list and view scroll clipping by providing full bottom scroll clearance above the floating player and mobile navigation bars, and (3) Overhaul the local audio playback pipeline by registering scanned files in sessionRegistry, adding QueueManager.getCurrentTrack(), adding robust FSAA permission handling and root directory handle fallback traversal in audioEngine.playTrack(), and auto-populating library queue on initial play. Document comprehensive UX design specifications and skeuomorphic/minimalist critique in `UX_CRITIQUE_REPORT.md`.
+  - *Associated Commits:* `4d6d525`, `1a8ad3d`, `0c64306`
+
 ---
 
 ## Feature Requests
