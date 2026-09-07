@@ -40,7 +40,7 @@ test('PWA - sw.js caches all declared app shell assets and excludes audio stream
   const content = fs.readFileSync(swPath, 'utf8');
 
   // Verify cache name and assets array
-  assert.ok(content.includes("const CACHE_NAME = 'localjam-v1'"), 'Cache version must be declared');
+  assert.ok(content.includes("const CACHE_NAME = 'localjam-"), 'Cache version must be declared');
   assert.ok(content.includes('APP_SHELL_ASSETS = ['), 'App shell assets array must be declared');
 
   // Verify all files in APP_SHELL_ASSETS actually exist on disk

@@ -8,12 +8,13 @@ import {
   parseReleaseName,
   isValidSemanticTag,
   formatSemanticTag,
-  parseSemanticTag
+  parseSemanticTag,
+  isValidVersion
 } from "../src/version.js";
 
 test("Release Versioning & Naming Convention Suite", async (t) => {
-  await t.test("APP_VERSION strictly adheres to YYYY-MM-DD-NNN format", () => {
-    assert.ok(isValidReleaseName(APP_VERSION), `${APP_VERSION} must be a valid release name`);
+  await t.test("APP_VERSION strictly adheres to standardized release name or semantic tag format", () => {
+    assert.ok(isValidVersion(APP_VERSION), `${APP_VERSION} must be a valid release name or semantic tag`);
   });
 
   await t.test("isValidReleaseName accurately validates release name strings", () => {
@@ -76,7 +77,7 @@ test("Release Versioning & Naming Convention Suite", async (t) => {
 
   await t.test("CURRENT_RELEASE contains valid metadata, commit history, and notes", () => {
     assert.ok(CURRENT_RELEASE);
-    assert.ok(isValidReleaseName(CURRENT_RELEASE.version));
+    assert.ok(isValidVersion(CURRENT_RELEASE.version));
     assert.ok(Array.isArray(CURRENT_RELEASE.commits));
     assert.ok(CURRENT_RELEASE.commits.length > 0);
 

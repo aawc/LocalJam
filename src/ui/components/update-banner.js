@@ -35,9 +35,19 @@ export function createUpdateBanner() {
   const dismissBtn = container.querySelector("#btn-dismiss-update");
 
   let waitingWorker = null;
+  let currentBannerVersion = null;
 
   function show(newVersion, worker = null) {
     if (worker) waitingWorker = worker;
+    currentBannerVersion = newVersion;
+
+    if (typeof sessionStorage !== "undefined") {
+      const dismissed = sessionStorage.getItem("localjam_dismissed_version");
+      if (dismissed === newVersion) {
+        return;
+      }
+    }
+
     if (msgEl) {
       msgEl.textContent = `A new version of LocalJam (${newVersion}) is ready.`;
     }
@@ -50,11 +60,18 @@ export function createUpdateBanner() {
 
   if (applyBtn) {
     applyBtn.addEventListener("click", () => {
+      hide();
       if (waitingWorker) {
         waitingWorker.postMessage({ type: "SKIP_WAITING" });
-      }
-      if (typeof window !== "undefined" && window.location) {
-        window.location.reload();
+        setTimeout(() => {
+          if (typeof window !== "undefined" && window.location) {
+            window.location.reload();
+          }
+        }, 600);
+      } else {
+        if (typeof window !== "undefined" && window.location) {
+          window.location.reload();
+        }
       }
     });
   }
@@ -62,6 +79,9 @@ export function createUpdateBanner() {
   if (dismissBtn) {
     dismissBtn.addEventListener("click", () => {
       hide();
+      if (typeof sessionStorage !== "undefined" && currentBannerVersion) {
+        sessionStorage.setItem("localjam_dismissed_version", currentBannerVersion);
+      }
     });
   }
 

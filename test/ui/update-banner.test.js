@@ -243,11 +243,16 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
       assert.equal(msgMock.textContent, "A new version of LocalJam (v2026.09.036) is ready.");
       assert.equal(banner.element.style.display, "block");
 
-      // Click "Refresh Now"
+      // Click "Refresh Now" with worker
       assert.ok(listeners["click"], "Click listener must be registered on apply button");
       listeners["click"]();
 
       assert.deepEqual(postedMessage, { type: "SKIP_WAITING" });
+
+      // Click "Refresh Now" without worker triggers immediate reload
+      const bannerNoWorker = createUpdateBanner();
+      bannerNoWorker.show("v2026.09.036");
+      listeners["click"]();
       assert.equal(reloaded, true);
     } finally {
       globalThis.document = prevDoc;

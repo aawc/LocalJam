@@ -3,12 +3,12 @@
  * Standard format: YYYY-MM-DD-NNN (e.g. 2026-09-04-001)
  */
 
-export const APP_VERSION = "2026-09-04-004";
+export const APP_VERSION = "v2026.09.040";
 
 export const CURRENT_RELEASE = {
-  version: "2026-09-04-004",
-  releaseDate: "2026-09-04",
-  title: "LocalJam 2026-09-04-004",
+  version: "v2026.09.040",
+  releaseDate: "2026-09-07",
+  title: "LocalJam v2026.09.040",
   commits: [
     {
       hash: "6c6aec9",

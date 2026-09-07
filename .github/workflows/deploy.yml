@@ -69,6 +69,23 @@ jobs:
             };
 
             fs.writeFileSync('version.json', JSON.stringify(payload, null, 2));
+
+            // Synchronize src/version.js with deployment version
+            if (fs.existsSync('src/version.js')) {
+              let versionJs = fs.readFileSync('src/version.js', 'utf8');
+              versionJs = versionJs.replace(/export const APP_VERSION = [^;]+;/, 'export const APP_VERSION = "' + tagName + '";');
+              versionJs = versionJs.replace(/version:\s*["'][^"']+["']/, 'version: "' + tagName + '"');
+              versionJs = versionJs.replace(/releaseDate:\s*["'][^"']+["']/, 'releaseDate: "' + releaseDate + '"');
+              versionJs = versionJs.replace(/title:\s*["'][^"']+["']/, 'title: "LocalJam ' + tagName + '"');
+              fs.writeFileSync('src/version.js', versionJs);
+            }
+
+            // Synchronize sw.js CACHE_NAME with deployment version
+            if (fs.existsSync('sw.js')) {
+              let swJs = fs.readFileSync('sw.js', 'utf8');
+              swJs = swJs.replace(/const CACHE_NAME = [^;]+;/, "const CACHE_NAME = 'localjam-" + tagName + "';");
+              fs.writeFileSync('sw.js', swJs);
+            }
           "
 
       - name: Setup Pages
