@@ -87,7 +87,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 21: Persistent Update Dialog Loop on Chrome Canary (Android PWA)** `[DONE]`
   - *Description:* Resolve recurring update popup loop on Chrome Canary (Android) and desktop PWAs where clicking "Refresh Now" or restarting the PWA reloads into the old version. Fix by dynamically resolving the active ServiceWorkerRegistration and waiting/installing workers when waitingWorker was null on boot, awaiting installing worker completion, dispatching SKIP_WAITING before reload, invalidating outdated app shell caches via caches.delete, listening for controllerchange to trigger safe reload, and passing discovered workers in main.js and update-banner.js.
-  - *Associated Commits:* `pending`
+  - *Associated Commits:* `df72572`
 
 ---
 
