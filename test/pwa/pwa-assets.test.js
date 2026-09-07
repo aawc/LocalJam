@@ -60,6 +60,12 @@ test('PWA - sw.js caches all declared app shell assets and excludes audio stream
   assert.ok(content.includes("request.headers.has('range')"), 'Must bypass HTTP range requests');
   assert.ok(content.includes("url.protocol === 'blob:'"), 'Must bypass blob: URLs');
   assert.ok(content.includes("url.protocol === 'data:'"), 'Must bypass data: URLs');
+
+  // Verify critical utilities and lifecycle handlers
+  assert.ok(assetList.includes('./src/utils/sanitize.js'), 'Must precache ./src/utils/sanitize.js');
+  assert.ok(!content.includes("then(() => self.skipWaiting())"), 'Must not automatically skipWaiting during install');
+  assert.ok(content.includes("event.data.type === 'SKIP_WAITING'"), 'Must handle SKIP_WAITING message');
+  assert.ok(content.includes("self.clients.claim()"), 'Must claim clients on activate');
 });
 
 test('PWA - index.html contains correct relative links and meta tags for GitHub Pages', () => {

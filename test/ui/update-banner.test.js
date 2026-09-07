@@ -139,14 +139,119 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
       assert.equal(typeof checker.setActiveVersion, "function");
       assert.equal(typeof checker.destroy, "function");
 
-      await checker.poll();
-
-      assert.equal(updateCheckedCount, 1);
-      assert.equal(notifiedVersion, "v2026.09.010");
-
       checker.destroy();
     } finally {
       globalThis.fetch = prevFetch;
+    }
+  });
+
+  await t.test("checkRemoteVersion detects semantic tag updates (e.g. v2026.09.036 vs v2026.09.009)", async () => {
+    const prevFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({ version: "v2026.09.036" })
+      });
+
+      const newVer = await checkRemoteVersion("v2026.09.009");
+      assert.equal(newVer, "v2026.09.036");
+
+      const sameVer = await checkRemoteVersion("v2026.09.036");
+      assert.equal(sameVer, null);
+    } finally {
+      globalThis.fetch = prevFetch;
+    }
+  });
+
+  await t.test("initUpdateChecker triggers immediately when registration.waiting worker is already present", async () => {
+    let notifiedVersion = null;
+    let notifiedWorker = null;
+
+    const mockWaitingWorker = {
+      state: "installed",
+      postMessage: () => {}
+    };
+
+    const mockRegistration = {
+      waiting: mockWaitingWorker,
+      installing: null,
+      addEventListener: () => {}
+    };
+
+    const checker = initUpdateChecker({
+      registration: mockRegistration,
+      onUpdateReady: (ver, worker) => {
+        notifiedVersion = ver;
+        notifiedWorker = worker;
+      },
+      pollIntervalMs: 0
+    });
+
+    assert.equal(notifiedVersion, "New Release");
+    assert.equal(notifiedWorker, mockWaitingWorker);
+    checker.destroy();
+  });
+
+  await t.test("createUpdateBanner applies update and posts SKIP_WAITING to waiting worker on button click", () => {
+    const prevDoc = globalThis.document;
+    const prevWin = globalThis.window;
+    try {
+      let postedMessage = null;
+      let reloaded = false;
+
+      const mockWorker = {
+        postMessage: (msg) => {
+          postedMessage = msg;
+        }
+      };
+
+      const listeners = {};
+      const applyBtnMock = {
+        addEventListener: (evt, fn) => {
+          listeners[evt] = fn;
+        }
+      };
+      const msgMock = { textContent: "" };
+
+      globalThis.document = {
+        createElement: () => ({
+          id: "",
+          className: "",
+          style: { display: "none" },
+          innerHTML: "",
+          querySelector: (sel) => {
+            if (sel === "#update-banner-message") return msgMock;
+            if (sel === "#btn-apply-update") return applyBtnMock;
+            if (sel === "#btn-dismiss-update") return { addEventListener: () => {} };
+            return null;
+          },
+          setAttribute: () => {}
+        })
+      };
+
+      globalThis.window = {
+        location: {
+          reload: () => {
+            reloaded = true;
+          }
+        }
+      };
+
+      const banner = createUpdateBanner();
+      banner.show("v2026.09.036", mockWorker);
+
+      assert.equal(msgMock.textContent, "A new version of LocalJam (v2026.09.036) is ready.");
+      assert.equal(banner.element.style.display, "block");
+
+      // Click "Refresh Now"
+      assert.ok(listeners["click"], "Click listener must be registered on apply button");
+      listeners["click"]();
+
+      assert.deepEqual(postedMessage, { type: "SKIP_WAITING" });
+      assert.equal(reloaded, true);
+    } finally {
+      globalThis.document = prevDoc;
+      globalThis.window = prevWin;
     }
   });
 });

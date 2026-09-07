@@ -220,5 +220,65 @@ test('Internet Radio Stations Suite', async (t) => {
     const rp = reloaded.find((s) => s.id === 'rp_main');
     assert.equal(rp.lastPlayedAt, updated.lastPlayedAt);
   });
+
+  await t.test('Seamlessly upgrades legacy 23-station DB to 34 stations, adding Kids and News streams while preserving custom stations', async () => {
+    const db = new MockRadioDB();
+    // Simulate legacy DB with 23 old stations + 1 user custom station
+    const legacyStations = CURATED_STATIONS.slice(0, 23).map((s) => ({
+      ...s,
+      description: 'Old legacy description'
+    }));
+
+    const customUserStation = {
+      id: 'custom_user_stream_1',
+      name: 'My Personal Radio',
+      streamUrl: 'https://stream.myradio.org/live',
+      genre: 'Custom Ambient',
+      isCustom: true,
+      isFavorite: true,
+      lastPlayedAt: 1700000000000
+    };
+    legacyStations.push(customUserStation);
+
+    await db.saveStations(legacyStations);
+    assert.equal(db.stations.length, 24);
+
+    // Run loadStations (simulating app boot on new version)
+    const loaded = await loadStations(db);
+
+    // Total should now be 34 curated stations + 1 custom station = 35 stations
+    assert.equal(loaded.length, CURATED_STATIONS.length + 1);
+
+    // Verify Kids & Family stations are present
+    const kidsStations = loaded.filter((s) => getStationCategory(s) === 'Kids & Family');
+    assert.equal(kidsStations.length, 6);
+    assert.ok(kidsStations.some((s) => s.id === 'fun_kids_uk'));
+    assert.ok(kidsStations.some((s) => s.id === 'fun_kids_junior'));
+    assert.ok(kidsStations.some((s) => s.id === 'radio_art_lullaby'));
+    assert.ok(kidsStations.some((s) => s.id === 'radio_art_solo_piano'));
+    assert.ok(kidsStations.some((s) => s.id === 'radio_art_mozart'));
+    assert.ok(kidsStations.some((s) => s.id === 'soma_covers'));
+
+    // Verify News & Talk stations are present
+    const newsStations = loaded.filter((s) => getStationCategory(s) === 'News & Talk');
+    assert.equal(newsStations.length, 7); // wnyc_fm, bbc_world_service + npr_news, kqed_fm, wbez_chicago, rfi_english, wgbh_boston
+    assert.ok(newsStations.some((s) => s.id === 'npr_news'));
+    assert.ok(newsStations.some((s) => s.id === 'kqed_fm'));
+    assert.ok(newsStations.some((s) => s.id === 'wbez_chicago'));
+    assert.ok(newsStations.some((s) => s.id === 'rfi_english'));
+    assert.ok(newsStations.some((s) => s.id === 'wgbh_boston'));
+
+    // Verify custom user station is preserved intact
+    const customInLoaded = loaded.find((s) => s.id === 'custom_user_stream_1');
+    assert.ok(customInLoaded);
+    assert.equal(customInLoaded.name, 'My Personal Radio');
+    assert.equal(customInLoaded.isFavorite, true);
+    assert.equal(customInLoaded.lastPlayedAt, 1700000000000);
+
+    // Verify legacy station metadata was refreshed to new curated description
+    const rpMain = loaded.find((s) => s.id === 'rp_main');
+    assert.notEqual(rpMain.description, 'Old legacy description');
+    assert.equal(rpMain.description, CURATED_STATIONS.find((s) => s.id === 'rp_main').description);
+  });
 });
 
