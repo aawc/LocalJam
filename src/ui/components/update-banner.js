@@ -121,10 +121,19 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
     }
   };
 
-  // 1. Service Worker updatefound listener
+  // 1. Service Worker updatefound and waiting listener
   if (registration) {
     if (registration.waiting) {
       notifyUpdate("New Release", registration.waiting);
+    }
+    if (registration.installing) {
+      const currentInstalling = registration.installing;
+      currentInstalling.addEventListener("statechange", () => {
+        const hasController = typeof navigator !== "undefined" && navigator.serviceWorker ? navigator.serviceWorker.controller : true;
+        if (currentInstalling.state === "installed" && hasController) {
+          notifyUpdate("New Release", currentInstalling);
+        }
+      });
     }
 
     registration.addEventListener("updatefound", () => {
@@ -140,7 +149,7 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
     });
   }
 
-  // 2. Periodic and window focus remote version check
+  // 2. Periodic, window focus, and visibility change remote version check
   const poll = async () => {
     // Actively prompt browser Service Worker update check if registration is available
     if (registration && typeof registration.update === "function") {
@@ -153,7 +162,8 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
 
     const newVersion = await checkRemoteVersion(activeVersion);
     if (newVersion) {
-      notifyUpdate(newVersion);
+      const worker = registration ? (registration.waiting || registration.installing) : null;
+      notifyUpdate(newVersion, worker);
     }
   };
 
@@ -161,8 +171,17 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
     poll();
   };
 
+  const onVisibilityChange = () => {
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      poll();
+    }
+  };
+
   if (typeof window !== "undefined") {
     window.addEventListener("focus", onFocus);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibilityChange);
+    }
 
     // Initial check after short boot settle delay (1500ms)
     initialTimeoutId = setTimeout(() => {
@@ -191,6 +210,9 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
     }
     if (typeof window !== "undefined") {
       window.removeEventListener("focus", onFocus);
+    }
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     }
   };
 

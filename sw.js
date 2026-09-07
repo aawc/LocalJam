@@ -47,14 +47,15 @@ const APP_SHELL_ASSETS = [
   './src/metadata/id3v2.js',
   './src/metadata/flac.js',
   './src/metadata/m4a.js',
-  './src/metadata/filename-parser.js'
+  './src/metadata/filename-parser.js',
+  './src/utils/sanitize.js'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(APP_SHELL_ASSETS);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 

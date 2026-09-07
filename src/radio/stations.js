@@ -786,7 +786,10 @@ export async function loadStations(db) {
           station.name !== curated.name ||
           station.genre !== curated.genre ||
           station.favicon !== curated.favicon ||
-          station.bitrate !== curated.bitrate
+          station.bitrate !== curated.bitrate ||
+          station.description !== curated.description ||
+          station.country !== curated.country ||
+          station.homepageUrl !== curated.homepageUrl
         ) {
           saved[i] = {
             ...curated,

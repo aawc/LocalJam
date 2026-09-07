@@ -19,12 +19,10 @@ export async function renderSettingsView() {
   const hasFSAA = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
   const currentCrossfade = audioEngine.crossfadeDuration || 2;
 
-  let activeVersion = CURRENT_RELEASE.version;
-  let activeReleaseDate = CURRENT_RELEASE.releaseDate;
-  if (typeof window !== 'undefined' && window.localjamActiveVersionData) {
-    activeVersion = window.localjamActiveVersionData.version || activeVersion;
-    activeReleaseDate = window.localjamActiveVersionData.releaseDate || activeReleaseDate;
-  }
+  const runningVersion = CURRENT_RELEASE.version;
+  const runningReleaseDate = CURRENT_RELEASE.releaseDate;
+  const remoteData = typeof window !== 'undefined' && window.localjamRemoteVersionData ? window.localjamRemoteVersionData : null;
+  const hasUpdate = Boolean(remoteData && remoteData.version && remoteData.version !== runningVersion);
 
   container.innerHTML = `
     <div class="view-header">
@@ -42,11 +40,12 @@ export async function renderSettingsView() {
           <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">
             Local-first audio player Progressive Web App
           </div>
-          <div style="font-size: 13px; color: var(--text-primary); margin-bottom: 4px;">
-            <strong>Version:</strong> <span id="settings-app-version">${escapeHtml(activeVersion)}</span>
+          <div style="font-size: 13px; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <strong>Version:</strong> <span id="settings-app-version">${escapeHtml(runningVersion)}</span>
+            ${hasUpdate ? `<span class="status-badge badge-warn" style="font-size: 11px;">[UPDATE AVAILABLE: ${escapeHtml(remoteData.version)}]</span>` : ''}
           </div>
           <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-            <strong>Released:</strong> <span id="settings-release-date">${escapeHtml(activeReleaseDate)}</span>
+            <strong>Released:</strong> <span id="settings-release-date">${escapeHtml(runningReleaseDate)}</span>
           </div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">

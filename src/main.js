@@ -76,32 +76,29 @@ export async function initApp() {
       window.localjamReleaseNotesModal = releaseNotesModal;
     }
 
-    let updateCheckerInstance = null;
-    let activeDeployedVersion = APP_VERSION;
+    const updateBanner = createUpdateBanner();
+    document.body.appendChild(updateBanner.element);
 
-    // Dynamically fetch deployed version.json to synchronize runtime release display
+    let updateCheckerInstance = null;
+
+    const handleUpdateReady = (newVersion, worker) => {
+      updateBanner.show(newVersion, worker);
+    };
+
+    // Dynamically check deployed version.json for updates and synchronize release notes modal
     if (typeof fetch === 'function') {
       fetch(`./version.json?_t=${Date.now()}`, { cache: 'no-cache' })
         .then((res) => (res.ok ? res.json() : null))
         .then((verData) => {
           if (verData && verData.version) {
-            activeDeployedVersion = verData.version;
             if (typeof window !== 'undefined') {
-              window.localjamActiveVersionData = verData;
+              window.localjamRemoteVersionData = verData;
             }
             if (typeof releaseNotesModal.updateVersion === 'function') {
               releaseNotesModal.updateVersion(verData);
             }
-            const settingsAppVer = document.getElementById('settings-app-version');
-            if (settingsAppVer) {
-              settingsAppVer.textContent = verData.version;
-            }
-            const settingsReleaseDate = document.getElementById('settings-release-date');
-            if (settingsReleaseDate && verData.releaseDate) {
-              settingsReleaseDate.textContent = verData.releaseDate;
-            }
-            if (updateCheckerInstance && typeof updateCheckerInstance.setActiveVersion === 'function') {
-              updateCheckerInstance.setActiveVersion(verData.version);
+            if (verData.version !== APP_VERSION) {
+              handleUpdateReady(verData.version, null);
             }
           }
         })
@@ -109,9 +106,6 @@ export async function initApp() {
           console.warn('[LocalJam] Could not fetch remote version.json:', err?.message || err);
         });
     }
-
-    const updateBanner = createUpdateBanner();
-    document.body.appendChild(updateBanner.element);
 
     // 4. Connect Toggle Triggers
     const btnToggleEq = document.getElementById('btn-toggle-eq');
@@ -168,33 +162,41 @@ export async function initApp() {
     });
 
     // 9. Initialize Update Checker & Register Service Worker for PWA
-    const handleUpdateReady = (newVersion, worker) => {
-      updateBanner.show(newVersion, worker);
-    };
-
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        if (typeof window !== 'undefined' && window.location) {
+          window.location.reload();
+        }
+      });
+
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('./sw.js')
           .then((reg) => {
             console.log('[SW] ServiceWorker registered with scope:', reg.scope);
+            if (typeof reg.update === 'function') {
+              reg.update().catch(() => {});
+            }
             updateCheckerInstance = initUpdateChecker({
               registration: reg,
-              currentVersion: activeDeployedVersion,
+              currentVersion: APP_VERSION,
               onUpdateReady: handleUpdateReady
             });
           })
           .catch((err) => {
             console.warn('[SW] ServiceWorker registration failed:', err);
             updateCheckerInstance = initUpdateChecker({
-              currentVersion: activeDeployedVersion,
+              currentVersion: APP_VERSION,
               onUpdateReady: handleUpdateReady
             });
           });
       });
     } else {
       updateCheckerInstance = initUpdateChecker({
-        currentVersion: activeDeployedVersion,
+        currentVersion: APP_VERSION,
         onUpdateReady: handleUpdateReady
       });
     }
