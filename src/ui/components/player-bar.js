@@ -84,9 +84,9 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
       <div id="player-live-bar" class="player-live-bar" style="display: none;">
         <span class="player-live-indicator">
           <span class="live-dot"></span>
-          <span class="live-text">LIVE STREAM</span>
+          <span class="live-text">LIVE</span>
         </span>
-        <span id="player-live-meta" class="player-live-meta">128 kbps • Live Radio</span>
+        <span id="player-live-meta" class="player-live-meta">128 kbps</span>
       </div>
     </div>
 
@@ -223,8 +223,13 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     if (state.isRadio && state.currentStation) {
       if (progressBar) progressBar.style.display = 'none';
       if (liveBar) liveBar.style.display = 'flex';
+      if (btnShuffle) btnShuffle.style.display = 'none';
+      if (btnRepeat) btnRepeat.style.display = 'none';
+      if (btnPrev) btnPrev.setAttribute('title', 'Previous Station');
+      if (btnNext) btnNext.setAttribute('title', 'Next Station');
+
       if (liveMeta) {
-        liveMeta.textContent = `${state.currentStation.bitrate || '128 kbps'} • ${state.currentStation.genre || 'Live Radio'}`;
+        liveMeta.textContent = state.currentStation.bitrate || '128 kbps';
       }
 
       titleEl.textContent = state.currentStation.name;
@@ -234,7 +239,7 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
       titleEl.setAttribute('title', 'Station Details & Stream Info');
       titleEl.setAttribute('aria-label', `View details for ${state.currentStation.name}`);
 
-      artistEl.textContent = `${state.currentStation.genre} • ${state.currentStation.country || 'Global'}`;
+      artistEl.textContent = `${state.currentStation.genre || 'Internet Radio'}${state.currentStation.country ? ` • ${state.currentStation.country}` : ''}`;
       artImg.src = state.currentStation.favicon || getStationFallbackArtwork(state.currentStation);
       if (durationLabel) durationLabel.textContent = 'LIVE';
       seekSlider.disabled = true;
@@ -245,6 +250,10 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     } else if (state.currentTrack) {
       if (progressBar) progressBar.style.display = 'flex';
       if (liveBar) liveBar.style.display = 'none';
+      if (btnShuffle) btnShuffle.style.display = 'flex';
+      if (btnRepeat) btnRepeat.style.display = 'flex';
+      if (btnPrev) btnPrev.setAttribute('title', 'Previous (Shift+Left)');
+      if (btnNext) btnNext.setAttribute('title', 'Next (Shift+Right)');
 
       titleEl.textContent = state.currentTrack.title || state.currentTrack.filename;
       titleEl.classList.remove('station-title-interactive');
@@ -276,6 +285,10 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     } else {
       if (progressBar) progressBar.style.display = 'flex';
       if (liveBar) liveBar.style.display = 'none';
+      if (btnShuffle) btnShuffle.style.display = 'flex';
+      if (btnRepeat) btnRepeat.style.display = 'flex';
+      if (btnPrev) btnPrev.setAttribute('title', 'Previous (Shift+Left)');
+      if (btnNext) btnNext.setAttribute('title', 'Next (Shift+Right)');
 
       titleEl.textContent = 'Not Playing';
       artistEl.textContent = 'Select a song or radio station';

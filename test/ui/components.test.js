@@ -93,7 +93,7 @@ test('UI Components - createPlayerBar renders player bar structure', () => {
   assert.ok(bar.innerHTML.includes('player-controls'));
   assert.ok(bar.innerHTML.includes('player-progress-bar'));
   assert.ok(bar.innerHTML.includes('player-live-bar'));
-  assert.ok(bar.innerHTML.includes('LIVE STREAM'));
+  assert.ok(bar.innerHTML.includes('LIVE'));
 });
 
 test('UI Components - createEqModal renders 10-band equalizer modal', () => {
