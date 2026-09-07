@@ -89,7 +89,7 @@ export async function initApp() {
     if (typeof fetch === 'function') {
       fetch(`./version.json?_t=${Date.now()}`, { cache: 'no-cache' })
         .then((res) => (res.ok ? res.json() : null))
-        .then((verData) => {
+        .then(async (verData) => {
           if (verData && verData.version) {
             if (typeof window !== 'undefined') {
               window.localjamRemoteVersionData = verData;
@@ -98,7 +98,16 @@ export async function initApp() {
               releaseNotesModal.updateVersion(verData);
             }
             if (verData.version !== APP_VERSION) {
-              handleUpdateReady(verData.version, null);
+              let worker = null;
+              if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+                try {
+                  const reg = await navigator.serviceWorker.getRegistration();
+                  if (reg) {
+                    worker = reg.waiting || reg.installing || null;
+                  }
+                } catch {}
+              }
+              handleUpdateReady(verData.version, worker);
             }
           }
         })
@@ -168,7 +177,13 @@ export async function initApp() {
         if (refreshing) return;
         refreshing = true;
         if (typeof window !== 'undefined' && window.location) {
-          window.location.reload();
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('_t', Date.now().toString());
+            window.location.replace(url.toString());
+          } catch {
+            window.location.reload();
+          }
         }
       });
 

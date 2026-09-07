@@ -192,14 +192,17 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
     checker.destroy();
   });
 
-  await t.test("createUpdateBanner applies update and posts SKIP_WAITING to waiting worker on button click", () => {
+  await t.test("createUpdateBanner applies update and posts SKIP_WAITING to waiting worker on button click", async () => {
     const prevDoc = globalThis.document;
     const prevWin = globalThis.window;
+    const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const prevCaches = globalThis.caches;
     try {
       let postedMessage = null;
       let reloaded = false;
 
       const mockWorker = {
+        state: "installed",
         postMessage: (msg) => {
           postedMessage = msg;
         }
@@ -207,6 +210,8 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
 
       const listeners = {};
       const applyBtnMock = {
+        disabled: false,
+        textContent: "Refresh Now",
         addEventListener: (evt, fn) => {
           listeners[evt] = fn;
         }
@@ -229,8 +234,26 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
         })
       };
 
+      let swListeners = {};
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          serviceWorker: {
+            addEventListener: (evt, fn) => {
+              swListeners[evt] = fn;
+            },
+            getRegistration: async () => null
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
       globalThis.window = {
         location: {
+          href: "http://localhost:3000/#/songs",
+          replace: () => {
+            reloaded = true;
+          },
           reload: () => {
             reloaded = true;
           }
@@ -245,18 +268,195 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
 
       // Click "Refresh Now" with worker
       assert.ok(listeners["click"], "Click listener must be registered on apply button");
-      listeners["click"]();
+      await banner.apply();
 
       assert.deepEqual(postedMessage, { type: "SKIP_WAITING" });
 
-      // Click "Refresh Now" without worker triggers immediate reload
-      const bannerNoWorker = createUpdateBanner();
-      bannerNoWorker.show("v2026.09.036");
-      listeners["click"]();
+      // Trigger controllerchange
+      if (swListeners["controllerchange"]) {
+        swListeners["controllerchange"]();
+      }
       assert.equal(reloaded, true);
     } finally {
       globalThis.document = prevDoc;
       globalThis.window = prevWin;
+      if (prevNavDescriptor) {
+        Object.defineProperty(globalThis, "navigator", prevNavDescriptor);
+      }
+      globalThis.caches = prevCaches;
+    }
+  });
+
+  await t.test("createUpdateBanner dynamically queries navigator.serviceWorker when worker was null", async () => {
+    const prevDoc = globalThis.document;
+    const prevWin = globalThis.window;
+    const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const prevCaches = globalThis.caches;
+    try {
+      let postedMessage = null;
+      let deletedCaches = [];
+      let replacedUrl = null;
+
+      const dynamicWaitingWorker = {
+        state: "installed",
+        postMessage: (msg) => {
+          postedMessage = msg;
+        }
+      };
+
+      globalThis.caches = {
+        keys: async () => ["localjam-v2026.09.045", "localjam-v2026.09.048"],
+        delete: async (name) => {
+          deletedCaches.push(name);
+          return true;
+        }
+      };
+
+      let swListeners = {};
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          serviceWorker: {
+            addEventListener: (evt, fn) => {
+              swListeners[evt] = fn;
+            },
+            getRegistration: async () => ({
+              waiting: dynamicWaitingWorker,
+              installing: null
+            })
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
+      const applyBtnMock = { disabled: false, textContent: "Refresh Now", addEventListener: () => {} };
+      globalThis.document = {
+        createElement: () => ({
+          id: "",
+          className: "",
+          style: { display: "none" },
+          innerHTML: "",
+          querySelector: (sel) => {
+            if (sel === "#update-banner-message") return { textContent: "" };
+            if (sel === "#btn-apply-update") return applyBtnMock;
+            if (sel === "#btn-dismiss-update") return { addEventListener: () => {} };
+            return null;
+          },
+          setAttribute: () => {}
+        })
+      };
+
+      globalThis.window = {
+        location: {
+          href: "http://localhost:3000/",
+          replace: (u) => {
+            replacedUrl = u;
+          },
+          reload: () => {}
+        }
+      };
+
+      const banner = createUpdateBanner();
+      // Show without worker (e.g. from version.json fetch)
+      banner.show("v2026.09.048", null);
+
+      await banner.apply();
+
+      // Verified dynamic resolution posted SKIP_WAITING
+      assert.deepEqual(postedMessage, { type: "SKIP_WAITING" });
+
+      // Verified old cache was deleted
+      assert.ok(deletedCaches.includes("localjam-v2026.09.045"));
+
+      // Trigger controllerchange to confirm reload
+      if (swListeners["controllerchange"]) {
+        swListeners["controllerchange"]();
+      }
+      assert.ok(replacedUrl && replacedUrl.includes("_t="));
+    } finally {
+      globalThis.document = prevDoc;
+      globalThis.window = prevWin;
+      if (prevNavDescriptor) {
+        Object.defineProperty(globalThis, "navigator", prevNavDescriptor);
+      }
+      globalThis.caches = prevCaches;
+    }
+  });
+
+  await t.test("createUpdateBanner waits for installing worker to become installed before sending SKIP_WAITING", async () => {
+    const prevDoc = globalThis.document;
+    const prevWin = globalThis.window;
+    const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    try {
+      let postedMessage = null;
+      let installingListeners = {};
+
+      const installingWorker = {
+        state: "installing",
+        addEventListener: (evt, fn) => {
+          installingListeners[evt] = fn;
+        },
+        postMessage: (msg) => {
+          postedMessage = msg;
+        }
+      };
+
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          serviceWorker: {
+            addEventListener: () => {},
+            getRegistration: async () => ({
+              waiting: null,
+              installing: installingWorker
+            })
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
+      globalThis.document = {
+        createElement: () => ({
+          id: "",
+          style: { display: "none" },
+          innerHTML: "",
+          querySelector: (sel) => {
+            if (sel === "#update-banner-message") return { textContent: "" };
+            if (sel === "#btn-apply-update" || sel === "#btn-dismiss-update") return { addEventListener: () => {} };
+            return null;
+          },
+          setAttribute: () => {}
+        })
+      };
+
+      globalThis.window = {
+        location: {
+          href: "http://localhost:3000/",
+          replace: () => {},
+          reload: () => {}
+        }
+      };
+
+      const banner = createUpdateBanner();
+      banner.show("v2026.09.048");
+
+      await banner.apply();
+
+      assert.equal(postedMessage, null, "Should not post before installed");
+
+      // State transitions to installed
+      installingWorker.state = "installed";
+      if (installingListeners["statechange"]) {
+        installingListeners["statechange"]();
+      }
+
+      assert.deepEqual(postedMessage, { type: "SKIP_WAITING" });
+    } finally {
+      globalThis.document = prevDoc;
+      globalThis.window = prevWin;
+      if (prevNavDescriptor) {
+        Object.defineProperty(globalThis, "navigator", prevNavDescriptor);
+      }
     }
   });
 });

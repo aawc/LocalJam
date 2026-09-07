@@ -72,7 +72,12 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (
+    event.data &&
+    (event.data.type === 'SKIP_WAITING' ||
+      event.data === 'SKIP_WAITING' ||
+      event.data.action === 'skipWaiting')
+  ) {
     self.skipWaiting();
   }
 });
@@ -86,10 +91,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Network-First strategy for version.json to ensure immediate update detection
-  if (url.pathname.endsWith('version.json')) {
+  // 2. Network-First strategy for version.json and sw.js to ensure immediate update detection
+  if (url.pathname.endsWith('version.json') || url.pathname.endsWith('sw.js')) {
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
+      fetch(request, { cache: 'no-cache' }).catch(() => caches.match(request))
     );
     return;
   }
