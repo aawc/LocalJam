@@ -5,7 +5,7 @@
 import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
 import { db } from '../../storage/db.js';
-import { toggleFavoriteStation } from '../../radio/stations.js';
+import { toggleFavoriteStation, getStationFallbackArtwork } from '../../radio/stations.js';
 
 export function createPlayerBar({ onOpenStationDetails } = {}) {
   const bar = document.createElement('div');
@@ -75,10 +75,18 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
         </button>
       </div>
 
-      <div class="player-progress-bar">
+      <div id="player-progress-bar" class="player-progress-bar">
         <span id="label-current-time" class="time-label current">0:00</span>
         <input id="player-seek" type="range" class="seek-slider" min="0" max="100" value="0" aria-label="Seek track position" />
         <span id="label-duration" class="time-label">0:00</span>
+      </div>
+
+      <div id="player-live-bar" class="player-live-bar" style="display: none;">
+        <span class="player-live-indicator">
+          <span class="live-dot"></span>
+          <span class="live-text">LIVE STREAM</span>
+        </span>
+        <span id="player-live-meta" class="player-live-meta">128 kbps • Live Radio</span>
       </div>
     </div>
 
@@ -137,6 +145,9 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
   const btnShuffle = bar.querySelector('#btn-shuffle');
   const btnRepeat = bar.querySelector('#btn-repeat');
   const btnMute = bar.querySelector('#btn-mute');
+  const progressBar = bar.querySelector('#player-progress-bar');
+  const liveBar = bar.querySelector('#player-live-bar');
+  const liveMeta = bar.querySelector('#player-live-meta');
   const seekSlider = bar.querySelector('#player-seek');
   const volumeSlider = bar.querySelector('#player-volume');
   const currentTimeLabel = bar.querySelector('#label-current-time');
@@ -210,22 +221,31 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     btnPlayPause.setAttribute('aria-label', state.isPlaying ? 'Pause' : 'Play');
 
     if (state.isRadio && state.currentStation) {
+      if (progressBar) progressBar.style.display = 'none';
+      if (liveBar) liveBar.style.display = 'flex';
+      if (liveMeta) {
+        liveMeta.textContent = `${state.currentStation.bitrate || '128 kbps'} • ${state.currentStation.genre || 'Live Radio'}`;
+      }
+
       titleEl.textContent = state.currentStation.name;
       titleEl.classList.add('station-title-interactive');
       titleEl.setAttribute('role', 'button');
       titleEl.setAttribute('tabindex', '0');
-      titleEl.setAttribute('title', 'Click for station details');
+      titleEl.setAttribute('title', 'Station Details & Stream Info');
       titleEl.setAttribute('aria-label', `View details for ${state.currentStation.name}`);
 
-      artistEl.textContent = state.currentStation.genre + ' • Live Radio';
-      artImg.src = state.currentStation.favicon || 'public/icons/icon-192.svg';
-      durationLabel.textContent = 'LIVE';
+      artistEl.textContent = `${state.currentStation.genre} • ${state.currentStation.country || 'Global'}`;
+      artImg.src = state.currentStation.favicon || getStationFallbackArtwork(state.currentStation);
+      if (durationLabel) durationLabel.textContent = 'LIVE';
       seekSlider.disabled = true;
       const isFav = Boolean(state.currentStation.isFavorite);
       favBtn.style.color = isFav ? '#fbbf24' : 'var(--text-secondary)';
       const svg = favBtn.querySelector('svg');
       if (svg) svg.setAttribute('fill', isFav ? 'currentColor' : 'none');
     } else if (state.currentTrack) {
+      if (progressBar) progressBar.style.display = 'flex';
+      if (liveBar) liveBar.style.display = 'none';
+
       titleEl.textContent = state.currentTrack.title || state.currentTrack.filename;
       titleEl.classList.remove('station-title-interactive');
       titleEl.removeAttribute('role');
@@ -254,10 +274,13 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
         if (svg) svg.setAttribute('fill', isFav ? 'currentColor' : 'none');
       });
     } else {
+      if (progressBar) progressBar.style.display = 'flex';
+      if (liveBar) liveBar.style.display = 'none';
+
       titleEl.textContent = 'Not Playing';
       artistEl.textContent = 'Select a song or radio station';
       artImg.src = 'public/icons/icon-192.svg';
-      durationLabel.textContent = '0:00';
+      if (durationLabel) durationLabel.textContent = '0:00';
     }
 
     if (!isSeeking && !state.isRadio) {

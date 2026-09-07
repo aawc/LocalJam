@@ -94,7 +94,7 @@ export async function renderRadioView() {
           <div class="media-card-title" style="display: flex; align-items: center; justify-content: space-between;">
             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;">${escapeHtml(station.name)}</span>
             <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
-              ${isPlayingThis ? '<span class="status-badge badge-active" style="font-size: 10px;">[LIVE]</span>' : ''}
+              ${isPlayingThis ? '<span class="status-badge badge-active" style="font-size: 10px;"><span class="live-dot-sm"></span> LIVE</span>' : ''}
               <button class="btn-star-station" data-station-id="${station.id}" aria-label="${isFav ? 'Unstar' : 'Star'} ${escapeHtml(station.name)}" style="background: none; border: none; cursor: pointer; color: ${isFav ? '#fbbf24' : 'var(--text-secondary)'}; padding: 2px; display: inline-flex; align-items: center;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -112,6 +112,12 @@ export async function renderRadioView() {
     if (stations.length === 0) {
       return `
         <div class="empty-state-card">
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+              <circle cx="12" cy="12" r="2"></circle>
+              <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
+            </svg>
+          </div>
           <p>${
             selectedGenre === 'Favorites'
               ? 'No starred radio streams yet. Click the star icon on any station to save it here.'
@@ -299,7 +305,7 @@ export async function renderRadioView() {
       </div>
 
       <!-- Genre & Favorite Filter Pills -->
-      <div class="filter-pills-bar" style="display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 4px;">
+      <div class="filter-pills-bar">
         <button class="btn-filter-pill ${selectedGenre === 'All' ? 'active' : ''}" data-genre="All">All Streams</button>
         <button class="btn-filter-pill ${selectedGenre === 'Favorites' ? 'active' : ''}" data-genre="Favorites">★ Starred Streams</button>
         ${RADIO_GENRES.filter((g) => g !== 'All').map(
@@ -371,7 +377,7 @@ export async function renderRadioView() {
           const badge = document.createElement('span');
           badge.className = 'status-badge badge-active';
           badge.style.fontSize = '10px';
-          badge.textContent = '[LIVE]';
+          badge.innerHTML = '<span class="live-dot-sm"></span> LIVE';
           titleWrapper.insertBefore(badge, titleWrapper.firstChild);
         }
       } else {

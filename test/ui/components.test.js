@@ -92,6 +92,8 @@ test('UI Components - createPlayerBar renders player bar structure', () => {
   assert.equal(bar.getAttribute('aria-label'), 'Audio Player Controls');
   assert.ok(bar.innerHTML.includes('player-controls'));
   assert.ok(bar.innerHTML.includes('player-progress-bar'));
+  assert.ok(bar.innerHTML.includes('player-live-bar'));
+  assert.ok(bar.innerHTML.includes('LIVE STREAM'));
 });
 
 test('UI Components - createEqModal renders 10-band equalizer modal', () => {

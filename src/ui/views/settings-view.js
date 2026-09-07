@@ -87,10 +87,10 @@ export async function renderSettingsView() {
         <div class="stat-card" style="text-align: left; padding: 14px;">
           <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">ACTIVE TRACKS</div>
           <div style="font-size: 15px; font-weight: 600; color: var(--status-success);">
-            ${activeCount} Available <span class="status-badge badge-active" style="font-size: 10px;">[AVAILABLE]</span>
+            ${activeCount} Available <span class="status-badge badge-active" style="font-size: 10px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:3px;"><polyline points="20 6 9 17 4 12"></polyline></svg> Available</span>
           </div>
           <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-            ${missingCount > 0 ? `${missingCount} Missing <span class="status-badge badge-missing" style="font-size: 10px;">[MISSING]</span>` : '0 Missing files'}
+            ${missingCount > 0 ? `${missingCount} Missing <span class="status-badge badge-missing" style="font-size: 10px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:3px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Missing</span>` : '0 Missing files'}
           </div>
         </div>
 

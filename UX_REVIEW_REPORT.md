@@ -26,17 +26,17 @@ An end-to-end evaluation of the user journey, player bar ergonomics, dashboard l
 
 <!-- mdformat off(reason: standard GFM table rendering in Critique and Code Search) -->
 | Finding ID | Severity | Category | Component / View | Problem Description | Status |
-| :--- | :---: | :--- | :--- | :--- | :---: |
-| **UX-01** | `[HIGH]` | Player Ergonomics | [`player-bar.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/components/player-bar.js) | Static seek bar during live radio streams showing `0:00 / 0:00`; missing station detail affordance. | `[PENDING_FIX]` |
-| **UX-02** | `[HIGH]` | Visual Hierarchy | [`home-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/home-view.js) | Hero card has multiple competing primary action buttons; disabled `Shuffle (0)` button clutters empty state. | `[PENDING_FIX]` |
-| **UX-03** | `[HIGH]` | Responsiveness | [`app.css`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/app.css), Top Bar | Overly wide 520px search input crowding header actions on viewports under 1200px. | `[PENDING_FIX]` |
-| **UX-04** | `[MEDIUM]` | Navigation / Layout | [`radio-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/radio-view.js) | Radio genre pills wrap into multiline visual clutter; search and sort controls uncoordinated. | `[PENDING_FIX]` |
-| **UX-05** | `[MEDIUM]` | Content & Catalog | [`stations.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/radio/stations.js) | Missing dedicated **Kids & Family** genre; underrepresented **News & Talk** streams. | `[PENDING_FIX]` |
-| **UX-06** | `[MEDIUM]` | Visual Noise | [`settings-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/settings-view.js), Tables | Noisy bracketed badges (`[AVAILABLE]`, `[TIER 1]`) cluttering cards and diagnostic tables. | `[PENDING_FIX]` |
-| **UX-07** | `[MEDIUM]` | Interaction Design | All Views, Cards | Media cards and buttons lack smooth micro-interactions, subtle hover lift, and keyboard focus elegance. | `[PENDING_FIX]` |
-| **UX-08** | `[LOW]` | Typography Scale | [`theme.css`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/theme.css), Views | Inconsistent section title sizing (`18px` vs `20px` vs `24px`) and tight table line spacing. | `[PENDING_FIX]` |
-| **UX-09** | `[LOW]` | Overlay Aesthetics | Modals, Drawer | Opaque flat modal overlays lacking modern backdrop blur; coarse range slider thumbs. | `[PENDING_FIX]` |
-| **UX-10** | `[INFO]` | Onboarding Experience | Empty States | Generic gray empty state cards lacking warm typography and contextual primary action prompts. | `[PENDING_FIX]` |
+| :--- | :---: | :--- | :--- | :--- | :--- |
+| **UX-01** | `[HIGH]` | Player Ergonomics | [`player-bar.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/components/player-bar.js) | Static seek bar during live radio streams showing `0:00 / 0:00`; missing station detail affordance. | `[RESOLVED]` |
+| **UX-02** | `[HIGH]` | Visual Hierarchy | [`home-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/home-view.js) | Hero card has multiple competing primary action buttons; disabled `Shuffle (0)` button clutters empty state. | `[RESOLVED]` |
+| **UX-03** | `[HIGH]` | Responsiveness | [`app.css`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/app.css), Top Bar | Overly wide 520px search input crowding header actions on viewports under 1200px. | `[RESOLVED]` |
+| **UX-04** | `[MEDIUM]` | Navigation / Layout | [`radio-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/radio-view.js) | Radio genre pills wrap into multiline visual clutter; search and sort controls uncoordinated. | `[RESOLVED]` |
+| **UX-05** | `[MEDIUM]` | Content & Catalog | [`stations.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/radio/stations.js) | Missing dedicated **Kids & Family** genre; underrepresented **News & Talk** streams. | `[RESOLVED]` |
+| **UX-06** | `[MEDIUM]` | Visual Noise | [`settings-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/settings-view.js), Tables | Noisy bracketed badges (`[AVAILABLE]`, `[TIER 1]`) cluttering cards and diagnostic tables. | `[RESOLVED]` |
+| **UX-07** | `[MEDIUM]` | Interaction Design | All Views, Cards | Media cards and buttons lack smooth micro-interactions, subtle hover lift, and keyboard focus elegance. | `[RESOLVED]` |
+| **UX-08** | `[LOW]` | Typography Scale | [`theme.css`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/theme.css), Views | Inconsistent section title sizing (`18px` vs `20px` vs `24px`) and tight table line spacing. | `[RESOLVED]` |
+| **UX-09** | `[LOW]` | Overlay Aesthetics | Modals, Drawer | Opaque flat modal overlays lacking modern backdrop blur; coarse range slider thumbs. | `[RESOLVED]` |
+| **UX-10** | `[INFO]` | Onboarding Experience | Empty States | Generic gray empty state cards lacking warm typography and contextual primary action prompts. | `[RESOLVED]` |
 <!-- mdformat on -->
 
 ---
@@ -134,12 +134,12 @@ An end-to-end evaluation of the user journey, player bar ergonomics, dashboard l
 
 ## 4. Remediation Roadmap & Execution Plan
 
-- `[ ]` **Task 1:** Commit UX Review Report (`UX_REVIEW_REPORT.md`).
-- `[ ]` **Task 2:** Refactor Design Tokens, Glassmorphism, and Typography Scale in `theme.css` and `app.css`.
-- `[ ]` **Task 3:** Implement Live Stream Context-Aware Mode and Ergonomics in `player-bar.js`.
-- `[ ]` **Task 4:** Refactor Home Dashboard, Search Header, and View Headers across all views.
-- `[ ]` **Task 5:** Expand Curated Radio Catalog with News & Talk and Kids & Family Streams + SVG Fallback Artwork in `stations.js`.
-- `[ ]` **Task 6:** Streamline Radio View Toolbar, Scrollable Genre Pills, and Card Aesthetics in `radio-view.js`.
-- `[ ]` **Task 7:** Upgrade Empty States and Clean Up Redundant Badges in `settings-view.js`, `songs-view.js`, `albums-view.js`, `playlists-view.js`.
-- `[ ]` **Task 8:** Author & Update Automated Tests for New Stations and UI Changes.
-- `[ ]` **Task 9:** Independent Subagent Review, Atomic Commits, and Documentation Synchronization.
+- `[x]` **Task 1:** Commit UX Review Report (`UX_REVIEW_REPORT.md`).
+- `[x]` **Task 2:** Refactor Design Tokens, Glassmorphism, and Typography Scale in `theme.css` and `app.css`.
+- `[x]` **Task 3:** Implement Live Stream Context-Aware Mode and Ergonomics in `player-bar.js`.
+- `[x]` **Task 4:** Refactor Home Dashboard, Search Header, and View Headers across all views.
+- `[x]` **Task 5:** Expand Curated Radio Catalog with News & Talk and Kids & Family Streams + SVG Fallback Artwork in `stations.js`.
+- `[x]` **Task 6:** Streamline Radio View Toolbar, Scrollable Genre Pills, and Card Aesthetics in `radio-view.js`.
+- `[x]` **Task 7:** Upgrade Empty States and Clean Up Redundant Badges in `settings-view.js`, `songs-view.js`, `albums-view.js`, `playlists-view.js`, `favorites-view.js`, `history-view.js`.
+- `[x]` **Task 8:** Author & Update Automated Tests for New Stations and UI Changes.
+- `[x]` **Task 9:** Independent Subagent Review, Atomic Commits, and Documentation Synchronization.

@@ -43,6 +43,7 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.ok(HIGH_LEVEL_GENRES.includes('Rock'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Classical'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Jazz'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Kids & Family'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Electronic'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Folk & Roots'));
     assert.ok(HIGH_LEVEL_GENRES.includes('News & Talk'));
@@ -60,16 +61,21 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.equal(getStationCategory({ genre: 'Rock / Alternative' }), 'Rock');
     assert.equal(getStationCategory({ genre: 'Classical / Instrumental' }), 'Classical');
     assert.equal(getStationCategory({ genre: 'Jazz / Blues' }), 'Jazz');
+    assert.equal(getStationCategory({ genre: 'Kids & Family / Pop & Learning' }), 'Kids & Family');
+    assert.equal(getStationCategory({ genre: 'Kids & Family / Sleep & Bedtime' }), 'Kids & Family');
     assert.equal(getStationCategory({ genre: 'Electronic / Industrial' }), 'Electronic');
     assert.equal(getStationCategory({ genre: 'Folk / Americana' }), 'Folk & Roots');
     assert.equal(getStationCategory({ genre: 'Spy / Lounge / Trip-Hop' }), 'Lounge');
     assert.equal(getStationCategory({ genre: 'News / English Talk' }), 'News & Talk');
+    assert.equal(getStationCategory({ genre: 'News / Public Radio' }), 'News & Talk');
     assert.equal(getStationCategory({ genre: 'Soul / Funk' }), 'Soul & Funk');
     assert.equal(getStationCategory({ genre: 'World Fusion' }), 'World');
+    assert.equal(getStationCategory({ genre: 'World Fusion / Asian Chill' }), 'World');
+    assert.equal(getStationCategory({ genre: 'Future Lounge / Chill' }), 'Lounge');
     assert.equal(getStationCategory({ genre: 'Synthwave / Instrumental' }), 'Electronic');
   });
 
-  await t.test('Includes Radio Paradise, SomaFM, Classical, Jazz, and News stations with verified URLs', () => {
+  await t.test('Includes Radio Paradise, SomaFM, Classical, Jazz, News, and Kids stations with verified URLs', () => {
     const ids = CURATED_STATIONS.map((s) => s.id);
     assert.ok(ids.includes('rp_main'));
     assert.ok(ids.includes('rp_mellow'));
@@ -83,18 +89,19 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.ok(ids.includes('wqxr_classical'));
     assert.ok(ids.includes('jazz24'));
     assert.ok(ids.includes('knkx_jazz_npr'));
-    assert.ok(ids.includes('soma_poptron'));
-    assert.ok(ids.includes('soma_indiepop'));
-    assert.ok(ids.includes('soma_beatblender'));
-    assert.ok(ids.includes('soma_7soul'));
-    assert.ok(ids.includes('soma_seventies'));
-    assert.ok(ids.includes('soma_folkfwd'));
-    assert.ok(ids.includes('soma_bootliquor'));
-    assert.ok(ids.includes('soma_thistle'));
-    assert.ok(ids.includes('soma_fluid'));
-    assert.ok(ids.includes('soma_sf1033'));
     assert.ok(ids.includes('wnyc_fm'));
     assert.ok(ids.includes('bbc_world_service'));
+    assert.ok(ids.includes('npr_news'));
+    assert.ok(ids.includes('kqed_fm'));
+    assert.ok(ids.includes('wbez_chicago'));
+    assert.ok(ids.includes('rfi_english'));
+    assert.ok(ids.includes('wgbh_boston'));
+    assert.ok(ids.includes('fun_kids_uk'));
+    assert.ok(ids.includes('fun_kids_junior'));
+    assert.ok(ids.includes('radio_art_lullaby'));
+    assert.ok(ids.includes('radio_art_solo_piano'));
+    assert.ok(ids.includes('radio_art_mozart'));
+    assert.ok(ids.includes('soma_covers'));
 
     // Verify critical station stream endpoints
     const kusc = CURATED_STATIONS.find((s) => s.id === 'kusc_classical');

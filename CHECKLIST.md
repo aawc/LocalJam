@@ -66,6 +66,10 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Perform a comprehensive security audit of repository, server (`server.js`), static hosting on GitHub Pages, and client-side web application. Document all 11 vulnerability findings in `SECURITY_REPORT.md` across 4 severity tiers (Critical path traversal, High CSP/DOM XSS, Medium HTML escaping/MIME validation/inline handlers, Low/Info security headers and error masking), commit report, and implement complete remediations with automated test verification.
   - *Associated Commits:* `51360b0`, `721bc8f`
 
+- [x] **Issue 16: Minimalist UX Design Review & UI Enhancements** `[DONE]`
+  - *Description:* Conduct end-to-end UX audit from a minimalist product designer perspective. Document 10 findings in `UX_REVIEW_REPORT.md` (live stream progress bar vs track timeline, fluid search header, single-row horizontal genre pills scroll, hero button hierarchy, card hover elevations, table padding, glassmorphic overlays, and warm empty states), commit report, and implement all UI improvements across views.
+  - *Associated Commits:* `dba488a`
+
 ---
 
 ## Feature Requests
@@ -125,4 +129,8 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 - [x] **FR 14: Move GitHub Repository Link to Settings About Section** `[DONE]`
   - *Description:* Relocate the external GitHub repository link from the top navigation bar to the new "About LocalJam" section in the Settings view.
   - *Associated Commits:* `f6af12b`
+
+- [x] **FR 15: Curated Radio Catalog Expansion (Kids & Family + News & Talk)** `[DONE]`
+  - *Description:* Expand curated internet radio directory with dedicated **Kids & Family** genre category (Fun Kids Radio UK, Fun Kids Junior, Radio Art Lullabies, Radio Art Peaceful Solo Piano, Radio Art Mozart for Children, SomaFM Covers) and premier **News & Talk** streams (NPR 24/7 Live Stream, KQED 88.5 FM, WBEZ 91.5 FM, RFI English, WGBH 89.7 FM) accompanied by custom accessible SVG fallback artwork badges.
+  - *Associated Commits:*
 

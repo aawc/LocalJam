@@ -38,7 +38,10 @@ export async function renderHomeView() {
           </button>
           <input type="file" id="fallback-folder-input" webkitdirectory directory multiple style="display: none;" />
           
-          <button id="hero-shuffle-all-btn" class="btn btn-secondary" ${activeTracks.length === 0 ? 'disabled' : ''}>
+          ${
+            activeTracks.length > 0
+              ? `
+          <button id="hero-shuffle-all-btn" class="btn btn-secondary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
               <polyline points="16 3 21 3 21 8"></polyline>
               <line x1="4" y1="20" x2="21" y2="3"></line>
@@ -48,6 +51,9 @@ export async function renderHomeView() {
             </svg>
             Shuffle Library (${activeTracks.length})
           </button>
+          `
+              : ''
+          }
 
           <button id="hero-radio-btn" class="btn btn-secondary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
@@ -90,7 +96,13 @@ export async function renderHomeView() {
       history.length === 0
         ? `
         <div class="empty-state-card">
-          <p>No tracks played yet. Choose a song or station to start listening.</p>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8" fill="rgba(255,255,255,0.05)"></polygon>
+            </svg>
+          </div>
+          <p>No tracks played yet. Choose a song from your library or tune into internet radio to start listening.</p>
         </div>
       `
         : `
@@ -172,13 +184,15 @@ export async function renderHomeView() {
     router.handleRouteChange();
   });
 
-  shuffleBtn.addEventListener('click', () => {
-    if (activeTracks.length > 0) {
-      queueManager.setQueue(activeTracks, 0);
-      queueManager.toggleShuffle();
-      audioEngine.playTrack(queueManager.getCurrentTrack());
-    }
-  });
+  if (shuffleBtn) {
+    shuffleBtn.addEventListener('click', () => {
+      if (activeTracks.length > 0) {
+        queueManager.setQueue(activeTracks, 0);
+        queueManager.toggleShuffle();
+        audioEngine.playTrack(queueManager.getCurrentTrack());
+      }
+    });
+  }
 
   radioBtn.addEventListener('click', () => {
     router.navigate('radio');

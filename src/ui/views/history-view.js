@@ -32,7 +32,13 @@ export async function renderHistoryView() {
         history.length === 0
           ? `
         <div class="empty-state-card">
-          <p>No listening history recorded yet. Play some music to see history here.</p>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <p>No listening history recorded yet. Play songs or radio streams to see your listening history here.</p>
         </div>
       `
           : `

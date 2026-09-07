@@ -189,4 +189,20 @@ test('UI Views - renderSettingsView displays diagnostics, storage tier, and abou
   assert.ok(view.innerHTML.includes('Release Notes'));
   assert.ok(view.innerHTML.includes('https://github.com/aawc/LocalJam'));
   assert.ok(!view.innerHTML.includes('Visual Accessibility'));
+  assert.ok(!view.innerHTML.includes('[AVAILABLE]'));
+  assert.ok(!view.innerHTML.includes('[MISSING]'));
+});
+
+test('UI Views - renderHomeView omits shuffle button when library is empty', async () => {
+  db.getAllTracks = async () => [];
+  db.getAllAlbums = async () => [];
+  db.getAllArtists = async () => [];
+  db.getAllPlaylists = async () => [];
+  db.getRecentHistory = async () => [];
+
+  const view = await renderHomeView();
+  assert.ok(view.innerHTML.includes('Open Music Folder'));
+  assert.ok(!view.innerHTML.includes('Shuffle Library'));
+  assert.ok(view.innerHTML.includes('Internet Radio'));
+  assert.ok(view.innerHTML.includes('empty-state-icon'));
 });

@@ -74,7 +74,14 @@ export async function renderSongsView(params) {
         list.length === 0
           ? `
         <div class="empty-state-card">
-          <p>No songs found. Scan a music folder or clear search filters.</p>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </div>
+          <p>No songs found. Open a music folder to index tracks or clear active search filters.</p>
         </div>
       `
           : `
@@ -101,7 +108,7 @@ export async function renderSongsView(params) {
                     <td>
                       <div class="track-title-cell">
                         <span class="track-name">${escapeHtml(track.title || track.filename)}</span>
-                        ${isMissing ? '<span class="status-badge badge-missing" title="File not found at original path">[MISSING]</span>' : ''}
+                        ${isMissing ? '<span class="status-badge badge-missing" title="File not found at original path"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:3px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Missing</span>' : ''}
                       </div>
                     </td>
                     <td>${escapeHtml(track.artist || 'Unknown Artist')}</td>

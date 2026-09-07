@@ -447,6 +447,149 @@ export const CURATED_STATIONS = [
     favicon: 'https://www.bbc.co.uk/favicon.ico',
     isCustom: false,
     isFavorite: false
+  },
+  {
+    id: 'npr_news',
+    name: 'NPR 24/7 Live Stream',
+    description: 'National Public Radio live stream featuring Morning Edition, All Things Considered, and Fresh Air.',
+    streamUrl: 'https://npr-ice.streamguys1.com/live.mp3',
+    homepageUrl: 'https://www.npr.org',
+    genre: 'News / Public Radio',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.npr.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'kqed_fm',
+    name: 'KQED 88.5 FM (San Francisco)',
+    description: 'Northern California public media news, Forum discussions, and NPR programming.',
+    streamUrl: 'https://streams.kqed.org/kqedradio',
+    homepageUrl: 'https://www.kqed.org',
+    genre: 'News / Talk',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.kqed.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'wbez_chicago',
+    name: 'WBEZ 91.5 FM (Chicago)',
+    description: 'Chicago public media news, investigative journalism, and birthplace of This American Life.',
+    streamUrl: 'https://stream.wbez.org/wbez128.mp3',
+    homepageUrl: 'https://www.wbez.org',
+    genre: 'News / Public Radio',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.wbez.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'rfi_english',
+    name: 'RFI English (Paris)',
+    description: 'Radio France Internationale international news, European analysis, and global affairs.',
+    streamUrl: 'https://rfienanglais64k.ice.infomaniak.ch/rfienanglais-64.mp3',
+    homepageUrl: 'https://www.rfi.fr/en/',
+    genre: 'News / Global Talk',
+    country: 'France',
+    bitrate: '64 kbps',
+    favicon: 'https://www.rfi.fr/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'wgbh_boston',
+    name: 'WGBH 89.7 FM (Boston)',
+    description: 'Boston public radio news, ideas, and in-depth cultural conversation.',
+    streamUrl: 'https://wgbh-live.streamguys1.com/wgbh',
+    homepageUrl: 'https://www.wgbh.org',
+    genre: 'News / Public Radio',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.wgbh.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'fun_kids_uk',
+    name: 'Fun Kids Radio UK',
+    description: 'The UK\'s award-winning children\'s radio station featuring pop music, stories, games, and learning.',
+    streamUrl: 'https://listen-funkids.sharp-stream.com/funkids.mp3',
+    homepageUrl: 'https://www.funkidslive.com',
+    genre: 'Kids & Family / Pop & Learning',
+    country: 'UK',
+    bitrate: '128 kbps',
+    favicon: 'https://www.funkidslive.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'fun_kids_junior',
+    name: 'Fun Kids Junior',
+    description: 'Gentle songs, bedtime stories, and soothing nursery rhymes for preschool children and toddlers.',
+    streamUrl: 'https://listen-funkids.sharp-stream.com/funkidsjunior.mp3',
+    homepageUrl: 'https://www.funkidslive.com/junior/',
+    genre: 'Kids & Family / Preschool & Lullabies',
+    country: 'UK',
+    bitrate: '128 kbps',
+    favicon: 'https://www.funkidslive.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'radio_art_lullaby',
+    name: 'Radio Art: Lullabies for Sleep',
+    description: 'Peaceful acoustic lullabies, harp, and soft piano melodies designed for children\'s sleep and rest.',
+    streamUrl: 'https://live.radioart.com/fLullaby.mp3',
+    homepageUrl: 'https://www.radioart.com',
+    genre: 'Kids & Family / Sleep & Bedtime',
+    country: 'Greece',
+    bitrate: '128 kbps',
+    favicon: 'https://www.radioart.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'radio_art_solo_piano',
+    name: 'Radio Art: Peaceful Solo Piano',
+    description: 'Calm and melodic solo piano compositions creating a gentle, focused background for family and study.',
+    streamUrl: 'https://live.radioart.com/fSolo_piano.mp3',
+    homepageUrl: 'https://www.radioart.com',
+    genre: 'Kids & Family / Relaxing Piano',
+    country: 'Greece',
+    bitrate: '128 kbps',
+    favicon: 'https://www.radioart.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'radio_art_mozart',
+    name: 'Radio Art: Mozart for Children',
+    description: 'Uplifting classical Wolfgang Amadeus Mozart works tailored for creative play, young minds, and focus.',
+    streamUrl: 'https://live.radioart.com/fMozart.mp3',
+    homepageUrl: 'https://www.radioart.com',
+    genre: 'Kids & Family / Classical for Focus',
+    country: 'Greece',
+    bitrate: '128 kbps',
+    favicon: 'https://www.radioart.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_covers',
+    name: 'SomaFM: Covers',
+    description: 'All-ages acoustic and creative interpretations of classic pop, rock, and folk songs.',
+    streamUrl: 'https://ice1.somafm.com/covers-128-mp3',
+    homepageUrl: 'https://somafm.com/covers/',
+    genre: 'Kids & Family / Acoustic Covers',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
   }
 ];
 
@@ -457,6 +600,7 @@ export const HIGH_LEVEL_GENRES = [
   'Electronic',
   'Folk & Roots',
   'Jazz',
+  'Kids & Family',
   'Lounge',
   'News & Talk',
   'Rock',
@@ -477,35 +621,38 @@ export function getStationCategory(station) {
   const name = (station.name || '').toLowerCase();
   const desc = (station.description || '').toLowerCase();
 
+  if (g.includes('kids') || g.includes('child') || g.includes('lullaby') || g.includes('preschool') || g.includes('family') || name.includes('fun kids') || name.includes('for children') || name.includes('lullabies') || name.includes('covers')) {
+    return 'Kids & Family';
+  }
+  if (g.includes('news') || g.includes('talk') || g.includes('public radio') || name.includes('wnyc') || name.includes('bbc world service') || name.includes('npr') || name.includes('kqed') || name.includes('wbez') || name.includes('rfi') || name.includes('wgbh')) {
+    return 'News & Talk';
+  }
   if (g.includes('classical') || desc.includes('classical') || name.includes('classical') || name.includes('kusc') || name.includes('wqxr') || name.includes('king fm')) {
     return 'Classical';
   }
-  if (g.includes('jazz') || g.includes('nujazz') || name.includes('jazz') || name.includes('knkx') || name.includes('sonic universe')) {
+  if (g.includes('jazz') || g.includes('nujazz') || name.includes('jazz') || name.includes('knkx') || name.includes('sonic universe') || name.includes('jazz24')) {
     return 'Jazz';
   }
-  if (g.includes('drone') || g.includes('ambient') || g.includes('chill') || g.includes('downtempo') || g.includes('space') || g.includes('scanner') || g.includes('mellow') || g.includes('fluid') || g.includes('lush')) {
-    return 'Ambient';
-  }
-  if (g.includes('electronic') || g.includes('electropop') || g.includes('synthwave') || g.includes('house') || g.includes('dance') || g.includes('industrial') || g.includes('def con') || g.includes('poptron') || g.includes('beat blender') || g.includes('synphaera')) {
-    return 'Electronic';
+  if (g.includes('world') || g.includes('asian') || g.includes('global') || g.includes('fusion') || g.includes('goa')) {
+    return 'World';
   }
   if (g.includes('folk') || g.includes('americana') || g.includes('country') || g.includes('celtic') || g.includes('roots') || g.includes('boot liquor') || g.includes('thistle')) {
     return 'Folk & Roots';
   }
-  if (g.includes('lounge') || g.includes('exotica') || g.includes('spy') || g.includes('trip-hop') || g.includes('illinois street') || g.includes('secret agent')) {
-    return 'Lounge';
-  }
-  if (g.includes('news') || g.includes('talk') || g.includes('public radio') || name.includes('wnyc') || name.includes('bbc world service')) {
-    return 'News & Talk';
+  if (g.includes('soul') || g.includes('funk') || g.includes('lo-fi') || g.includes('hip-hop') || name.includes('seven inch') || name.includes('lofi')) {
+    return 'Soul & Funk';
   }
   if (g.includes('rock') || g.includes('indie') || g.includes('alternative') || g.includes('eclectic') || g.includes('70s') || name.includes('kexp') || name.includes('bbc radio 6') || name.includes('left coast')) {
     return 'Rock';
   }
-  if (g.includes('soul') || g.includes('funk') || g.includes('lo-fi') || g.includes('hip-hop') || name.includes('seven inch') || name.includes('lofi')) {
-    return 'Soul & Funk';
+  if (g.includes('lounge') || g.includes('exotica') || g.includes('spy') || g.includes('trip-hop') || g.includes('illinois street') || g.includes('secret agent')) {
+    return 'Lounge';
   }
-  if (g.includes('world') || g.includes('asian') || g.includes('global') || g.includes('fusion') || g.includes('goa')) {
-    return 'World';
+  if (g.includes('electronic') || g.includes('electropop') || g.includes('synthwave') || g.includes('house') || g.includes('dance') || g.includes('industrial') || g.includes('def con') || g.includes('poptron') || g.includes('beat blender') || g.includes('synphaera')) {
+    return 'Electronic';
+  }
+  if (g.includes('drone') || g.includes('ambient') || g.includes('chill') || g.includes('downtempo') || g.includes('space') || g.includes('scanner') || g.includes('mellow') || g.includes('fluid') || g.includes('lush')) {
+    return 'Ambient';
   }
   return 'Other';
 }
@@ -517,14 +664,23 @@ export function getStationCategory(station) {
  */
 export function getStationFallbackArtwork(station = {}) {
   const genre = (station.genre || '').toLowerCase();
-  const name = station.name || 'Radio';
+  const name = (station.name || '').toLowerCase();
 
   let bgGradientStart = '#1e3a8a'; // Deep blue
   let bgGradientEnd = '#0f172a';   // Midnight
   let iconSvg = '';
   let badgeText = 'RADIO';
 
-  if (genre.includes('classical')) {
+  if (genre.includes('kid') || genre.includes('child') || genre.includes('lullaby') || genre.includes('family') || name.includes('kids') || name.includes('junior')) {
+    bgGradientStart = '#d97706'; // Warm Amber
+    bgGradientEnd = '#92400e';   // Deep Amber
+    badgeText = 'KIDS';
+    iconSvg = `
+      <polygon points="96,44 112,76 148,81 122,106 128,142 96,125 64,142 70,106 44,81 80,76" fill="#fef08a"/>
+      <circle cx="96" cy="96" r="14" fill="#fbbf24"/>
+      <circle cx="96" cy="96" r="8" fill="#d97706"/>
+    `;
+  } else if (genre.includes('classical') || name.includes('mozart')) {
     bgGradientStart = '#1e3a8a';
     bgGradientEnd = '#172554';
     badgeText = 'CLASSIC';
@@ -539,7 +695,7 @@ export function getStationFallbackArtwork(station = {}) {
     iconSvg = `
       <path d="M72 136a20 20 0 1 0 20-20H80V56l48-12v64a20 20 0 1 0 20-20H136V36L72 52v84z" fill="#fbbf24"/>
     `;
-  } else if (genre.includes('ambient') || genre.includes('drone') || genre.includes('space')) {
+  } else if (genre.includes('ambient') || genre.includes('drone') || genre.includes('space') || genre.includes('piano')) {
     bgGradientStart = '#0f172a';
     bgGradientEnd = '#0284c7';
     badgeText = 'AMBIENT';
@@ -566,7 +722,7 @@ export function getStationFallbackArtwork(station = {}) {
       <rect x="100" y="44" width="12" height="84" rx="4" fill="#fbbf24"/>
       <rect x="124" y="68" width="12" height="60" rx="4" fill="#f43f5e"/>
     `;
-  } else if (genre.includes('news') || genre.includes('talk') || genre.includes('npr')) {
+  } else if (genre.includes('news') || genre.includes('talk') || genre.includes('npr') || name.includes('news') || name.includes('bbc') || name.includes('kqed')) {
     bgGradientStart = '#1e293b';
     bgGradientEnd = '#0f172a';
     badgeText = 'NEWS';

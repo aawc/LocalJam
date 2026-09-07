@@ -46,6 +46,11 @@ export async function renderFavoritesView() {
         tracks.length === 0
           ? `
         <div class="empty-state-card">
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
           <p>No favorite tracks starred yet. Click the star icon on any song to add it here.</p>
         </div>
       `
@@ -72,7 +77,7 @@ export async function renderFavoritesView() {
                     <td>
                       <div class="track-title-cell">
                         <span class="track-name">${escapeHtml(track.title || track.filename)}</span>
-                        ${isMissing ? '<span class="status-badge badge-missing">[MISSING]</span>' : ''}
+                        ${isMissing ? '<span class="status-badge badge-missing" title="File not found at original path"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:3px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Missing</span>' : ''}
                       </div>
                     </td>
                     <td>${escapeHtml(track.artist || 'Unknown Artist')}</td>

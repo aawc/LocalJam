@@ -38,6 +38,13 @@ export async function renderAlbumsView() {
       albums.length === 0
         ? `
       <div class="empty-state-card">
+        <div class="empty-state-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="12" cy="12" r="4"></circle>
+            <circle cx="12" cy="12" r="1.5" fill="var(--text-muted)"></circle>
+          </svg>
+        </div>
         <p>No albums found in your library. Open a music folder to get started.</p>
       </div>
     `
