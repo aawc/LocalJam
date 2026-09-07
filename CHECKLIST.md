@@ -130,7 +130,11 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Relocate the external GitHub repository link from the top navigation bar to the new "About LocalJam" section in the Settings view.
   - *Associated Commits:* `f6af12b`
 
+- [x] **Issue 17: PWA Update Notification Failure & Radio Station Catalog Sync** `[DONE]`
+  - *Description:* Resolve failure of PWA update notifications on Chrome Canary (Android) and desktop browsers caused by premature remote version mutation overwriting baseline `APP_VERSION`, missing Service Worker precaching of `sanitize.js`, unconditional `self.skipWaiting()` on install, and deceptive version display in Settings. Fix station catalog synchronization to seamlessly merge all 34 curated streams (including 6 Kids & Family and 5 News & Talk streams) into pre-existing IndexedDB stores while preserving user favorites and custom streams.
+  - *Associated Commits:* `6c810c4`, `3b259d6`, `6bd4abd`
+
 - [x] **FR 15: Curated Radio Catalog Expansion (Kids & Family + News & Talk)** `[DONE]`
   - *Description:* Expand curated internet radio directory with dedicated **Kids & Family** genre category (Fun Kids Radio UK, Fun Kids Junior, Radio Art Lullabies, Radio Art Peaceful Solo Piano, Radio Art Mozart for Children, SomaFM Covers) and premier **News & Talk** streams (NPR 24/7 Live Stream, KQED 88.5 FM, WBEZ 91.5 FM, RFI English, WGBH 89.7 FM) accompanied by custom accessible SVG fallback artwork badges.
-  - *Associated Commits:*
+  - *Associated Commits:* `97dcea4`
 
