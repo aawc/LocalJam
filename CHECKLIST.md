@@ -69,6 +69,17 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 - [x] **Issue 16: Minimalist UX Design Review & UI Enhancements** `[DONE]`
   - *Description:* Conduct end-to-end UX audit from a minimalist product designer perspective. Document 10 findings in `UX_REVIEW_REPORT.md` (live stream progress bar vs track timeline, fluid search header, single-row horizontal genre pills scroll, hero button hierarchy, card hover elevations, table padding, glassmorphic overlays, and warm empty states), commit report, and implement all UI improvements across views.
   - *Associated Commits:* `dba488a`
+- [x] **Issue 17: PWA Update Notification Failure & Radio Station Catalog Sync** `[DONE]`
+  - *Description:* Resolve failure of PWA update notifications on Chrome Canary (Android) and desktop browsers caused by premature remote version mutation overwriting baseline `APP_VERSION`, missing Service Worker precaching of `sanitize.js`, unconditional `self.skipWaiting()` on install, and deceptive version display in Settings. Fix station catalog synchronization to seamlessly merge all 34 curated streams (including 6 Kids & Family and 5 News & Talk streams) into pre-existing IndexedDB stores while preserving user favorites and custom streams.
+  - *Associated Commits:* `6c810c4`, `3b259d6`, `6bd4abd`
+
+- [x] **Issue 18: Persistent Update Popup on Refresh (Version Disconnect in CI & Synchronous Reload)** `[DONE]`
+  - *Description:* Resolve recurring update popup appearing on every page refresh caused by GitHub Pages deployment workflow (`deploy.yml`) only generating `version.json` while leaving `src/version.js` (`APP_VERSION`) and `sw.js` (`CACHE_NAME`) un-synchronized with the deployed release tag. Update `deploy.yml` to automatically patch `src/version.js` and `sw.js` with `TAG_NAME` prior to uploading GitHub Pages artifacts. Update `createUpdateBanner` to smoothly post `SKIP_WAITING` to waiting worker without premature synchronous reload, and add session-level version dismissal.
+  - *Associated Commits:* `d47f726`
+
+- [x] **Issue 19: GitHub Pages Deployment Syntax Error & Dedicated Synchronizer Script** `[DONE]`
+  - *Description:* Resolve GitHub Actions deployment workflow syntax error caused by unescaped bash double-quotes in multiline inline `node -e` script. Extract deployment metadata generation and asset synchronization into modular `scripts/generate-version.js` with comprehensive unit and integration tests.
+  - *Associated Commits:* `ea9bd9a`
 
 ---
 
@@ -130,15 +141,9 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Relocate the external GitHub repository link from the top navigation bar to the new "About LocalJam" section in the Settings view.
   - *Associated Commits:* `f6af12b`
 
-- [x] **Issue 17: PWA Update Notification Failure & Radio Station Catalog Sync** `[DONE]`
-  - *Description:* Resolve failure of PWA update notifications on Chrome Canary (Android) and desktop browsers caused by premature remote version mutation overwriting baseline `APP_VERSION`, missing Service Worker precaching of `sanitize.js`, unconditional `self.skipWaiting()` on install, and deceptive version display in Settings. Fix station catalog synchronization to seamlessly merge all 34 curated streams (including 6 Kids & Family and 5 News & Talk streams) into pre-existing IndexedDB stores while preserving user favorites and custom streams.
-  - *Associated Commits:* `6c810c4`, `3b259d6`, `6bd4abd`
-
-- [x] **Issue 18: Persistent Update Popup on Refresh (Version Disconnect in CI & Synchronous Reload)** `[DONE]`
-  - *Description:* Resolve recurring update popup appearing on every page refresh caused by GitHub Pages deployment workflow (`deploy.yml`) only generating `version.json` while leaving `src/version.js` (`APP_VERSION`) and `sw.js` (`CACHE_NAME`) un-synchronized with the deployed release tag. Update `deploy.yml` to automatically patch `src/version.js` and `sw.js` with `TAG_NAME` prior to uploading GitHub Pages artifacts. Update `createUpdateBanner` to smoothly post `SKIP_WAITING` to waiting worker without premature synchronous reload, and add session-level version dismissal.
-  - *Associated Commits:* `d47f726`
-
 - [x] **FR 15: Curated Radio Catalog Expansion (Kids & Family + News & Talk)** `[DONE]`
   - *Description:* Expand curated internet radio directory with dedicated **Kids & Family** genre category (Fun Kids Radio UK, Fun Kids Junior, Radio Art Lullabies, Radio Art Peaceful Solo Piano, Radio Art Mozart for Children, SomaFM Covers) and premier **News & Talk** streams (NPR 24/7 Live Stream, KQED 88.5 FM, WBEZ 91.5 FM, RFI English, WGBH 89.7 FM) accompanied by custom accessible SVG fallback artwork badges.
   - *Associated Commits:* `97dcea4`
+
+
 
