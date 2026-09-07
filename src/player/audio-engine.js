@@ -214,8 +214,59 @@ export class AudioEngine {
     let file = null;
     try {
       file = sessionRegistry.getFile(track.id);
-      if (!file && track.handle && typeof track.handle.getFile === 'function') {
-        file = await track.handle.getFile();
+
+      // Tier 1: Stored FileSystemFileHandle with permission check
+      if (!file && track.handle) {
+        try {
+          if (typeof track.handle.queryPermission === 'function') {
+            let perm = await track.handle.queryPermission({ mode: 'read' });
+            if (perm !== 'granted' && typeof track.handle.requestPermission === 'function') {
+              perm = await track.handle.requestPermission({ mode: 'read' });
+            }
+          }
+          if (typeof track.handle.getFile === 'function') {
+            file = await track.handle.getFile();
+          }
+        } catch (handleErr) {
+          console.warn(`[AudioEngine] Direct handle access failed for ${track.title}: ${handleErr?.message}`);
+        }
+      }
+
+      // Tier 1 Fallback: Root directory handle traversal from IndexedDB
+      if (!file && track.relativePath && db && typeof db.getRoots === 'function') {
+        try {
+          const roots = await db.getRoots();
+          const root = roots.find((r) => r.id === track.rootId) || roots[0];
+          if (root && root.handle) {
+            if (typeof root.handle.queryPermission === 'function') {
+              let perm = await root.handle.queryPermission({ mode: 'read' });
+              if (perm !== 'granted' && typeof root.handle.requestPermission === 'function') {
+                perm = await root.handle.requestPermission({ mode: 'read' });
+              }
+            }
+            const parts = track.relativePath.split('/').filter(Boolean);
+            let currHandle = root.handle;
+            for (let i = 0; i < parts.length - 1; i++) {
+              if (typeof currHandle.getDirectoryHandle === 'function') {
+                currHandle = await currHandle.getDirectoryHandle(parts[i]);
+              }
+            }
+            if (typeof currHandle.getFileHandle === 'function') {
+              const fileHandle = await currHandle.getFileHandle(parts[parts.length - 1]);
+              file = await fileHandle.getFile();
+              track.handle = fileHandle;
+              if (typeof db.putTrack === 'function') {
+                db.putTrack(track).catch(() => {});
+              }
+            }
+          }
+        } catch (rootErr) {
+          console.warn(`[AudioEngine] Root directory handle traversal failed for ${track.relativePath}: ${rootErr?.message}`);
+        }
+      }
+
+      if (file && sessionRegistry && typeof sessionRegistry.registerFile === 'function') {
+        sessionRegistry.registerFile(file, track.relativePath || track.filename);
       }
     } catch (err) {
       console.error(`[AudioEngine] Failed to obtain File for track ${track.title}: ${err?.message}`);
@@ -257,6 +308,15 @@ export class AudioEngine {
 
     this.activePlayer = nextPlayer;
 
+    if (this.masterGain) {
+      this.masterGain.gain.value = this.muted ? 0 : this.volume;
+    }
+
+    if (!this.crossfadeSeconds || this.crossfadeSeconds <= 0) {
+      if (nextGain) nextGain.gain.value = 1;
+      if (prevGain && prevGain !== nextGain) prevGain.gain.value = 0;
+    }
+
     try {
       if (nextAudio) {
         const playPromise = nextAudio.play();
@@ -275,11 +335,11 @@ export class AudioEngine {
         prevGain.gain.linearRampToValueAtTime(0, now + this.crossfadeSeconds);
 
         setTimeout(() => {
-          if (prevAudio) prevAudio.pause();
+          if (prevAudio && prevAudio !== nextAudio) prevAudio.pause();
         }, this.crossfadeSeconds * 1000);
       } else {
         if (nextGain) nextGain.gain.value = 1;
-        if (prevGain) prevGain.gain.value = 0;
+        if (prevGain && prevGain !== nextGain) prevGain.gain.value = 0;
         if (prevAudio && prevAudio !== nextAudio) prevAudio.pause();
       }
 
@@ -360,7 +420,7 @@ export class AudioEngine {
   async play() {
     this.unlock();
     const audio = this.getActiveAudio();
-    if (audio && audio.src) {
+    if (audio && audio.src && audio.src !== (typeof window !== 'undefined' ? window.location.href : '')) {
       try {
         const playPromise = audio.play();
         if (playPromise !== undefined) {
@@ -372,8 +432,20 @@ export class AudioEngine {
         console.error(`[AudioEngine] Play error: ${err?.message}`);
       }
     } else {
-      const item = queueManager.getCurrent();
-      if (item) {
+      let item = queueManager.getCurrent();
+      if (!item && db && typeof db.getAllTracks === 'function') {
+        try {
+          const allTracks = await db.getAllTracks();
+          const availableTracks = allTracks.filter((t) => !t.isMissing);
+          if (availableTracks.length > 0) {
+            queueManager.setQueue(availableTracks, 0);
+            item = queueManager.getCurrent();
+          }
+        } catch (dbErr) {
+          console.warn(`[AudioEngine] Failed to auto-populate queue from DB: ${dbErr?.message}`);
+        }
+      }
+      if (item && item.track) {
         await this.playTrack(item.track);
       }
     }

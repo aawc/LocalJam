@@ -212,4 +212,119 @@ test('Audio Engine State & Control Suite', async (t) => {
     assert.equal(engine.isPlaying, true);
     assert.equal(engine.radioAudio.src, 'https://stream.example.org/live');
   });
+
+  await t.test('playTrack resolves File from sessionRegistry and initiates playback', async () => {
+    const { sessionRegistry } = await import('../../src/storage/session-registry.js');
+    const engine = new AudioEngine();
+    let playCalled = false;
+
+    engine.audioB = {
+      src: '',
+      play: async () => {
+        playCalled = true;
+        return Promise.resolve();
+      },
+      pause: () => {}
+    };
+    engine.audioA = {
+      src: '',
+      play: async () => Promise.resolve(),
+      pause: () => {}
+    };
+
+    const mockFile = { name: 'song.mp3', size: 1024, lastModified: Date.now() };
+    const trackId = sessionRegistry.registerFile(mockFile, 'song.mp3');
+    const track = { id: trackId, title: 'Local Song', relativePath: 'song.mp3' };
+
+    // Mock URL.createObjectURL
+    const prevCreateObjectURL = globalThis.URL?.createObjectURL;
+    if (!globalThis.URL) globalThis.URL = {};
+    globalThis.URL.createObjectURL = (f) => 'blob:http://localhost/song-blob-url';
+
+    try {
+      await engine.playTrack(track);
+      assert.equal(playCalled, true);
+      assert.equal(engine.isPlaying, true);
+      assert.equal(engine.currentTrack.id, trackId);
+    } finally {
+      globalThis.URL.createObjectURL = prevCreateObjectURL;
+    }
+  });
+
+  await t.test('playTrack queries and requests permission for stored FileSystemFileHandle', async () => {
+    const engine = new AudioEngine();
+    let playCalled = false;
+    let queryCalled = false;
+    let requestCalled = false;
+
+    engine.audioB = {
+      src: '',
+      play: async () => {
+        playCalled = true;
+        return Promise.resolve();
+      },
+      pause: () => {}
+    };
+    engine.audioA = {
+      src: '',
+      play: async () => Promise.resolve(),
+      pause: () => {}
+    };
+
+    const mockHandle = {
+      queryPermission: async () => {
+        queryCalled = true;
+        return 'prompt';
+      },
+      requestPermission: async () => {
+        requestCalled = true;
+        return 'granted';
+      },
+      getFile: async () => ({ name: 'track.flac', size: 5000, lastModified: Date.now() })
+    };
+
+    const track = { id: 'trk_fsaa_1', title: 'FSAA Track', handle: mockHandle, relativePath: 'track.flac' };
+
+    const prevCreateObjectURL = globalThis.URL?.createObjectURL;
+    if (!globalThis.URL) globalThis.URL = {};
+    globalThis.URL.createObjectURL = () => 'blob:http://localhost/fsaa-blob';
+
+    try {
+      await engine.playTrack(track);
+      assert.equal(queryCalled, true);
+      assert.equal(requestCalled, true);
+      assert.equal(playCalled, true);
+      assert.equal(engine.isPlaying, true);
+    } finally {
+      globalThis.URL.createObjectURL = prevCreateObjectURL;
+    }
+  });
+
+  await t.test('play auto-populates queue from DB when queue is empty and starts playback', async () => {
+    const { queueManager } = await import('../../src/player/queue.js');
+    const { db } = await import('../../src/storage/db.js');
+    const engine = new AudioEngine();
+    let trackPlayed = null;
+
+    queueManager.clear();
+    engine.playTrack = async (t) => {
+      trackPlayed = t;
+      engine.isPlaying = true;
+    };
+
+    const prevGetAllTracks = db.getAllTracks;
+    db.getAllTracks = async () => [
+      { id: 'db_trk_1', title: 'DB Song 1', isMissing: 0 },
+      { id: 'db_trk_2', title: 'DB Song 2', isMissing: 0 }
+    ];
+
+    try {
+      await engine.play();
+      assert.ok(trackPlayed);
+      assert.equal(trackPlayed.id, 'db_trk_1');
+      assert.equal(queueManager.items.length, 2);
+    } finally {
+      db.getAllTracks = prevGetAllTracks;
+    }
+  });
 });

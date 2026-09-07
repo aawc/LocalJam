@@ -195,6 +195,11 @@ export class QueueManager {
     return null;
   }
 
+  getCurrentTrack() {
+    const current = this.getCurrent();
+    return current ? current.track : null;
+  }
+
   next() {
     if (this.items.length === 0) return null;
 

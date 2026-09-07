@@ -7,7 +7,7 @@
  * - Marks deleted/unreachable files as missing without corrupting playlists
  */
 
-import { generateDeterministicTrackId } from './session-registry.js';
+import { generateDeterministicTrackId, sessionRegistry } from './session-registry.js';
 import { extractMetadataFromChunk } from '../metadata/index.js';
 import { db } from './db.js';
 
@@ -283,6 +283,9 @@ async function scanDirectoryHandle(dirHandle, path = '') {
         const file = await entry.getFile();
         const ext = name.split('.').pop().toLowerCase();
         if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'wav', 'opus'].includes(ext)) {
+          if (sessionRegistry && typeof sessionRegistry.registerFile === 'function') {
+            sessionRegistry.registerFile(file, relativePath);
+          }
           items.push({
             relativePath,
             filename: name,
@@ -325,6 +328,9 @@ export const reconciler = {
       const relativePath = file.webkitRelativePath || file.name;
       const ext = file.name.split('.').pop().toLowerCase();
       if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'wav', 'opus'].includes(ext)) {
+        if (sessionRegistry && typeof sessionRegistry.registerFile === 'function') {
+          sessionRegistry.registerFile(file, relativePath);
+        }
         scannedItems.push({
           relativePath,
           filename: file.name,

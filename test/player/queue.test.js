@@ -12,10 +12,12 @@ test('Queue Manager Suite', async (t) => {
 
   await t.test('Sets queue and sets current index', () => {
     const q = new QueueManager();
+    assert.equal(q.getCurrentTrack(), null);
     q.setQueue(sampleTracks, 1);
     assert.equal(q.items.length, 4);
     assert.equal(q.currentIndex, 1);
     assert.equal(q.getCurrent().track.id, 'trk_2');
+    assert.equal(q.getCurrentTrack().id, 'trk_2');
   });
 
   await t.test('Adds track to end and adds track next', () => {
