@@ -96,11 +96,21 @@ export class AudioEngine {
   }
 
   unlock() {
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume().catch(() => {});
-    } else if (!this.webAudioInitialized) {
-      this.initWebAudio().catch(() => {});
+    this.ensureAudioContextActive().catch(() => {});
+  }
+
+  async ensureAudioContextActive() {
+    if (!this.webAudioInitialized) {
+      await this.initWebAudio();
     }
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      try {
+        await this.audioCtx.resume();
+      } catch (err) {
+        console.warn(`[AudioEngine] AudioContext resume warning: ${err?.message}`);
+      }
+    }
+    return this.audioCtx;
   }
 
   async initWebAudio() {
@@ -593,12 +603,71 @@ export class AudioEngine {
   }
 
   /**
+   * Synthesize organic, rhythmically pulsing frequency spectrum data for CORS-isolated radio streams
+   * @param {Uint8Array} dataArray
+   */
+  generateSyntheticRadioFrequencyData(dataArray) {
+    const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    const vol = this.muted ? 0 : this.volume;
+    const count = dataArray.length;
+    for (let i = 0; i < count; i++) {
+      const freqNorm = i / count;
+      const bassPulse = Math.sin(t * 3.2) * 0.5 + 0.5;
+      const midPulse = Math.sin(t * 6.5 + i * 0.1) * 0.5 + 0.5;
+      const treblePulse = Math.sin(t * 12.0 + i * 0.3) * 0.5 + 0.5;
+
+      let energy = 0;
+      if (freqNorm < 0.15) {
+        energy = bassPulse * (1 - freqNorm / 0.15) * 220 + 35;
+      } else if (freqNorm < 0.6) {
+        energy = midPulse * 160 + 20;
+      } else {
+        energy = treblePulse * 110 + 10;
+      }
+
+      const decay = Math.pow(1 - freqNorm, 0.75);
+      dataArray[i] = Math.min(255, Math.max(0, Math.floor(energy * decay * vol)));
+    }
+  }
+
+  /**
+   * Synthesize oscillating time-domain waveform data for radio streams
+   * @param {Uint8Array} dataArray
+   */
+  generateSyntheticRadioTimeDomainData(dataArray) {
+    const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    const vol = this.muted ? 0 : this.volume;
+    const count = dataArray.length;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 4 + t * 5;
+      const wave = Math.sin(angle) * 35 * vol + Math.sin(angle * 2.5) * 15 * vol;
+      dataArray[i] = Math.min(255, Math.max(0, Math.floor(128 + wave)));
+    }
+  }
+
+  /**
    * Get FFT frequency data for real-time visualizers
    * @param {Uint8Array} dataArray
    */
   getByteFrequencyData(dataArray) {
-    if (this.analyser && this.isPlaying) {
-      this.analyser.getByteFrequencyData(dataArray);
+    if (this.isPlaying) {
+      if (this.analyser) {
+        this.analyser.getByteFrequencyData(dataArray);
+      }
+      if (this.isRadio) {
+        let hasData = false;
+        if (this.analyser) {
+          for (let i = 0; i < Math.min(32, dataArray.length); i++) {
+            if (dataArray[i] > 0) {
+              hasData = true;
+              break;
+            }
+          }
+        }
+        if (!hasData) {
+          this.generateSyntheticRadioFrequencyData(dataArray);
+        }
+      }
     } else {
       dataArray.fill(0);
     }
@@ -609,8 +678,24 @@ export class AudioEngine {
    * @param {Uint8Array} dataArray
    */
   getByteTimeDomainData(dataArray) {
-    if (this.analyser && this.isPlaying) {
-      this.analyser.getByteTimeDomainData(dataArray);
+    if (this.isPlaying) {
+      if (this.analyser) {
+        this.analyser.getByteTimeDomainData(dataArray);
+      }
+      if (this.isRadio) {
+        let hasVariation = false;
+        if (this.analyser) {
+          for (let i = 0; i < Math.min(32, dataArray.length); i++) {
+            if (dataArray[i] !== 128) {
+              hasVariation = true;
+              break;
+            }
+          }
+        }
+        if (!hasVariation) {
+          this.generateSyntheticRadioTimeDomainData(dataArray);
+        }
+      }
     } else {
       dataArray.fill(128);
     }

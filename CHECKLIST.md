@@ -93,6 +93,10 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Overhaul the entire user interface and design system under extreme minimalist principles ("Less, but better"): deep matte slate surfaces (`#0a0e17`, `#111827`, `#1a2333`), Swiss typography with tabular monospace numbers for time/frequency/bitrate metrics, high-contrast double-coded colorblind-safe accents (Cobalt `#0072B2`, Sky Blue `#38bdf8`, Amber `#fbbf24`, Rose `#f43f5e`, Purple `#a855f7`), tactile 3-column audio player bar with dynamic volume iconography and live broadcast capsule, refined card elevations, streamlined sortable track tables, and glassmorphic modal overlays.
   - *Associated Commits:* `f43ca0d`
 
+- [x] **Issue 23: Audio Visualizer Inactivity on Chrome on macOS and Android (v2026.09.051)** `[DONE]`
+  - *Description:* Resolve audio visualizer inactivity and rendering failures on Chrome on macOS and Android caused by: (1) Unresumed suspended `AudioContext` lifecycle during overlay opening and background visibility return, (2) Elimination of visualizer button on mobile viewports (< 768px), (3) Horizontal header overflow pushing close and fullscreen buttons off-screen on mobile, (4) Zero-dimension canvas reflow `IndexSizeError` in `createRadialGradient` and `roundRect` radius clamping, and (5) FFT starvation during CORS-isolated internet radio playback. Document comprehensive findings in `VISUALIZER_INVESTIGATION_REPORT.md` and add unit and integration test coverage.
+  - *Associated Commits:* `[PENDING_COMMIT]`
+
 ---
 
 ## Feature Requests

@@ -140,11 +140,18 @@ export function createVisualizerOverlay() {
 
   function open() {
     overlay.style.display = 'flex';
-    if (audioEngine && typeof audioEngine.initWebAudio === 'function') {
+    if (audioEngine && typeof audioEngine.ensureAudioContextActive === 'function') {
+      audioEngine.ensureAudioContextActive().catch(() => {});
+    } else if (audioEngine && typeof audioEngine.initWebAudio === 'function') {
       audioEngine.initWebAudio().catch(() => {});
     }
     audioVisualizer.init(canvas);
     audioVisualizer.start();
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        audioVisualizer.resize();
+      });
+    }
   }
 
   closeBtn.addEventListener('click', close);

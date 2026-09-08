@@ -46,15 +46,18 @@ export class AudioVisualizer {
         }
       } else if (this.wasRunningBeforeHide) {
         this.wasRunningBeforeHide = false;
+        if (audioEngine && typeof audioEngine.ensureAudioContextActive === 'function') {
+          audioEngine.ensureAudioContextActive().catch(() => {});
+        }
         this.start();
       }
     };
 
     this.resize();
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('resize', this.resize);
     }
-    if (typeof document !== 'undefined') {
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
       document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
   }
@@ -83,8 +86,8 @@ export class AudioVisualizer {
     const width = this.canvas.clientWidth || 800;
     const height = this.canvas.clientHeight || 400;
 
-    this.canvas.width = Math.floor(width * dpr);
-    this.canvas.height = Math.floor(height * dpr);
+    this.canvas.width = Math.max(10, Math.floor(width * dpr));
+    this.canvas.height = Math.max(10, Math.floor(height * dpr));
     if (this.ctx && typeof this.ctx.scale === 'function') {
       this.ctx.scale(dpr, dpr);
     }
@@ -142,8 +145,8 @@ export class AudioVisualizer {
       audioEngine.getByteTimeDomainData(this.timeData);
     }
 
-    const w = this.width || 800;
-    const h = this.height || 400;
+    const w = Math.max(10, this.width || 800);
+    const h = Math.max(10, this.height || 400);
 
     // Clear background
     this.ctx.fillStyle = '#0b0f17';
@@ -173,7 +176,7 @@ export class AudioVisualizer {
 
   renderBars(w, h) {
     const barCount = Math.min(64, Math.max(16, Math.floor(w / 12)));
-    const barWidth = (w / barCount) * 0.7;
+    const barWidth = Math.max(1, (w / barCount) * 0.7);
     const gap = (w / barCount) * 0.3;
     const step = Math.max(1, Math.floor(this.freqData.length / barCount / 2));
 
@@ -190,12 +193,13 @@ export class AudioVisualizer {
       const barHeight = Math.max(2, (val / 255) * (h * 0.85));
       const x = i * (barWidth + gap) + gap / 2;
       const y = h - barHeight;
+      const radius = Math.min(4, Math.max(0, barWidth / 2), Math.max(0, barHeight / 2));
 
       // Draw Main Bar
       this.ctx.fillStyle = gradient || '#38bdf8';
       this.ctx.beginPath();
       if (typeof this.ctx.roundRect === 'function') {
-        this.ctx.roundRect(x, y, barWidth, barHeight, [4, 4, 0, 0]);
+        this.ctx.roundRect(x, y, barWidth, barHeight, [radius, radius, 0, 0]);
       } else {
         this.ctx.rect(x, y, barWidth, barHeight);
       }
@@ -221,7 +225,7 @@ export class AudioVisualizer {
     this.ctx.shadowColor = '#0072B2';
 
     this.ctx.beginPath();
-    const sliceWidth = w / this.timeData.length;
+    const sliceWidth = w / Math.max(1, this.timeData.length);
     let x = 0;
 
     for (let i = 0; i < this.timeData.length; i++) {
@@ -244,16 +248,18 @@ export class AudioVisualizer {
   renderNebula(w, h) {
     const cx = w / 2;
     const cy = h / 2;
-    const radius = Math.min(w, h) * 0.22;
+    const radius = Math.max(12, Math.min(w, h) * 0.22);
 
     // Calculate low bass energy
     let bassSum = 0;
     for (let i = 0; i < 16; i++) bassSum += this.freqData[i];
     const bassAvg = bassSum / 16 / 255;
+    const outerRadius = Math.max(radius * (1 + bassAvg * 0.4), 8);
+    const innerRadius = Math.min(5, outerRadius * 0.5);
 
     // Inner Pulsing Core
     if (typeof this.ctx.createRadialGradient === 'function') {
-      const glowGradient = this.ctx.createRadialGradient(cx, cy, 5, cx, cy, radius * (1 + bassAvg * 0.4));
+      const glowGradient = this.ctx.createRadialGradient(cx, cy, innerRadius, cx, cy, outerRadius);
       glowGradient.addColorStop(0, 'rgba(56, 189, 248, 0.8)');
       glowGradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.4)');
       glowGradient.addColorStop(1, 'rgba(11, 15, 23, 0)');
@@ -263,7 +269,7 @@ export class AudioVisualizer {
     }
 
     this.ctx.beginPath();
-    this.ctx.arc(cx, cy, radius * (1 + bassAvg * 0.4), 0, Math.PI * 2);
+    this.ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
     this.ctx.fill();
 
     // Outer Radial Frequency Ring
@@ -339,10 +345,11 @@ export class AudioVisualizer {
 
   destroy() {
     this.pause();
-    if (typeof window !== 'undefined') {
+    this.wasRunningBeforeHide = false;
+    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
       window.removeEventListener('resize', this.resize);
     }
-    if (typeof document !== 'undefined') {
+    if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
       document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
   }

@@ -193,6 +193,27 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     }
   };
 
+  if (artImg) {
+    artImg.style.cursor = 'pointer';
+    artImg.setAttribute('role', 'button');
+    artImg.setAttribute('tabindex', '0');
+    artImg.setAttribute('aria-label', 'Open Audio Visualizer (V)');
+    artImg.title = 'Open Visualizer (V)';
+    const triggerViz = () => {
+      const vizBtn = typeof document !== 'undefined' ? document.getElementById('btn-toggle-viz') : null;
+      if (vizBtn) {
+        vizBtn.click();
+      }
+    };
+    artImg.onclick = triggerViz;
+    artImg.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        triggerViz();
+      }
+    };
+  }
+
   titleEl.onclick = () => {
     if (audioEngine.isRadio && audioEngine.currentStation) {
       if (typeof onOpenStationDetails === 'function') {

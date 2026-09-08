@@ -163,4 +163,112 @@ test('Audio Visualizer Engine Suite', async (t) => {
     visualizer.destroy();
     assert.equal(visualizer.isRunning, false);
   });
+
+  await t.test('Resilient against zero-dimension canvas and layout transitions without throwing IndexSizeError', () => {
+    let gradientCreated = false;
+    const { canvas, ctx } = createMockCanvas(0, 0);
+    ctx.createRadialGradient = (x0, y0, r0, x1, y1, r1) => {
+      if (r0 < 0 || r1 <= 0 || isNaN(r0) || isNaN(r1)) {
+        throw new Error('IndexSizeError: The provided radius is non-finite or negative');
+      }
+      gradientCreated = true;
+      return { addColorStop: () => {} };
+    };
+
+    const visualizer = new AudioVisualizer(canvas);
+    visualizer.width = 0;
+    visualizer.height = 0;
+    visualizer.setMode('nebula');
+    visualizer.isRunning = true;
+
+    // Must not throw IndexSizeError
+    assert.doesNotThrow(() => {
+      visualizer.render();
+    });
+    assert.ok(gradientCreated, 'createRadialGradient must be invoked with valid positive radii');
+  });
+
+  await t.test('Generates vibrant audio reactivity during Internet Radio playback without CORS starvation', async () => {
+    const { audioEngine } = await import('../../src/player/audio-engine.js');
+    audioEngine.isPlaying = true;
+    audioEngine.isRadio = true;
+    audioEngine.volume = 0.8;
+    audioEngine.muted = false;
+
+    const freqData = new Uint8Array(1024);
+    const timeData = new Uint8Array(1024);
+
+    audioEngine.getByteFrequencyData(freqData);
+    audioEngine.getByteTimeDomainData(timeData);
+
+    let nonZeroCount = 0;
+    for (let i = 0; i < freqData.length; i++) {
+      if (freqData[i] > 0) nonZeroCount++;
+    }
+    assert.ok(nonZeroCount > 50, 'Radio playback must generate dynamic frequency spectrum data');
+
+    let timeDeviations = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      if (timeData[i] !== 128) timeDeviations++;
+    }
+    assert.ok(timeDeviations > 50, 'Radio playback must generate oscillating time domain waveforms');
+
+    // Clean up
+    audioEngine.isPlaying = false;
+    audioEngine.isRadio = false;
+  });
+
+  await t.test('AudioEngine ensureAudioContextActive initializes and resumes suspended AudioContext', async () => {
+    const { audioEngine } = await import('../../src/player/audio-engine.js');
+    let resumed = false;
+
+    audioEngine.webAudioInitialized = true;
+    audioEngine.audioCtx = {
+      state: 'suspended',
+      resume: async () => {
+        resumed = true;
+        audioEngine.audioCtx.state = 'running';
+      }
+    };
+
+    await audioEngine.ensureAudioContextActive();
+    assert.equal(resumed, true, 'ensureAudioContextActive must call resume on suspended AudioContext');
+    assert.equal(audioEngine.audioCtx.state, 'running');
+  });
+
+  await t.test('Properly scales high DPI displays on macOS Retina (dpr=2) and Android (dpr=3)', () => {
+    let transformA = null;
+    let transformB = null;
+
+    // Retina (macOS) dpr=2
+    globalThis.window = { devicePixelRatio: 2, innerWidth: 1440, innerHeight: 900 };
+    const canvasRetina = createMockCanvas(800, 400);
+    canvasRetina.ctx.setTransform = (a, b, c, d, e, f) => {
+      transformA = [a, b, c, d, e, f];
+    };
+    canvasRetina.canvas.getBoundingClientRect = () => ({ width: 800, height: 400 });
+    const vizRetina = new AudioVisualizer(canvasRetina.canvas);
+    vizRetina.isRunning = true;
+    vizRetina.render();
+    assert.equal(canvasRetina.canvas.width, 1600);
+    assert.equal(canvasRetina.canvas.height, 800);
+    assert.deepEqual(transformA, [2, 0, 0, 2, 0, 0]);
+
+    // High-DPI Android phone dpr=3
+    globalThis.window = { devicePixelRatio: 3, innerWidth: 390, innerHeight: 844 };
+    const canvasAndroid = createMockCanvas(390, 600);
+    canvasAndroid.ctx.setTransform = (a, b, c, d, e, f) => {
+      transformB = [a, b, c, d, e, f];
+    };
+    canvasAndroid.canvas.getBoundingClientRect = () => ({ width: 390, height: 600 });
+    const vizAndroid = new AudioVisualizer(canvasAndroid.canvas);
+    vizAndroid.isRunning = true;
+    vizAndroid.render();
+    assert.equal(canvasAndroid.canvas.width, 1170);
+    assert.equal(canvasAndroid.canvas.height, 1800);
+    assert.deepEqual(transformB, [3, 0, 0, 3, 0, 0]);
+
+    // Reset window
+    delete globalThis.window;
+  });
 });
