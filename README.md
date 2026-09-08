@@ -11,6 +11,7 @@ LocalJam is a privacy-first, local-first music and media player built as a Progr
 ## Key Features
 
 - **Privacy-First & Local-First:** Your files are never uploaded, sent to third-party servers, or duplicated into browser storage. LocalJam indexes metadata into IndexedDB and accesses your audio directly from your local filesystem.
+- **Extreme Minimalist & Tactile Design:** Built on Dieter Rams' *"Less, but better"* principle with a deep matte slate palette, Swiss typography, tabular monospace metrics, subtle glassmorphic backdrop filters, and refined micro-interactions.
 - **Cross-Platform Resilience (Tiered Storage):**
   - **Tier 1 (Chromium Desktop):** Uses the File System Access API (`showDirectoryPicker`) for persistent directory handles and background re-authorization.
   - **Tier 2 (Firefox, Safari, Android & iOS):** Session-based file registry with persistent metadata indexing and fast $O(N)$ folder re-association.

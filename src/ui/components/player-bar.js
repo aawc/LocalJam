@@ -214,6 +214,38 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     }
   };
 
+  const iconVolume = bar.querySelector('#icon-volume');
+
+  function updateVolumeIcon(volume, muted) {
+    if (!iconVolume) return;
+    if (muted || volume <= 0) {
+      iconVolume.innerHTML = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <line x1="23" y1="9" x2="17" y2="15"></line>
+        <line x1="17" y1="9" x2="23" y2="15"></line>
+      `;
+      btnMute.setAttribute('aria-label', 'Unmute (M)');
+      btnMute.setAttribute('title', 'Unmute (M)');
+    } else if (volume < 0.5) {
+      iconVolume.innerHTML = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      `;
+      btnMute.setAttribute('aria-label', 'Mute (M)');
+      btnMute.setAttribute('title', 'Mute (M)');
+    } else {
+      iconVolume.innerHTML = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      `;
+      btnMute.setAttribute('aria-label', 'Mute (M)');
+      btnMute.setAttribute('title', 'Mute (M)');
+    }
+  }
+
+  // Synchronize initial volume icon state
+  updateVolumeIcon(audioEngine.volume, audioEngine.muted);
+
   // Subscribe to Audio Engine state
   audioEngine.subscribe((state) => {
     iconPlay.style.display = state.isPlaying ? 'none' : 'block';
@@ -306,6 +338,7 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     btnShuffle.classList.toggle('active', state.shuffle);
     btnRepeat.classList.toggle('active', state.repeat !== 'off');
     volumeSlider.value = state.muted ? 0 : Math.round(state.volume * 100);
+    updateVolumeIcon(state.volume, state.muted);
   });
 
   return bar;

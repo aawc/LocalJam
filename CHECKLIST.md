@@ -89,6 +89,10 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Resolve recurring update popup loop on Chrome Canary (Android) and desktop PWAs where clicking "Refresh Now" or restarting the PWA reloads into the old version. Fix by dynamically resolving the active ServiceWorkerRegistration and waiting/installing workers when waitingWorker was null on boot, awaiting installing worker completion, dispatching SKIP_WAITING before reload, invalidating outdated app shell caches via caches.delete, listening for controllerchange to trigger safe reload, and passing discovered workers in main.js and update-banner.js.
   - *Associated Commits:* `df72572`
 
+- [x] **Issue 22: Extreme Minimalist UX Design Overhaul** `[DONE]`
+  - *Description:* Overhaul the entire user interface and design system under extreme minimalist principles ("Less, but better"): deep matte slate surfaces (`#0a0e17`, `#111827`, `#1a2333`), Swiss typography with tabular monospace numbers for time/frequency/bitrate metrics, high-contrast double-coded colorblind-safe accents (Cobalt `#0072B2`, Sky Blue `#38bdf8`, Amber `#fbbf24`, Rose `#f43f5e`, Purple `#a855f7`), tactile 3-column audio player bar with dynamic volume iconography and live broadcast capsule, refined card elevations, streamlined sortable track tables, and glassmorphic modal overlays.
+  - *Associated Commits:* `[PENDING_COMMIT]`
+
 ---
 
 ## Feature Requests
