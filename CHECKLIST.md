@@ -95,7 +95,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 23: Audio Visualizer Inactivity on Chrome on macOS and Android (v2026.09.051)** `[DONE]`
   - *Description:* Resolve audio visualizer inactivity and rendering failures on Chrome on macOS and Android caused by: (1) Unresumed suspended `AudioContext` lifecycle during overlay opening and background visibility return, (2) Elimination of visualizer button on mobile viewports (< 768px), (3) Horizontal header overflow pushing close and fullscreen buttons off-screen on mobile, (4) Zero-dimension canvas reflow `IndexSizeError` in `createRadialGradient` and `roundRect` radius clamping, and (5) FFT starvation during CORS-isolated internet radio playback. Document comprehensive findings in `VISUALIZER_INVESTIGATION_REPORT.md` and add unit and integration test coverage.
-  - *Associated Commits:* `[PENDING_COMMIT]`
+  - *Associated Commits:* `eee72da`
 
 ---
 
