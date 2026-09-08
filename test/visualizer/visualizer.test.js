@@ -188,12 +188,13 @@ test('Audio Visualizer Engine Suite', async (t) => {
     assert.ok(gradientCreated, 'createRadialGradient must be invoked with valid positive radii');
   });
 
-  await t.test('Generates vibrant audio reactivity during Internet Radio playback without CORS starvation', async () => {
+  await t.test('Routes real AnalyserNode FFT data to visualizer during playback and stays calm when stopped', async () => {
     const { audioEngine } = await import('../../src/player/audio-engine.js');
     audioEngine.isPlaying = true;
-    audioEngine.isRadio = true;
-    audioEngine.volume = 0.8;
-    audioEngine.muted = false;
+    audioEngine.analyser = {
+      getByteFrequencyData: (arr) => arr.fill(175),
+      getByteTimeDomainData: (arr) => arr.fill(160)
+    };
 
     const freqData = new Uint8Array(1024);
     const timeData = new Uint8Array(1024);
@@ -201,21 +202,19 @@ test('Audio Visualizer Engine Suite', async (t) => {
     audioEngine.getByteFrequencyData(freqData);
     audioEngine.getByteTimeDomainData(timeData);
 
-    let nonZeroCount = 0;
-    for (let i = 0; i < freqData.length; i++) {
-      if (freqData[i] > 0) nonZeroCount++;
-    }
-    assert.ok(nonZeroCount > 50, 'Radio playback must generate dynamic frequency spectrum data');
+    assert.equal(freqData[0], 175, 'Visualizer must receive genuine FFT data from AnalyserNode');
+    assert.equal(timeData[0], 160, 'Visualizer must receive genuine time-domain data from AnalyserNode');
 
-    let timeDeviations = 0;
-    for (let i = 0; i < timeData.length; i++) {
-      if (timeData[i] !== 128) timeDeviations++;
-    }
-    assert.ok(timeDeviations > 50, 'Radio playback must generate oscillating time domain waveforms');
+    // When stopped / paused, data must be clean zero / calm state (no fake fixed synthetic patterns)
+    audioEngine.isPlaying = false;
+    audioEngine.getByteFrequencyData(freqData);
+    audioEngine.getByteTimeDomainData(timeData);
+
+    assert.equal(freqData[0], 0, 'Idle mode must not output frequency energy');
+    assert.equal(timeData[0], 128, 'Idle mode must return centered calm time-domain baseline');
 
     // Clean up
-    audioEngine.isPlaying = false;
-    audioEngine.isRadio = false;
+    audioEngine.analyser = null;
   });
 
   await t.test('AudioEngine ensureAudioContextActive initializes and resumes suspended AudioContext', async () => {

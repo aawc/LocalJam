@@ -159,7 +159,9 @@ export class AudioEngine {
   }
 
   getActiveAudio() {
-    if (this.isRadio) return this.radioAudio;
+    if (this.isRadio && this.radioAudio && this.radioAudio.src && !this.radioAudio.paused) {
+      return this.radioAudio;
+    }
     return this.activePlayer === 'A' ? this.audioA : this.audioB;
   }
 
@@ -369,7 +371,7 @@ export class AudioEngine {
   }
 
   /**
-   * Play Internet Radio Station with CORS resilience and object URL cleanup
+   * Play Internet Radio Station with Web Audio pipeline & fallback
    * @param {any} station
    */
   async playRadio(station) {
@@ -382,29 +384,85 @@ export class AudioEngine {
     this.currentTrack = null;
 
     // Revoke local object URL immediately to prevent memory leaks during radio sessions
-    if (this.currentObjectUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
-      URL.revokeObjectURL(this.currentObjectUrl);
+    if (this.currentObjectUrl) {
+      if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        try {
+          URL.revokeObjectURL(this.currentObjectUrl);
+        } catch (_) {}
+      }
       this.activeObjectUrls.delete(this.currentObjectUrl);
       this.currentObjectUrl = null;
     }
 
-    if (this.audioA) this.audioA.pause();
-    if (this.audioB) this.audioB.pause();
-
-    // Trigger background audio unlock
-    this.unlock();
-
     if (this.radioAudio) {
-      if (typeof this.radioAudio.removeAttribute === 'function') {
-        this.radioAudio.removeAttribute('crossOrigin');
+      if (typeof this.radioAudio.pause === 'function') {
+        try {
+          this.radioAudio.pause();
+        } catch (_) {}
       }
-      this.radioAudio.src = streamUrl;
-      this.radioAudio.volume = this.muted ? 0 : this.volume;
+      this.radioAudio.src = '';
+    }
+
+    await this.ensureAudioContextActive().catch(() => {});
+
+    const prevAudio = this.getActiveAudio();
+    const nextPlayer = this.activePlayer === 'A' ? 'B' : 'A';
+    const nextAudio = nextPlayer === 'B' ? this.audioB : this.audioA;
+    const nextGain = nextPlayer === 'B' ? this.gainB : this.gainA;
+    const prevGain = nextPlayer === 'B' ? this.gainA : this.gainB;
+
+    if (nextAudio) {
+      this.activePlayer = nextPlayer;
+      try {
+        nextAudio.crossOrigin = 'anonymous';
+      } catch (_) {}
+      nextAudio.src = streamUrl;
+
+      if (this.masterGain) {
+        this.masterGain.gain.value = this.muted ? 0 : this.volume;
+      }
+      if (nextGain) nextGain.gain.value = 1;
+      if (prevGain && prevGain !== nextGain) prevGain.gain.value = 0;
 
       try {
-        const playPromise = this.radioAudio.play();
+        const playPromise = nextAudio.play();
         if (playPromise !== undefined) {
           await playPromise;
+        }
+        if (prevAudio && prevAudio !== nextAudio && typeof prevAudio.pause === 'function') {
+          prevAudio.pause();
+        }
+
+        this.isPlaying = true;
+        this.updateMediaSessionRadio(station);
+        this.notifyState();
+
+        if (station && station.id) {
+          station.lastPlayedAt = Date.now();
+          if (db && typeof db.recordStationPlay === 'function') {
+            db.recordStationPlay(station.id).catch(() => {});
+          }
+        }
+        return;
+      } catch (err) {
+        console.warn(`[AudioEngine] Web Audio radio playback failed, attempting direct fallback: ${err?.message}`);
+      }
+    }
+
+    // Direct fallback with radioAudio (for non-CORS streams or standalone element)
+    if (this.radioAudio) {
+      try {
+        if (typeof this.radioAudio.removeAttribute === 'function') {
+          this.radioAudio.removeAttribute('crossOrigin');
+        }
+        this.radioAudio.src = streamUrl;
+        this.radioAudio.volume = this.muted ? 0 : this.volume;
+        const fallbackPromise = this.radioAudio.play();
+        if (fallbackPromise !== undefined) {
+          await fallbackPromise;
+        }
+        if (prevAudio && prevAudio !== this.radioAudio && typeof prevAudio.pause === 'function') {
+          prevAudio.pause();
         }
         this.isPlaying = true;
         this.updateMediaSessionRadio(station);
@@ -416,14 +474,16 @@ export class AudioEngine {
             db.recordStationPlay(station.id).catch(() => {});
           }
         }
-      } catch (err) {
-        if (err?.name === 'AbortError') {
-          return;
+      } catch (fbErr) {
+        if (fbErr?.name !== 'AbortError') {
+          console.error(`[AudioEngine] Radio stream fallback playback failed: ${fbErr?.message}`);
+          this.isPlaying = false;
+          this.notifyState();
         }
-        console.error(`[AudioEngine] Radio stream playback failed: ${err?.message}`);
-        this.isPlaying = false;
-        this.notifyState();
       }
+    } else {
+      this.isPlaying = false;
+      this.notifyState();
     }
   }
 
@@ -603,71 +663,12 @@ export class AudioEngine {
   }
 
   /**
-   * Synthesize organic, rhythmically pulsing frequency spectrum data for CORS-isolated radio streams
-   * @param {Uint8Array} dataArray
-   */
-  generateSyntheticRadioFrequencyData(dataArray) {
-    const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-    const vol = this.muted ? 0 : this.volume;
-    const count = dataArray.length;
-    for (let i = 0; i < count; i++) {
-      const freqNorm = i / count;
-      const bassPulse = Math.sin(t * 3.2) * 0.5 + 0.5;
-      const midPulse = Math.sin(t * 6.5 + i * 0.1) * 0.5 + 0.5;
-      const treblePulse = Math.sin(t * 12.0 + i * 0.3) * 0.5 + 0.5;
-
-      let energy = 0;
-      if (freqNorm < 0.15) {
-        energy = bassPulse * (1 - freqNorm / 0.15) * 220 + 35;
-      } else if (freqNorm < 0.6) {
-        energy = midPulse * 160 + 20;
-      } else {
-        energy = treblePulse * 110 + 10;
-      }
-
-      const decay = Math.pow(1 - freqNorm, 0.75);
-      dataArray[i] = Math.min(255, Math.max(0, Math.floor(energy * decay * vol)));
-    }
-  }
-
-  /**
-   * Synthesize oscillating time-domain waveform data for radio streams
-   * @param {Uint8Array} dataArray
-   */
-  generateSyntheticRadioTimeDomainData(dataArray) {
-    const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-    const vol = this.muted ? 0 : this.volume;
-    const count = dataArray.length;
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 4 + t * 5;
-      const wave = Math.sin(angle) * 35 * vol + Math.sin(angle * 2.5) * 15 * vol;
-      dataArray[i] = Math.min(255, Math.max(0, Math.floor(128 + wave)));
-    }
-  }
-
-  /**
    * Get FFT frequency data for real-time visualizers
    * @param {Uint8Array} dataArray
    */
   getByteFrequencyData(dataArray) {
-    if (this.isPlaying) {
-      if (this.analyser) {
-        this.analyser.getByteFrequencyData(dataArray);
-      }
-      if (this.isRadio) {
-        let hasData = false;
-        if (this.analyser) {
-          for (let i = 0; i < Math.min(32, dataArray.length); i++) {
-            if (dataArray[i] > 0) {
-              hasData = true;
-              break;
-            }
-          }
-        }
-        if (!hasData) {
-          this.generateSyntheticRadioFrequencyData(dataArray);
-        }
-      }
+    if (this.analyser && this.isPlaying) {
+      this.analyser.getByteFrequencyData(dataArray);
     } else {
       dataArray.fill(0);
     }
@@ -678,24 +679,8 @@ export class AudioEngine {
    * @param {Uint8Array} dataArray
    */
   getByteTimeDomainData(dataArray) {
-    if (this.isPlaying) {
-      if (this.analyser) {
-        this.analyser.getByteTimeDomainData(dataArray);
-      }
-      if (this.isRadio) {
-        let hasVariation = false;
-        if (this.analyser) {
-          for (let i = 0; i < Math.min(32, dataArray.length); i++) {
-            if (dataArray[i] !== 128) {
-              hasVariation = true;
-              break;
-            }
-          }
-        }
-        if (!hasVariation) {
-          this.generateSyntheticRadioTimeDomainData(dataArray);
-        }
-      }
+    if (this.analyser && this.isPlaying) {
+      this.analyser.getByteTimeDomainData(dataArray);
     } else {
       dataArray.fill(128);
     }
