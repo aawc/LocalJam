@@ -91,7 +91,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 22: Extreme Minimalist UX Design Overhaul** `[DONE]`
   - *Description:* Overhaul the entire user interface and design system under extreme minimalist principles ("Less, but better"): deep matte slate surfaces (`#0a0e17`, `#111827`, `#1a2333`), Swiss typography with tabular monospace numbers for time/frequency/bitrate metrics, high-contrast double-coded colorblind-safe accents (Cobalt `#0072B2`, Sky Blue `#38bdf8`, Amber `#fbbf24`, Rose `#f43f5e`, Purple `#a855f7`), tactile 3-column audio player bar with dynamic volume iconography and live broadcast capsule, refined card elevations, streamlined sortable track tables, and glassmorphic modal overlays.
-  - *Associated Commits:* `[PENDING_COMMIT]`
+  - *Associated Commits:* `b404723`
 
 ---
 
