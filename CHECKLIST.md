@@ -170,5 +170,14 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Expand curated internet radio directory with dedicated **Kids & Family** genre category (Fun Kids Radio UK, Fun Kids Junior, Radio Art Lullabies, Radio Art Peaceful Solo Piano, Radio Art Mozart for Children, SomaFM Covers) and premier **News & Talk** streams (NPR 24/7 Live Stream, KQED 88.5 FM, WBEZ 91.5 FM, RFI English, WGBH 89.7 FM) accompanied by custom accessible SVG fallback artwork badges.
   - *Associated Commits:* `97dcea4`
 
+- [x] **FR 16: Radio and Mobile UX Simplification & Responsive Overhaul** `[DONE]`
+  - *Description:* Simplify radio station card controls, add circular station navigation (`audioEngine.playNextStation()`, `audioEngine.playPreviousStation()`) mapped to player bar next/prev and keyboard media keys (`ArrowLeft`/`ArrowRight`), implement responsive column hiding on mobile devices (`.col-album`, `.col-duration`, `.col-bitrate`), add mobile bottom sheet drag handle, and provide clear search query button.
+  - *Associated Commits:* `f52bd39`
+
+- [x] **FR 17: Dedicated Full Player View, Embedded Visualizer, & Station Expansion** `[DONE]`
+  - *Description:* Remove duplicative Now Playing hero banner from Radio View in favor of the persistent mini player bar. Create dedicated Full Player screen (`#/player`) with metadata, transport controls, timeline, volume, and technical badges. Embed real-time Web Audio API visualizer with accessible ON/OFF toggle switch (OFF by default) and mode selectors (`bars`, `wave`, `nebula`, `starfield`), automatically hiding the mini-player bar when on `#/player`. Expand curated radio catalog with 11 verified HTTPS stations across College & University (KZSU, KOHL, KALX, KSCU, WPRB, WMBR), Rock (The Current 89.3, SomaFM Left Coast 70s), Pop (Dance Wave!), and Lo-Fi (Chillsky, Lofi Radio).
+  - *Associated Commits:* `9eb2574`
+
+
 
 
