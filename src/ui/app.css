@@ -853,6 +853,16 @@ html, body {
   letter-spacing: 0.8px;
 }
 
+.live-icon {
+  font-size: 10px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: live-pulse 2s infinite ease-in-out;
+}
+
 .live-dot {
   width: 6px;
   height: 6px;
@@ -1394,6 +1404,95 @@ html, body {
   font-weight: 500;
 }
 
+/* Radio View Hero Banner & Search Controls */
+.radio-hero-banner {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.35), rgba(17, 24, 39, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  backdrop-filter: blur(var(--backdrop-blur-sm));
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.radio-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.radio-hero-art {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.radio-hero-meta {
+  min-width: 0;
+}
+
+.radio-hero-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.radio-hero-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.radio-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.radio-search-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radio-search-clear:hover {
+  color: var(--text-primary);
+}
+
+.bottom-sheet-handle {
+  display: none;
+}
+
 /* Mobile Bottom Navigation & Responsive Breakpoints */
 .mobile-nav {
   display: none;
@@ -1407,10 +1506,10 @@ html, body {
   .mobile-nav {
     display: flex;
     position: fixed;
-    bottom: var(--player-height);
+    bottom: var(--player-height-mobile, 60px);
     left: 0;
     right: 0;
-    height: var(--mobile-nav-height);
+    height: var(--mobile-nav-height, 52px);
     background-color: var(--player-glass);
     backdrop-filter: blur(var(--backdrop-blur));
     -webkit-backdrop-filter: blur(var(--backdrop-blur));
@@ -1424,9 +1523,9 @@ html, body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    font-size: 11px;
-    padding: 6px 12px;
+    gap: 2px;
+    font-size: 10.5px;
+    padding: 4px 10px;
     color: var(--text-secondary);
     text-decoration: none;
   }
@@ -1437,34 +1536,140 @@ html, body {
   }
 
   .content-scrollable {
-    padding: 20px 16px calc(var(--player-height) + var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 36px) 16px;
-    scroll-padding-bottom: calc(var(--player-height) + var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 36px);
+    padding: 16px 14px calc(var(--player-height-mobile, 60px) + var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 24px) 14px;
+    scroll-padding-bottom: calc(var(--player-height-mobile, 60px) + var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 24px);
   }
 
   .main-wrapper, .app-main {
-    height: calc(100vh - var(--player-height) - var(--mobile-nav-height));
+    height: calc(100vh - var(--player-height-mobile, 60px) - var(--mobile-nav-height, 52px));
   }
 
-  .player-right {
-    display: flex;
-    width: auto;
-    gap: 4px;
-    flex-shrink: 0;
+  /* Compact Mobile Mini-Player */
+  .player-bar {
+    height: var(--player-height-mobile, 60px);
+    padding: 0 12px;
   }
 
-  .player-right .volume-slider,
-  .player-right #btn-mute {
-    display: none;
+  .player-art {
+    width: 40px;
+    height: 40px;
+  }
+
+  .player-title {
+    font-size: 12.5px;
+  }
+
+  .player-artist {
+    font-size: 11px;
   }
 
   .player-left {
     width: auto;
     flex: 1;
     min-width: 0;
+    gap: 10px;
+  }
+
+  .player-center {
+    flex: 0 0 auto;
+    max-width: none;
+    gap: 0;
+  }
+
+  .player-controls {
+    gap: 6px;
+  }
+
+  .btn-control {
+    padding: 7px;
+  }
+
+  .btn-play-pause {
+    width: 40px;
+    height: 40px;
+  }
+
+  .player-progress-bar,
+  .player-live-bar {
+    display: none !important;
+  }
+
+  .player-right {
+    display: none !important;
   }
 
   .search-box, .search-box-wrapper {
     width: 100%;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .media-card {
+    padding: 10px;
+  }
+
+  .btn-play-card {
+    opacity: 0.95;
+    transform: scale(0.9);
+    width: 36px;
+    height: 36px;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .radio-hero-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .radio-hero-actions {
+    justify-content: flex-end;
+  }
+
+  /* Slide-Up Mobile Station Details Bottom Sheet */
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .station-modal-card {
+    width: 100%;
+    max-width: 100vw;
+    border-radius: 20px 20px 0 0;
+    max-height: 85vh;
+    margin: 0;
+    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 20px) 16px;
+    animation: slideUpBottomSheet 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bottom-sheet-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: var(--border-strong);
+    margin: 0 auto 12px auto;
+  }
+
+  @keyframes slideUpBottomSheet {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .col-album,
+  .col-num,
+  .track-num-cell {
+    display: none !important;
   }
 }
 

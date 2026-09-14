@@ -4,6 +4,7 @@ import { createPlayerBar } from '../../src/ui/components/player-bar.js';
 import { createEqModal } from '../../src/ui/components/eq-modal.js';
 import { createVisualizerOverlay } from '../../src/ui/components/visualizer-overlay.js';
 import { createQueueDrawer } from '../../src/ui/components/queue-drawer.js';
+import { createStationModal } from '../../src/ui/components/station-modal.js';
 
 // Setup minimal mock DOM if running in headless node
 if (typeof document === 'undefined') {
@@ -127,3 +128,18 @@ test('UI Components - createQueueDrawer renders queue drawer component', () => {
   assert.equal(typeof queue.toggle, 'function');
   assert.ok(queue.element.innerHTML.includes('Play Queue'));
 });
+
+test('UI Components - createStationModal renders mobile bottom-sheet-handle and modal controls', () => {
+  const modal = createStationModal({
+    onToggleEq: () => {},
+    onToggleViz: () => {}
+  });
+  assert.equal(modal.element.id, 'station-modal-overlay');
+  assert.ok(modal.element.innerHTML.includes('bottom-sheet-handle'));
+  assert.ok(modal.element.innerHTML.includes('station-modal-card'));
+  assert.ok(modal.element.innerHTML.includes('btn-close-station-modal'));
+  assert.ok(modal.element.innerHTML.includes('btn-modal-star'));
+  assert.equal(typeof modal.open, 'function');
+  assert.equal(typeof modal.close, 'function');
+});
+

@@ -34,7 +34,8 @@
   /* Dimensions & Spacing */
   --sidebar-width: 240px;
   --player-height: 88px;
-  --mobile-nav-height: 64px;
+  --player-height-mobile: 60px;
+  --mobile-nav-height: 52px;
   --topbar-height: 60px;
   --radius-xs: 4px;
   --radius-sm: 8px;

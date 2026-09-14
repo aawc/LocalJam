@@ -8,6 +8,7 @@ import { equalizer } from './equalizer.js';
 import { queueManager } from './queue.js';
 import { sessionRegistry } from '../storage/session-registry.js';
 import { db } from '../storage/db.js';
+import { CURATED_STATIONS } from '../radio/stations.js';
 
 export class AudioEngine {
   constructor() {
@@ -18,8 +19,11 @@ export class AudioEngine {
     this.activePlayer = 'A'; // 'A' or 'B'
     this.currentTrack = null;
     this.currentStation = null;
+    this.stationCatalog = Array.isArray(CURATED_STATIONS) ? [...CURATED_STATIONS] : [];
     this.isPlaying = false;
     this.isRadio = false;
+    /** @type {'idle'|'connecting'|'buffering'|'playing'|'error'} */
+    this.streamState = 'idle';
     this.volume = 0.8;
     this.muted = false;
     this.crossfadeSeconds = 0;
@@ -71,10 +75,29 @@ export class AudioEngine {
         }
       });
 
+      audio.addEventListener('waiting', () => {
+        if (this.getActiveAudio() === audio && this.isRadio) {
+          this.streamState = 'buffering';
+          this.notifyState();
+        }
+      });
+
+      audio.addEventListener('canplay', () => {
+        if (this.getActiveAudio() === audio && this.isRadio) {
+          if (this.isPlaying) {
+            this.streamState = 'playing';
+          }
+          this.notifyState();
+        }
+      });
+
       audio.addEventListener('error', () => {
         if (this.getActiveAudio() === audio) {
           const err = audio.error;
           console.error(`[AudioEngine] ${idx === 2 ? 'Radio' : idx === 0 ? 'Player A' : 'Player B'} error (code ${err?.code}): ${err?.message}`);
+          if (this.isRadio) {
+            this.streamState = 'error';
+          }
           this.notifyState();
         }
       });
@@ -82,6 +105,19 @@ export class AudioEngine {
       audio.addEventListener('play', () => {
         if (this.getActiveAudio() === audio) {
           this.isPlaying = true;
+          if (this.isRadio) {
+            this.streamState = 'playing';
+          }
+          this.notifyState();
+        }
+      });
+
+      audio.addEventListener('playing', () => {
+        if (this.getActiveAudio() === audio) {
+          this.isPlaying = true;
+          if (this.isRadio) {
+            this.streamState = 'playing';
+          }
           this.notifyState();
         }
       });
@@ -89,6 +125,9 @@ export class AudioEngine {
       audio.addEventListener('pause', () => {
         if (this.getActiveAudio() === audio) {
           this.isPlaying = false;
+          if (this.isRadio && this.streamState !== 'error') {
+            this.streamState = 'idle';
+          }
           this.notifyState();
         }
       });
@@ -174,11 +213,30 @@ export class AudioEngine {
     return () => this.stateListeners.delete(listener);
   }
 
+  setStationCatalog(stations) {
+    if (Array.isArray(stations)) {
+      this.stationCatalog = [...stations];
+    }
+  }
+
+  getStationCatalog() {
+    return this.stationCatalog;
+  }
+
+  setCrossfadeDuration(seconds) {
+    this.crossfadeSeconds = Math.max(0, Math.min(10, parseFloat(seconds) || 0));
+  }
+
+  get crossfadeDuration() {
+    return this.crossfadeSeconds;
+  }
+
   notifyState() {
     const audio = this.getActiveAudio();
     const state = {
       isPlaying: this.isPlaying,
       isRadio: this.isRadio,
+      streamState: this.isRadio ? this.streamState : (this.isPlaying ? 'playing' : 'idle'),
       currentTrack: this.currentTrack,
       currentStation: this.currentStation,
       currentTime: (audio && audio.currentTime) || 0,
@@ -382,6 +440,8 @@ export class AudioEngine {
     this.isRadio = true;
     this.currentStation = station;
     this.currentTrack = null;
+    this.streamState = 'connecting';
+    this.notifyState();
 
     // Revoke local object URL immediately to prevent memory leaks during radio sessions
     if (this.currentObjectUrl) {
@@ -434,6 +494,7 @@ export class AudioEngine {
         }
 
         this.isPlaying = true;
+        this.streamState = 'playing';
         this.updateMediaSessionRadio(station);
         this.notifyState();
 
@@ -465,6 +526,7 @@ export class AudioEngine {
           prevAudio.pause();
         }
         this.isPlaying = true;
+        this.streamState = 'playing';
         this.updateMediaSessionRadio(station);
         this.notifyState();
 
@@ -478,11 +540,13 @@ export class AudioEngine {
         if (fbErr?.name !== 'AbortError') {
           console.error(`[AudioEngine] Radio stream fallback playback failed: ${fbErr?.message}`);
           this.isPlaying = false;
+          this.streamState = 'error';
           this.notifyState();
         }
       }
     } else {
       this.isPlaying = false;
+      this.streamState = 'error';
       this.notifyState();
     }
   }
@@ -497,10 +561,14 @@ export class AudioEngine {
           await playPromise;
         }
         this.isPlaying = true;
+        if (this.isRadio) this.streamState = 'playing';
         this.notifyState();
       } catch (err) {
         console.error(`[AudioEngine] Play error: ${err?.message}`);
+        if (this.isRadio) this.streamState = 'error';
       }
+    } else if (this.isRadio && this.currentStation) {
+      await this.playRadio(this.currentStation);
     } else {
       let item = queueManager.getCurrent();
       if (!item && db && typeof db.getAllTracks === 'function') {
@@ -525,6 +593,9 @@ export class AudioEngine {
     const audio = this.getActiveAudio();
     if (audio) audio.pause();
     this.isPlaying = false;
+    if (this.isRadio && this.streamState !== 'error') {
+      this.streamState = 'idle';
+    }
     this.notifyState();
   }
 
@@ -571,7 +642,19 @@ export class AudioEngine {
   }
 
   async next() {
-    if (this.isRadio) return;
+    if (this.isRadio) {
+      if (this.stationCatalog && this.stationCatalog.length > 0) {
+        const currentId = this.currentStation?.id;
+        const currentUrl = this.currentStation?.streamUrl || this.currentStation?.url;
+        let index = this.stationCatalog.findIndex((s) => (currentId && s.id === currentId) || (currentUrl && (s.streamUrl === currentUrl || s.url === currentUrl)));
+        const nextIndex = index === -1 ? 0 : (index + 1) % this.stationCatalog.length;
+        const nextStation = this.stationCatalog[nextIndex];
+        if (nextStation) {
+          await this.playRadio(nextStation);
+        }
+      }
+      return;
+    }
     const nextItem = queueManager.next();
     if (nextItem) {
       await this.playTrack(nextItem.track);
@@ -581,7 +664,19 @@ export class AudioEngine {
   }
 
   async previous() {
-    if (this.isRadio) return;
+    if (this.isRadio) {
+      if (this.stationCatalog && this.stationCatalog.length > 0) {
+        const currentId = this.currentStation?.id;
+        const currentUrl = this.currentStation?.streamUrl || this.currentStation?.url;
+        let index = this.stationCatalog.findIndex((s) => (currentId && s.id === currentId) || (currentUrl && (s.streamUrl === currentUrl || s.url === currentUrl)));
+        const prevIndex = index === -1 ? 0 : (index - 1 + this.stationCatalog.length) % this.stationCatalog.length;
+        const prevStation = this.stationCatalog[prevIndex];
+        if (prevStation) {
+          await this.playRadio(prevStation);
+        }
+      }
+      return;
+    }
     const currentAudio = this.getActiveAudio();
     const prevItem = queueManager.previous(true, (currentAudio && currentAudio.currentTime) || 0);
     if (prevItem) {

@@ -191,10 +191,10 @@ async function renderPlaylistDetail(container, playlistId) {
         <table class="track-table">
           <thead>
             <tr>
-              <th style="width: 44px;">#</th>
+              <th class="col-num" style="width: 44px;">#</th>
               <th>Title</th>
               <th>Artist</th>
-              <th>Album</th>
+              <th class="col-album">Album</th>
               <th style="width: 80px; text-align: right;">Duration</th>
               <th style="width: 50px; text-align: center;">Action</th>
             </tr>
@@ -205,7 +205,7 @@ async function renderPlaylistDetail(container, playlistId) {
                 const isMissing = track.isMissing === 1;
                 return `
                 <tr class="track-row" data-track-id="${track.id}" data-index="${idx}">
-                  <td>${idx + 1}</td>
+                  <td class="track-num-cell col-num">${idx + 1}</td>
                   <td>
                     <div class="track-title-cell">
                       <span class="track-name">${escapeHtml(track.title || track.filename)}</span>
@@ -213,7 +213,7 @@ async function renderPlaylistDetail(container, playlistId) {
                     </div>
                   </td>
                   <td>${escapeHtml(track.artist || 'Unknown Artist')}</td>
-                  <td>${escapeHtml(track.album || 'Unknown Album')}</td>
+                  <td class="col-album">${escapeHtml(track.album || 'Unknown Album')}</td>
                   <td style="text-align: right;">${formatDuration(track.duration)}</td>
                   <td style="text-align: center;">
                     <button class="btn-remove-from-pl" data-track-id="${track.id}" title="Remove from playlist" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px;">

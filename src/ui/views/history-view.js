@@ -46,10 +46,10 @@ export async function renderHistoryView() {
           <table class="track-table">
             <thead>
               <tr>
-                <th style="width: 44px;">#</th>
+                <th class="col-num" style="width: 44px;">#</th>
                 <th>Title</th>
                 <th>Artist</th>
-                <th>Album</th>
+                <th class="col-album">Album</th>
                 <th style="width: 140px;">Played At</th>
                 <th style="width: 80px; text-align: right;">Duration</th>
               </tr>
@@ -60,10 +60,10 @@ export async function renderHistoryView() {
                   const track = item.track || {};
                   return `
                   <tr class="track-row" data-track-id="${item.trackId}">
-                    <td>${idx + 1}</td>
+                    <td class="track-num-cell col-num">${idx + 1}</td>
                     <td style="font-weight: 500; color: var(--text-primary);">${escapeHtml(track.title || track.filename || 'Unknown')}</td>
                     <td>${escapeHtml(track.artist || 'Unknown Artist')}</td>
-                    <td>${escapeHtml(track.album || 'Unknown Album')}</td>
+                    <td class="col-album">${escapeHtml(track.album || 'Unknown Album')}</td>
                     <td style="color: var(--text-secondary); font-size: 13px;">${formatTimestamp(item.playedAt || item.timestamp)}</td>
                     <td style="text-align: right;">${formatDuration(track.duration)}</td>
                   </tr>

@@ -97,6 +97,9 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Resolve audio visualizer inactivity, fixed artificial oscillations, and rendering failures on Chrome on macOS and Android caused by: (1) Unresumed suspended `AudioContext` lifecycle during overlay opening and background visibility return, (2) Elimination of visualizer button on mobile viewports (< 768px), (3) Horizontal header overflow pushing close and fullscreen buttons off-screen on mobile, (4) Zero-dimension canvas reflow `IndexSizeError` in `createRadialGradient` and `roundRect` radius clamping, and (5) Fixed mechanical sine patterns by routing radio streams through the Web Audio pipeline (`nextAudio` with `crossOrigin = 'anonymous'`) and querying authentic `AnalyserNode` FFT frequencies with calm baseline idle states. Document comprehensive findings in `VISUALIZER_INVESTIGATION_REPORT.md` and add unit and integration test coverage.
   - *Associated Commits:* `eee72da`, `d016df6`
 
+- [x] **Issue 24: Radio & Mobile UX Simplification & Responsive Overhaul** `[DONE]`
+  - *Description:* Conduct static analysis and UX evaluation across radio streaming and mobile platforms. Document 10 distinct UX and architectural findings in `RADIO_MOBILE_UX_REPORT.md` (radio station circular cycling, dynamic stream state machine telemetry `connecting`/`buffering`/`playing`/`error`, Now Playing radio hero banner with quick transport and station details access, search clear button trigger, compact 60px mobile mini-player bar, bottom navigation vertical clearance saving 40px, slide-up mobile station details bottom sheet with drag handle, responsive hiding of table columns `.col-num` and `.col-album` on small screens <=640px, and `setCrossfadeDuration` method consistency). Implement complete fixes across player engine, CSS layout, and UI views with comprehensive unit and integration test coverage.
+
 ---
 
 ## Feature Requests

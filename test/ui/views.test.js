@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { db } from '../../src/storage/db.js';
+import { audioEngine } from '../../src/player/audio-engine.js';
 
 import { renderHomeView } from '../../src/ui/views/home-view.js';
 import { renderSongsView } from '../../src/ui/views/songs-view.js';
@@ -206,3 +207,78 @@ test('UI Views - renderHomeView omits shuffle button when library is empty', asy
   assert.ok(view.innerHTML.includes('Internet Radio'));
   assert.ok(view.innerHTML.includes('empty-state-icon'));
 });
+
+test('UI Views - renderRadioView displays Now Playing Hero Banner when radio is playing', async () => {
+  const prevIsRadio = audioEngine.isRadio;
+  const prevStation = audioEngine.currentStation;
+  const prevIsPlaying = audioEngine.isPlaying;
+  try {
+    audioEngine.isRadio = true;
+    audioEngine.isPlaying = true;
+    audioEngine.currentStation = {
+      id: 'rp_mellow',
+      name: 'Radio Paradise: Mellow Mix',
+      genre: 'Mellow Rock / Acoustic',
+      country: 'USA',
+      streamUrl: 'https://stream.radioparadise.com/mellow-320',
+      bitrate: '320 kbps'
+    };
+
+    const params = new URLSearchParams('q=Radio');
+    const view = await renderRadioView(params);
+    assert.ok(view.innerHTML.includes('radio-hero-banner'));
+    assert.ok(view.innerHTML.includes('btn-hero-prev'));
+    assert.ok(view.innerHTML.includes('btn-hero-play'));
+    assert.ok(view.innerHTML.includes('btn-hero-next'));
+    assert.ok(view.innerHTML.includes('btn-hero-details'));
+    assert.ok(view.innerHTML.includes('Radio Paradise: Mellow Mix'));
+    assert.ok(view.innerHTML.includes('btn-clear-search'));
+  } finally {
+    audioEngine.isRadio = prevIsRadio;
+    audioEngine.currentStation = prevStation;
+    audioEngine.isPlaying = prevIsPlaying;
+  }
+});
+
+test('UI Views - responsive table classes are applied across all track table views', async () => {
+  db.getAllTracks = async () => [
+    { id: 'trk_resp', title: 'Responsive Song', artist: 'Responsive Artist', album: 'Responsive Album', duration: 200, isMissing: 0 }
+  ];
+  db.getAllFavorites = async () => [{ trackId: 'trk_resp' }];
+  db.getTrack = async () => ({ id: 'trk_resp', title: 'Responsive Song', artist: 'Responsive Artist', album: 'Responsive Album', duration: 200 });
+  db.getPlaylist = async (id) => ({ id, name: 'Playlist Resp', trackIds: ['trk_resp'] });
+  db.getRecentHistory = async () => [{ trackId: 'trk_resp', timestamp: Date.now(), track: { title: 'Responsive Song', artist: 'Responsive Artist', album: 'Responsive Album', duration: 200 } }];
+  db.getAllPlaylists = async () => [{ id: 'pl_resp', name: 'Playlist Resp', trackIds: ['trk_resp'] }];
+
+  // Songs View
+  const songsView = await renderSongsView();
+  assert.ok(songsView.innerHTML.includes('class="col-num"'));
+  assert.ok(songsView.innerHTML.includes('col-album'));
+  assert.ok(songsView.innerHTML.includes('track-num-cell col-num'));
+
+  // Favorites View
+  const favsView = await renderFavoritesView();
+  assert.ok(favsView.innerHTML.includes('class="col-num"'));
+  assert.ok(favsView.innerHTML.includes('class="col-album"'));
+  assert.ok(favsView.innerHTML.includes('track-num-cell col-num'));
+
+  // History View
+  const historyView = await renderHistoryView();
+  assert.ok(historyView.innerHTML.includes('class="col-num"'));
+  assert.ok(historyView.innerHTML.includes('class="col-album"'));
+  assert.ok(historyView.innerHTML.includes('track-num-cell col-num'));
+
+  // Home View
+  const homeView = await renderHomeView();
+  assert.ok(homeView.innerHTML.includes('class="col-num"'));
+  assert.ok(homeView.innerHTML.includes('class="col-album"'));
+  assert.ok(homeView.innerHTML.includes('track-num-cell col-num'));
+
+  // Playlists Detail View
+  const params = new URLSearchParams('id=pl_resp');
+  const plView = await renderPlaylistsView(params);
+  assert.ok(plView.innerHTML.includes('class="col-num"'));
+  assert.ok(plView.innerHTML.includes('class="col-album"'));
+  assert.ok(plView.innerHTML.includes('track-num-cell col-num'));
+});
+

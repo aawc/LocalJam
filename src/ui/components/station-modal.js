@@ -18,6 +18,7 @@ export function createStationModal({ onToggleEq, onToggleViz } = {}) {
 
   overlay.innerHTML = `
     <div class="modal-card station-modal-card">
+      <div class="bottom-sheet-handle"></div>
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
           <img id="station-modal-favicon" class="station-modal-art" src="public/icons/icon-192.svg" alt="Station Icon" />

@@ -15,13 +15,13 @@ import { audioEngine } from '../../player/audio-engine.js';
 import { db } from '../../storage/db.js';
 import { escapeHtml, isValidHttpUrl } from '../../utils/sanitize.js';
 
-export async function renderRadioView() {
+export async function renderRadioView(params) {
   const container = document.createElement('div');
   container.className = 'page-container';
 
-  let selectedGenre = 'All';
-  let searchQuery = '';
-  let sortOrder = 'default';
+  let selectedGenre = params?.get('genre') || 'All';
+  let searchQuery = params?.get('q') || '';
+  let sortOrder = params?.get('sort') || 'default';
   let allStations = await loadStations(db);
 
   function getFilteredAndSortedStations() {
@@ -94,7 +94,7 @@ export async function renderRadioView() {
           <div class="media-card-title" style="display: flex; align-items: center; justify-content: space-between;">
             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;">${escapeHtml(station.name)}</span>
             <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
-              ${isPlayingThis ? '<span class="status-badge badge-active" style="font-size: 10px;"><span class="live-dot-sm"></span> LIVE</span>' : ''}
+              ${isPlayingThis ? '<span class="status-badge badge-active" style="font-size: 10px;"><span class="live-icon" style="font-size: 8px; margin-right: 3px;">●</span> LIVE</span>' : ''}
               <button class="btn-star-station" data-station-id="${station.id}" aria-label="${isFav ? 'Unstar' : 'Star'} ${escapeHtml(station.name)}" style="background: none; border: none; cursor: pointer; color: ${isFav ? '#fbbf24' : 'var(--text-secondary)'}; padding: 2px; display: inline-flex; align-items: center;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -257,6 +257,41 @@ export async function renderRadioView() {
     const stations = getFilteredAndSortedStations();
     const currentRadio = audioEngine.isRadio ? audioEngine.currentStation : null;
 
+    // Synchronize current stations with audio engine catalog
+    audioEngine.setStationCatalog(allStations);
+
+    const nowPlayingBanner = currentRadio ? `
+      <div class="radio-hero-banner" data-station-id="${currentRadio.id}">
+        <div class="radio-hero-left" style="cursor: pointer;" id="hero-station-info">
+          <img src="${escapeHtml(currentRadio.favicon || getStationFallbackArtwork(currentRadio))}" alt="${escapeHtml(currentRadio.name)}" class="radio-hero-art" />
+          <div class="radio-hero-meta">
+            <div class="radio-hero-title">
+              <span>${escapeHtml(currentRadio.name)}</span>
+              <span class="status-badge badge-active" style="font-size: 10px;"><span class="live-icon" style="font-size: 8px; margin-right: 3px;">●</span> LIVE</span>
+            </div>
+            <div class="radio-hero-sub">${escapeHtml(currentRadio.genre || 'Live Radio')}${currentRadio.country ? ` • ${escapeHtml(currentRadio.country)}` : ''} • ${escapeHtml(currentRadio.bitrate || '128 kbps')}</div>
+          </div>
+        </div>
+        <div class="radio-hero-actions">
+          <button id="btn-hero-prev" class="btn btn-secondary btn-sm" aria-label="Previous Station" title="Previous Station">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
+          </button>
+          <button id="btn-hero-play" class="btn btn-primary btn-sm" aria-label="${audioEngine.isPlaying ? 'Pause' : 'Play'} ${escapeHtml(currentRadio.name)}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              ${audioEngine.isPlaying ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>' : '<polygon points="5 3 19 12 5 21 5 3"></polygon>'}
+            </svg>
+            <span style="margin-left: 4px;">${audioEngine.isPlaying ? 'Pause' : 'Play'}</span>
+          </button>
+          <button id="btn-hero-next" class="btn btn-secondary btn-sm" aria-label="Next Station" title="Next Station">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
+          </button>
+          <button id="btn-hero-details" class="btn btn-secondary btn-sm" aria-label="Station Details">
+            Details
+          </button>
+        </div>
+      </div>
+    ` : '';
+
     container.innerHTML = `
       <div class="view-header">
         <div>
@@ -275,6 +310,9 @@ export async function renderRadioView() {
         </div>
       </div>
 
+      <!-- Now Playing Hero Banner -->
+      ${nowPlayingBanner}
+
       <!-- Search & Sort Controls Toolbar -->
       <div class="radio-toolbar">
         <div class="radio-search-wrapper">
@@ -290,6 +328,7 @@ export async function renderRadioView() {
             value="${escapeHtml(searchQuery)}"
             aria-label="Search radio stations"
           />
+          ${searchQuery ? '<button id="btn-clear-search" class="radio-search-clear" aria-label="Clear search">&times;</button>' : ''}
         </div>
 
         <div class="radio-sort-wrapper">
@@ -318,7 +357,7 @@ export async function renderRadioView() {
       <!-- Custom Station Form (Hidden by default) -->
       <div id="custom-station-form-card" class="hero-card" style="display: none; margin-bottom: 24px; padding: 20px;">
         <h3 style="margin-bottom: 12px; font-size: 16px;">Add Custom Radio Stream</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 120px auto; gap: 12px; align-items: end;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end;">
           <div>
             <label class="form-label" for="custom-name-input">Station Name</label>
             <input type="text" id="custom-name-input" class="form-input" placeholder="My Ambient Stream" />
@@ -385,6 +424,20 @@ export async function renderRadioView() {
         if (liveBadge) liveBadge.remove();
       }
     });
+
+    const heroBanner = container.querySelector('.radio-hero-banner');
+    if (heroBanner && currentRadio) {
+      const heroPlayBtn = heroBanner.querySelector('#btn-hero-play');
+      if (heroPlayBtn) {
+        heroPlayBtn.setAttribute('aria-label', `${audioEngine.isPlaying ? 'Pause' : 'Play'} ${currentRadio.name}`);
+        heroPlayBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            ${audioEngine.isPlaying ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>' : '<polygon points="5 3 19 12 5 21 5 3"></polygon>'}
+          </svg>
+          <span style="margin-left: 4px;">${audioEngine.isPlaying ? 'Pause' : 'Play'}</span>
+        `;
+      }
+    }
   }
 
   function attachEvents() {
@@ -401,6 +454,42 @@ export async function renderRadioView() {
           if (typeof cursor === 'number') {
             updatedInput.setSelectionRange(cursor, cursor);
           }
+        }
+      });
+    }
+
+    // Clear search button listener
+    const clearSearchBtn = container.querySelector('#btn-clear-search');
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener('click', () => {
+        searchQuery = '';
+        render();
+        const updatedInput = container.querySelector('#radio-search-input');
+        if (updatedInput) updatedInput.focus();
+      });
+    }
+
+    // Now Playing Hero Banner handlers
+    const heroPrevBtn = container.querySelector('#btn-hero-prev');
+    const heroNextBtn = container.querySelector('#btn-hero-next');
+    const heroPlayBtn = container.querySelector('#btn-hero-play');
+    const heroDetailsBtn = container.querySelector('#btn-hero-details');
+    const heroInfo = container.querySelector('#hero-station-info');
+
+    if (heroPrevBtn) heroPrevBtn.addEventListener('click', () => audioEngine.previous());
+    if (heroNextBtn) heroNextBtn.addEventListener('click', () => audioEngine.next());
+    if (heroPlayBtn) heroPlayBtn.addEventListener('click', () => audioEngine.togglePlay());
+    if (heroDetailsBtn) {
+      heroDetailsBtn.addEventListener('click', () => {
+        if (audioEngine.isRadio && audioEngine.currentStation && typeof window !== 'undefined' && window.localjamStationModal) {
+          window.localjamStationModal.open(audioEngine.currentStation);
+        }
+      });
+    }
+    if (heroInfo) {
+      heroInfo.addEventListener('click', () => {
+        if (audioEngine.isRadio && audioEngine.currentStation && typeof window !== 'undefined' && window.localjamStationModal) {
+          window.localjamStationModal.open(audioEngine.currentStation);
         }
       });
     }

@@ -83,7 +83,7 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
 
       <div id="player-live-bar" class="player-live-bar" style="display: none;">
         <span class="player-live-indicator">
-          <span class="live-dot"></span>
+          <span class="live-icon" style="font-size: 10px; margin-right: 4px;">●</span>
           <span class="live-text">LIVE</span>
         </span>
         <span id="player-live-meta" class="player-live-meta">128 kbps</span>
@@ -275,15 +275,66 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
 
     if (state.isRadio && state.currentStation) {
       if (progressBar) progressBar.style.display = 'none';
-      if (liveBar) liveBar.style.display = 'flex';
+      if (liveBar) {
+        liveBar.style.display = 'flex';
+        const liveIndicator = liveBar.querySelector('.player-live-indicator');
+        const liveIcon = liveBar.querySelector('.live-icon');
+        const liveText = liveBar.querySelector('.live-text');
+
+        if (state.streamState === 'connecting') {
+          if (liveIcon) {
+            liveIcon.textContent = '▲';
+            liveIcon.style.color = 'var(--accent-amber)';
+          }
+          if (liveText) {
+            liveText.textContent = 'CONNECTING';
+            liveText.style.color = 'var(--accent-amber)';
+          }
+          if (liveMeta) {
+            liveMeta.textContent = 'Connecting to stream...';
+          }
+        } else if (state.streamState === 'buffering') {
+          if (liveIcon) {
+            liveIcon.textContent = '⏳';
+            liveIcon.style.color = 'var(--accent-amber)';
+          }
+          if (liveText) {
+            liveText.textContent = 'BUFFERING';
+            liveText.style.color = 'var(--accent-amber)';
+          }
+          if (liveMeta) {
+            liveMeta.textContent = 'Buffering audio...';
+          }
+        } else if (state.streamState === 'error') {
+          if (liveIcon) {
+            liveIcon.textContent = '✖';
+            liveIcon.style.color = 'var(--accent-rose)';
+          }
+          if (liveText) {
+            liveText.textContent = 'OFFLINE';
+            liveText.style.color = 'var(--accent-rose)';
+          }
+          if (liveMeta) {
+            liveMeta.textContent = 'Stream unavailable';
+          }
+        } else {
+          if (liveIcon) {
+            liveIcon.textContent = '●';
+            liveIcon.style.color = 'var(--accent-cyan)';
+          }
+          if (liveText) {
+            liveText.textContent = 'LIVE';
+            liveText.style.color = 'var(--accent-cyan)';
+          }
+          if (liveMeta) {
+            liveMeta.textContent = state.currentStation.bitrate || '128 kbps';
+          }
+        }
+      }
       if (btnShuffle) btnShuffle.style.display = 'none';
       if (btnRepeat) btnRepeat.style.display = 'none';
       if (btnPrev) btnPrev.setAttribute('title', 'Previous Station');
       if (btnNext) btnNext.setAttribute('title', 'Next Station');
-
-      if (liveMeta) {
-        liveMeta.textContent = state.currentStation.bitrate || '128 kbps';
-      }
 
       titleEl.textContent = state.currentStation.name;
       titleEl.classList.add('station-title-interactive');
