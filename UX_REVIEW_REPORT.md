@@ -27,14 +27,14 @@ An end-to-end evaluation of the user journey, player bar ergonomics, dashboard l
 <!-- mdformat off(reason: standard GFM table rendering in Critique and Code Search) -->
 | Finding ID | Severity | Category | Component / View | Problem Description | Status |
 | :--- | :---: | :--- | :--- | :--- | :--- |
-| **UX-01** | `[HIGH]` | Player Ergonomics | [`player-bar.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/components/player-bar.js) | Static seek bar during live radio streams showing `0:00 / 0:00`; missing station detail affordance. | `[RESOLVED]` |
-| **UX-02** | `[HIGH]` | Visual Hierarchy | [`home-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/home-view.js) | Hero card has multiple competing primary action buttons; disabled `Shuffle (0)` button clutters empty state. | `[RESOLVED]` |
-| **UX-03** | `[HIGH]` | Responsiveness | [`app.css`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/app.css), Top Bar | Overly wide 520px search input crowding header actions on viewports under 1200px. | `[RESOLVED]` |
-| **UX-04** | `[MEDIUM]` | Navigation / Layout | [`radio-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/radio-view.js) | Radio genre pills wrap into multiline visual clutter; search and sort controls uncoordinated. | `[RESOLVED]` |
-| **UX-05** | `[MEDIUM]` | Content & Catalog | [`stations.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/radio/stations.js) | Missing dedicated **Kids & Family** genre; underrepresented **News & Talk** streams. | `[RESOLVED]` |
-| **UX-06** | `[MEDIUM]` | Visual Noise | [`settings-view.js`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/views/settings-view.js), Tables | Noisy bracketed badges (`[AVAILABLE]`, `[TIER 1]`) cluttering cards and diagnostic tables. | `[RESOLVED]` |
+| **UX-01** | `[HIGH]` | Player Ergonomics | [`player-bar.js`](./src/ui/components/player-bar.js) | Static seek bar during live radio streams showing `0:00 / 0:00`; missing station detail affordance. | `[RESOLVED]` |
+| **UX-02** | `[HIGH]` | Visual Hierarchy | [`home-view.js`](./src/ui/views/home-view.js) | Hero card has multiple competing primary action buttons; disabled `Shuffle (0)` button clutters empty state. | `[RESOLVED]` |
+| **UX-03** | `[HIGH]` | Responsiveness | [`app.css`](./src/ui/app.css), Top Bar | Overly wide 520px search input crowding header actions on viewports under 1200px. | `[RESOLVED]` |
+| **UX-04** | `[MEDIUM]` | Navigation / Layout | [`radio-view.js`](./src/ui/views/radio-view.js) | Radio genre pills wrap into multiline visual clutter; search and sort controls uncoordinated. | `[RESOLVED]` |
+| **UX-05** | `[MEDIUM]` | Content & Catalog | [`stations.js`](./src/radio/stations.js) | Missing dedicated **Kids & Family** genre; underrepresented **News & Talk** streams. | `[RESOLVED]` |
+| **UX-06** | `[MEDIUM]` | Visual Noise | [`settings-view.js`](./src/ui/views/settings-view.js), Tables | Noisy bracketed badges (`[AVAILABLE]`, `[TIER 1]`) cluttering cards and diagnostic tables. | `[RESOLVED]` |
 | **UX-07** | `[MEDIUM]` | Interaction Design | All Views, Cards | Media cards and buttons lack smooth micro-interactions, subtle hover lift, and keyboard focus elegance. | `[RESOLVED]` |
-| **UX-08** | `[LOW]` | Typography Scale | [`theme.css`](file:///usr/local/google/home/vakh/git/hub/aawc/LocalJam/src/ui/theme.css), Views | Inconsistent section title sizing (`18px` vs `20px` vs `24px`) and tight table line spacing. | `[RESOLVED]` |
+| **UX-08** | `[LOW]` | Typography Scale | [`theme.css`](./src/ui/theme.css), Views | Inconsistent section title sizing (`18px` vs `20px` vs `24px`) and tight table line spacing. | `[RESOLVED]` |
 | **UX-09** | `[LOW]` | Overlay Aesthetics | Modals, Drawer | Opaque flat modal overlays lacking modern backdrop blur; coarse range slider thumbs. | `[RESOLVED]` |
 | **UX-10** | `[INFO]` | Onboarding Experience | Empty States | Generic gray empty state cards lacking warm typography and contextual primary action prompts. | `[RESOLVED]` |
 <!-- mdformat on -->

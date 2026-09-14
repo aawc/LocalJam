@@ -276,6 +276,12 @@ LocalJam enforces automated unit and integration tests using `node:test` and `no
 ---
 
 ## 10. Implementation Deliverables & Quality Bar
+ 
+Every component must contain complete, functional logic. No bare `TODO`, `pass`, or placeholder stubs. All commits must be small, single-purpose, and independently verified.
 
-Every component must contain complete, functional logic. No bare `TODO`, `pass`, or placeholder stubs. All commits must be small, single-purpose, and independently verified. After each commit, local branch changes must be pushed immediately to the `github-aawc` remote.
+### Documentation & Repository Sanitization Standards
+- **No Local File Paths:** Never commit local absolute filesystem paths (such as `file:///path/to/file`, `/usr/local/google/home/username`, `/home/username`, `/Users/username`, `C:\Users\username`, or `/tmp/scratch`) into repository documentation, specifications, plans, design documents, investigation reports, code comments, or tracked markdown files.
+- **Repository-Relative References:** In all repository documentation and reports, strictly reference files using repository-relative paths (e.g., `./src/player/audio-engine.js`, `src/ui/app.css#L45-L60`, or `docs/architecture.md`).
+- **Remote Synchronization:** After each commit, local branch changes must be pushed immediately to the `github-aawc` remote.
+
 

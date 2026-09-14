@@ -59,6 +59,11 @@
    - All documentation, configuration examples, and local server guides must reference standard localhost (`http://localhost:3000`) or the official public domain.
    - All commits and pull requests must pass automated hygiene checks prior to committing.
 
+2. **No Local File Paths in Documentation:**
+   - Never commit local absolute filesystem paths (such as `file:///path/to/file`, `/usr/local/google/home/username`, `/home/username`, `/Users/username`, `C:\Users\username`, or `/tmp/scratch`) into repository documentation, specifications, plans, design documents, investigation reports, code comments, or tracked markdown files.
+   - In all repository documentation and reports, strictly reference files using repository-relative paths (e.g., `./src/player/audio-engine.js`, `src/ui/app.css#L45-L60`, or `docs/architecture.md`).
+   - Chat responses and ephemeral UI artifacts may use `file:///` links for interactive editor navigation, but all content written to repository-tracked files MUST strictly use repository-relative paths.
+
 ---
 
 ## Task Execution & Verification Standards
