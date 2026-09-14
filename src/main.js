@@ -23,6 +23,7 @@ import { renderPlaylistsView } from './ui/views/playlists-view.js';
 import { renderFavoritesView } from './ui/views/favorites-view.js';
 import { renderHistoryView } from './ui/views/history-view.js';
 import { renderRadioView } from './ui/views/radio-view.js';
+import { renderPlayerView } from './ui/views/player-view.js';
 import { renderSettingsView } from './ui/views/settings-view.js';
 import { APP_VERSION } from './version.js';
 
@@ -40,6 +41,7 @@ export async function initApp() {
     router.registerRoute('favorites', renderFavoritesView);
     router.registerRoute('history', renderHistoryView);
     router.registerRoute('radio', renderRadioView);
+    router.registerRoute('player', renderPlayerView);
     router.registerRoute('settings', renderSettingsView);
 
     // 3. Mount UI Components

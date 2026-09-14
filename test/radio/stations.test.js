@@ -42,11 +42,14 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.ok(HIGH_LEVEL_GENRES.includes('Ambient'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Rock'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Classical'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('College & University'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Jazz'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Kids & Family'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Electronic'));
     assert.ok(HIGH_LEVEL_GENRES.includes('Folk & Roots'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Lo-Fi'));
     assert.ok(HIGH_LEVEL_GENRES.includes('News & Talk'));
+    assert.ok(HIGH_LEVEL_GENRES.includes('Pop'));
 
     for (const station of CURATED_STATIONS) {
       const cat = getStationCategory(station);
@@ -59,10 +62,18 @@ test('Internet Radio Stations Suite', async (t) => {
     // Specific category assertions
     assert.equal(getStationCategory({ genre: 'Ambient / Drone' }), 'Ambient');
     assert.equal(getStationCategory({ genre: 'Rock / Alternative' }), 'Rock');
+    assert.equal(getStationCategory({ genre: 'Rock / Indie' }), 'Rock');
     assert.equal(getStationCategory({ genre: 'Classical / Instrumental' }), 'Classical');
+    assert.equal(getStationCategory({ genre: 'College & University / Freeform', name: 'KZSU Stanford' }), 'College & University');
+    assert.equal(getStationCategory({ genre: 'College & University / Eclectic', name: 'KALX Berkeley' }), 'College & University');
+    assert.equal(getStationCategory({ genre: 'College & University / Pop & Rock', name: 'KOHL Ohlone' }), 'College & University');
     assert.equal(getStationCategory({ genre: 'Jazz / Blues' }), 'Jazz');
     assert.equal(getStationCategory({ genre: 'Kids & Family / Pop & Learning' }), 'Kids & Family');
     assert.equal(getStationCategory({ genre: 'Kids & Family / Sleep & Bedtime' }), 'Kids & Family');
+    assert.equal(getStationCategory({ genre: 'Lo-Fi / Chillhop', name: 'Chillsky' }), 'Lo-Fi');
+    assert.equal(getStationCategory({ genre: 'Lo-Fi / Beats', name: 'Lofi Radio' }), 'Lo-Fi');
+    assert.equal(getStationCategory({ genre: 'Pop / Electropop', name: 'PopTron' }), 'Pop');
+    assert.equal(getStationCategory({ genre: 'Pop / Dance', name: 'Dance Wave!' }), 'Pop');
     assert.equal(getStationCategory({ genre: 'Electronic / Industrial' }), 'Electronic');
     assert.equal(getStationCategory({ genre: 'Folk / Americana' }), 'Folk & Roots');
     assert.equal(getStationCategory({ genre: 'Spy / Lounge / Trip-Hop' }), 'Lounge');
@@ -75,7 +86,7 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.equal(getStationCategory({ genre: 'Synthwave / Instrumental' }), 'Electronic');
   });
 
-  await t.test('Includes Radio Paradise, SomaFM, Classical, Jazz, News, and Kids stations with verified URLs', () => {
+  await t.test('Includes Radio Paradise, SomaFM, Classical, Jazz, News, Kids, University, Rock, Pop, and Lo-Fi stations with verified URLs', () => {
     const ids = CURATED_STATIONS.map((s) => s.id);
     assert.ok(ids.includes('rp_main'));
     assert.ok(ids.includes('rp_mellow'));
@@ -102,6 +113,41 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.ok(ids.includes('radio_art_solo_piano'));
     assert.ok(ids.includes('radio_art_mozart'));
     assert.ok(ids.includes('soma_covers'));
+    assert.ok(ids.includes('stanford_kzsu'));
+    assert.ok(ids.includes('ohlone_kohl'));
+    assert.ok(ids.includes('berkeley_kalx'));
+    assert.ok(ids.includes('scu_kscu'));
+    assert.ok(ids.includes('princeton_wprb'));
+    assert.ok(ids.includes('mit_wmbr'));
+    assert.ok(ids.includes('the_current_mpr'));
+    assert.ok(ids.includes('soma_indiepop'));
+    assert.ok(ids.includes('soma_left_coast_70s'));
+    assert.ok(ids.includes('soma_poptron'));
+    assert.ok(ids.includes('dance_wave'));
+    assert.ok(ids.includes('chillsky_lofi'));
+    assert.ok(ids.includes('lofi_radio_chill'));
+
+    // Verify university and specialized station stream endpoints
+    const kzsu = CURATED_STATIONS.find((s) => s.id === 'stanford_kzsu');
+    assert.equal(kzsu.streamUrl, 'https://kzsu-streams.stanford.edu/kzsu-1-128.mp3');
+
+    const kohl = CURATED_STATIONS.find((s) => s.id === 'ohlone_kohl');
+    assert.equal(kohl.streamUrl, 'https://ice24.securenetsystems.net/KOHL');
+
+    const kalx = CURATED_STATIONS.find((s) => s.id === 'berkeley_kalx');
+    assert.equal(kalx.streamUrl, 'https://stream.kalx.berkeley.edu:8443/kalx-128.mp3');
+
+    const theCurrent = CURATED_STATIONS.find((s) => s.id === 'the_current_mpr');
+    assert.equal(theCurrent.streamUrl, 'https://current.stream.publicradio.org/kcmp.mp3');
+
+    const poptron = CURATED_STATIONS.find((s) => s.id === 'soma_poptron');
+    assert.equal(poptron.streamUrl, 'https://ice1.somafm.com/poptron-128-mp3');
+
+    const danceWave = CURATED_STATIONS.find((s) => s.id === 'dance_wave');
+    assert.equal(danceWave.streamUrl, 'https://dancewave.online/dance.mp3');
+
+    const chillsky = CURATED_STATIONS.find((s) => s.id === 'chillsky_lofi');
+    assert.equal(chillsky.streamUrl, 'https://stream.zeno.fm/f3wvbbqmdg8uv');
 
     // Verify critical station stream endpoints
     const kusc = CURATED_STATIONS.find((s) => s.id === 'kusc_classical');

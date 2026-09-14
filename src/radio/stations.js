@@ -590,6 +590,149 @@ export const CURATED_STATIONS = [
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
     isFavorite: false
+  },
+  {
+    id: 'stanford_kzsu',
+    name: 'KZSU 90.1 FM (Stanford University)',
+    description: 'Stanford University student and community radio. Freeform underground music, local sports, and culture.',
+    streamUrl: 'https://kzsu-streams.stanford.edu/kzsu-1-128.mp3',
+    homepageUrl: 'https://kzsu.stanford.edu',
+    genre: 'College & University / Freeform',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://kzsu.stanford.edu/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'ohlone_kohl',
+    name: 'KOHL 89.3 FM (Ohlone College)',
+    description: 'Ohlone College student-operated contemporary hit radio and modern music from Fremont, California.',
+    streamUrl: 'https://ice24.securenetsystems.net/KOHL',
+    homepageUrl: 'https://www.kohlradio.com',
+    genre: 'College & University / Pop & Rock',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.kohlradio.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'berkeley_kalx',
+    name: 'KALX 90.7 FM (UC Berkeley)',
+    description: 'University of California, Berkeley student & community radio. Independent, alternative, and educational broadcasting.',
+    streamUrl: 'https://stream.kalx.berkeley.edu:8443/kalx-128.mp3',
+    homepageUrl: 'https://www.kalx.berkeley.edu',
+    genre: 'College & University / Eclectic',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.kalx.berkeley.edu/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'scu_kscu',
+    name: 'KSCU 103.3 FM (Santa Clara University)',
+    description: 'Santa Clara University underground radio broadcasting indie rock, punk, electronic, and hip hop.',
+    streamUrl: 'https://kscu.streamguys1.com/live',
+    homepageUrl: 'https://kscu.org',
+    genre: 'College & University / Indie Rock',
+    country: 'USA',
+    bitrate: '128 kbps AAC',
+    favicon: 'https://kscu.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'princeton_wprb',
+    name: 'WPRB 103.3 FM (Princeton University)',
+    description: 'Princeton University student-run independent radio with eclectic and community programming since 1940.',
+    streamUrl: 'https://wprb.streamguys1.com/live',
+    homepageUrl: 'https://wprb.com',
+    genre: 'College & University / Freeform',
+    country: 'USA',
+    bitrate: '128 kbps AAC',
+    favicon: 'https://wprb.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'mit_wmbr',
+    name: 'WMBR 88.1 FM (MIT)',
+    description: 'Massachusetts Institute of Technology student and community radio from Cambridge, Massachusetts.',
+    streamUrl: 'https://wmbr.org:8002/hi',
+    homepageUrl: 'https://wmbr.org',
+    genre: 'College & University / Eclectic',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://wmbr.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'the_current_mpr',
+    name: 'The Current (89.3 FM MPR)',
+    description: 'Non-commercial, member-supported music radio from Minnesota Public Radio featuring indie, rock, and alternative.',
+    streamUrl: 'https://current.stream.publicradio.org/kcmp.mp3',
+    homepageUrl: 'https://www.thecurrent.org',
+    genre: 'Rock / Indie',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://www.thecurrent.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'soma_left_coast_70s',
+    name: 'SomaFM: Left Coast 70s',
+    description: 'Mellow album rock from the San Francisco Bay Area and West Coast in the 1970s.',
+    streamUrl: 'https://ice1.somafm.com/seventies-128-mp3',
+    homepageUrl: 'https://somafm.com/seventies/',
+    genre: 'Rock / 70s Classic Rock',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://somafm.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'dance_wave',
+    name: 'Dance Wave!',
+    description: 'Non-stop club, dance pop, and energetic electronic music with crystal clear digital audio.',
+    streamUrl: 'https://dancewave.online/dance.mp3',
+    homepageUrl: 'https://dancewave.online',
+    genre: 'Pop / Dance',
+    country: 'Hungary',
+    bitrate: '128 kbps',
+    favicon: 'https://dancewave.online/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'chillsky_lofi',
+    name: 'Chillsky Lo-Fi & Beats',
+    description: '24/7 relaxed instrumental lo-fi hip hop, chill beats, and study soundscapes.',
+    streamUrl: 'https://stream.zeno.fm/f3wvbbqmdg8uv',
+    homepageUrl: 'https://chillsky.com',
+    genre: 'Lo-Fi / Chillhop',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://chillsky.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
+  },
+  {
+    id: 'lofi_radio_chill',
+    name: 'Lofi Radio',
+    description: 'Smooth lo-fi chillout rhythms and warm vinyl textures for coding and relaxation.',
+    streamUrl: 'https://play.streamafrica.net/lofiradio',
+    homepageUrl: 'https://lofiradio.com',
+    genre: 'Lo-Fi / Beats',
+    country: 'Global',
+    bitrate: '128 kbps',
+    favicon: 'https://lofiradio.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false
   }
 ];
 
@@ -597,12 +740,15 @@ export const HIGH_LEVEL_GENRES = [
   'All',
   'Ambient',
   'Classical',
+  'College & University',
   'Electronic',
   'Folk & Roots',
   'Jazz',
   'Kids & Family',
+  'Lo-Fi',
   'Lounge',
   'News & Talk',
+  'Pop',
   'Rock',
   'Soul & Funk',
   'World'
@@ -624,6 +770,9 @@ export function getStationCategory(station) {
   if (g.includes('kids') || g.includes('child') || g.includes('lullaby') || g.includes('preschool') || g.includes('family') || name.includes('fun kids') || name.includes('for children') || name.includes('lullabies') || name.includes('covers')) {
     return 'Kids & Family';
   }
+  if (g.includes('college') || g.includes('university') || g.includes('student') || name.includes('stanford') || name.includes('berkeley') || name.includes('ohlone') || name.includes('mit') || name.includes('princeton') || name.includes('santa clara') || name.includes('kzsu') || name.includes('kalx') || name.includes('kscu') || name.includes('wprb') || name.includes('wmbr') || name.includes('kohl')) {
+    return 'College & University';
+  }
   if (g.includes('news') || g.includes('talk') || g.includes('public radio') || name.includes('wnyc') || name.includes('bbc world service') || name.includes('npr') || name.includes('kqed') || name.includes('wbez') || name.includes('rfi') || name.includes('wgbh')) {
     return 'News & Talk';
   }
@@ -639,16 +788,22 @@ export function getStationCategory(station) {
   if (g.includes('folk') || g.includes('americana') || g.includes('country') || g.includes('celtic') || g.includes('roots') || g.includes('boot liquor') || g.includes('thistle')) {
     return 'Folk & Roots';
   }
-  if (g.includes('soul') || g.includes('funk') || g.includes('lo-fi') || g.includes('hip-hop') || name.includes('seven inch') || name.includes('lofi')) {
+  if (g.includes('lo-fi') || g.includes('lofi') || g.includes('chillhop') || name.includes('chillsky') || name.includes('lofi')) {
+    return 'Lo-Fi';
+  }
+  if (g.includes('soul') || g.includes('funk') || g.includes('hip-hop') || name.includes('seven inch')) {
     return 'Soul & Funk';
   }
-  if (g.includes('rock') || g.includes('indie') || g.includes('alternative') || g.includes('eclectic') || g.includes('70s') || name.includes('kexp') || name.includes('bbc radio 6') || name.includes('left coast')) {
+  if (g.includes('pop') || g.includes('dance wave') || name.includes('poptron') || name.includes('dance wave')) {
+    return 'Pop';
+  }
+  if (g.includes('rock') || g.includes('indie') || g.includes('alternative') || g.includes('eclectic') || g.includes('70s') || name.includes('kexp') || name.includes('the current') || name.includes('bbc radio 6') || name.includes('left coast') || name.includes('indie pop')) {
     return 'Rock';
   }
   if (g.includes('lounge') || g.includes('exotica') || g.includes('spy') || g.includes('trip-hop') || g.includes('illinois street') || g.includes('secret agent')) {
     return 'Lounge';
   }
-  if (g.includes('electronic') || g.includes('electropop') || g.includes('synthwave') || g.includes('house') || g.includes('dance') || g.includes('industrial') || g.includes('def con') || g.includes('poptron') || g.includes('beat blender') || g.includes('synphaera')) {
+  if (g.includes('electronic') || g.includes('electropop') || g.includes('synthwave') || g.includes('house') || g.includes('dance') || g.includes('industrial') || g.includes('def con') || g.includes('beat blender') || g.includes('synphaera')) {
     return 'Electronic';
   }
   if (g.includes('drone') || g.includes('ambient') || g.includes('chill') || g.includes('downtempo') || g.includes('space') || g.includes('scanner') || g.includes('mellow') || g.includes('fluid') || g.includes('lush')) {
@@ -680,6 +835,15 @@ export function getStationFallbackArtwork(station = {}) {
       <circle cx="96" cy="96" r="14" fill="#fbbf24"/>
       <circle cx="96" cy="96" r="8" fill="#d97706"/>
     `;
+  } else if (genre.includes('college') || genre.includes('university') || name.includes('kzsu') || name.includes('kalx') || name.includes('kscu') || name.includes('wprb') || name.includes('wmbr') || name.includes('kohl')) {
+    bgGradientStart = '#1e3a8a'; // Deep Collegiate Blue
+    bgGradientEnd = '#831843';   // Maroon / Crimson
+    badgeText = 'CAMPUS';
+    iconSvg = `
+      <polygon points="96,48 28,84 96,120 164,84" fill="#fbbf24"/>
+      <line x1="164" y1="84" x2="164" y2="128" stroke="#fbbf24" stroke-width="4"/>
+      <path d="M52,97v32c0,16 20,28 44,28s44,-12 44,-28v-32" fill="none" stroke="#f8fafc" stroke-width="4"/>
+    `;
   } else if (genre.includes('classical') || name.includes('mozart')) {
     bgGradientStart = '#1e3a8a';
     bgGradientEnd = '#172554';
@@ -704,6 +868,25 @@ export function getStationFallbackArtwork(station = {}) {
       <circle cx="96" cy="64" r="8" fill="#fbbf24"/>
       <circle cx="64" cy="128" r="5" fill="#38bdf8"/>
       <circle cx="132" cy="124" r="6" fill="#38bdf8"/>
+    `;
+  } else if (genre.includes('lo-fi') || genre.includes('lofi') || genre.includes('chillhop')) {
+    bgGradientStart = '#4c1d95'; // Deep Indigo
+    bgGradientEnd = '#1e1b4b';   // Dark Midnight
+    badgeText = 'LO-FI';
+    iconSvg = `
+      <circle cx="96" cy="96" r="46" fill="#0f172a" stroke="#a78bfa" stroke-width="4"/>
+      <circle cx="96" cy="96" r="28" fill="#312e81"/>
+      <circle cx="96" cy="96" r="8" fill="#fbbf24"/>
+      <line x1="96" y1="50" x2="96" y2="68" stroke="#a78bfa" stroke-width="3"/>
+      <line x1="96" y1="124" x2="96" y2="142" stroke="#a78bfa" stroke-width="3"/>
+    `;
+  } else if (genre.includes('pop') || name.includes('poptron') || name.includes('dance wave')) {
+    bgGradientStart = '#ec4899'; // Bright Pink
+    bgGradientEnd = '#8b5cf6';   // Purple
+    badgeText = 'POP';
+    iconSvg = `
+      <circle cx="96" cy="96" r="44" stroke="#f472b6" stroke-width="5" fill="none"/>
+      <polygon points="96,56 108,82 136,86 116,106 121,134 96,120 71,134 76,106 56,86 84,82" fill="#fbbf24"/>
     `;
   } else if (genre.includes('rock') || genre.includes('indie') || genre.includes('70s')) {
     bgGradientStart = '#7c2d12';

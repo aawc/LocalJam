@@ -11,6 +11,7 @@ import { renderPlaylistsView } from '../../src/ui/views/playlists-view.js';
 import { renderFavoritesView } from '../../src/ui/views/favorites-view.js';
 import { renderHistoryView } from '../../src/ui/views/history-view.js';
 import { renderRadioView } from '../../src/ui/views/radio-view.js';
+import { renderPlayerView } from '../../src/ui/views/player-view.js';
 import { renderSettingsView } from '../../src/ui/views/settings-view.js';
 
 // Setup minimal mock DOM
@@ -208,7 +209,7 @@ test('UI Views - renderHomeView omits shuffle button when library is empty', asy
   assert.ok(view.innerHTML.includes('empty-state-icon'));
 });
 
-test('UI Views - renderRadioView displays Now Playing Hero Banner when radio is playing', async () => {
+test('UI Views - renderRadioView omits duplicative hero banner and preserves search and card grid', async () => {
   const prevIsRadio = audioEngine.isRadio;
   const prevStation = audioEngine.currentStation;
   const prevIsPlaying = audioEngine.isPlaying;
@@ -226,13 +227,11 @@ test('UI Views - renderRadioView displays Now Playing Hero Banner when radio is 
 
     const params = new URLSearchParams('q=Radio');
     const view = await renderRadioView(params);
-    assert.ok(view.innerHTML.includes('radio-hero-banner'));
-    assert.ok(view.innerHTML.includes('btn-hero-prev'));
-    assert.ok(view.innerHTML.includes('btn-hero-play'));
-    assert.ok(view.innerHTML.includes('btn-hero-next'));
-    assert.ok(view.innerHTML.includes('btn-hero-details'));
-    assert.ok(view.innerHTML.includes('Radio Paradise: Mellow Mix'));
+    assert.ok(!view.innerHTML.includes('radio-hero-banner'), 'Duplicative radio hero banner must be omitted');
+    assert.ok(!view.innerHTML.includes('btn-hero-play'));
+    assert.ok(view.innerHTML.includes('radio-toolbar'));
     assert.ok(view.innerHTML.includes('btn-clear-search'));
+    assert.ok(view.innerHTML.includes('Radio Paradise (Mellow Mix)'));
   } finally {
     audioEngine.isRadio = prevIsRadio;
     audioEngine.currentStation = prevStation;
@@ -281,4 +280,116 @@ test('UI Views - responsive table classes are applied across all track table vie
   assert.ok(plView.innerHTML.includes('class="col-album"'));
   assert.ok(plView.innerHTML.includes('track-num-cell col-num'));
 });
+
+test('UI Views - renderPlayerView renders local track details, timeline, and transport controls', async () => {
+  const prevCurrentTrack = audioEngine.currentTrack;
+  const prevIsRadio = audioEngine.isRadio;
+  const prevIsPlaying = audioEngine.isPlaying;
+  const prevDuration = audioEngine.duration;
+  const prevTime = audioEngine.currentTime;
+
+  try {
+    audioEngine.isRadio = false;
+    audioEngine.isPlaying = true;
+    audioEngine.duration = 245;
+    audioEngine.currentTime = 65;
+    audioEngine.currentTrack = {
+      id: 'trk_player_1',
+      title: 'Starlight Symphony',
+      artist: 'Acoustic Horizon',
+      album: 'Celestial Waves',
+      duration: 245,
+      bitrate: 320,
+      path: 'music/starlight.flac',
+      isFavorite: true
+    };
+
+    const view = await renderPlayerView();
+    assert.ok(view.innerHTML.includes('player-view-container'));
+    assert.ok(view.innerHTML.includes('Starlight Symphony'));
+    assert.ok(view.innerHTML.includes('Acoustic Horizon'));
+    assert.ok(view.innerHTML.includes('Celestial Waves'));
+    assert.ok(view.innerHTML.includes('[VISUALIZER: OFF]'), 'Visualizer must be OFF by default');
+    assert.ok(view.innerHTML.includes('player-view-visualizer-canvas'));
+    assert.ok(view.innerHTML.includes('btn-player-play-pause'));
+    assert.ok(view.innerHTML.includes('btn-player-shuffle'));
+    assert.ok(view.innerHTML.includes('btn-player-repeat'));
+    assert.ok(view.innerHTML.includes('btn-player-prev'));
+    assert.ok(view.innerHTML.includes('btn-player-next'));
+    assert.ok(view.innerHTML.includes('player-view-volume'));
+    assert.ok(view.innerHTML.includes('FLAC'));
+    assert.ok(view.innerHTML.includes('320 kbps'));
+    assert.ok(view.innerHTML.includes('Local Audio'));
+    assert.ok(view.innerHTML.includes('[PLAYING]'));
+  } finally {
+    audioEngine.currentTrack = prevCurrentTrack;
+    audioEngine.isRadio = prevIsRadio;
+    audioEngine.isPlaying = prevIsPlaying;
+    audioEngine.duration = prevDuration;
+    audioEngine.currentTime = prevTime;
+  }
+});
+
+test('UI Views - renderPlayerView renders live radio stream metadata and live indicators', async () => {
+  const prevIsRadio = audioEngine.isRadio;
+  const prevStation = audioEngine.currentStation;
+  const prevIsPlaying = audioEngine.isPlaying;
+  const prevStatus = audioEngine.streamStatus;
+
+  try {
+    audioEngine.isRadio = true;
+    audioEngine.isPlaying = true;
+    audioEngine.streamStatus = 'playing';
+    audioEngine.currentStation = {
+      id: 'stanford_kzsu',
+      name: 'KZSU 90.1 FM (Stanford University)',
+      genre: 'College & University / Freeform',
+      country: 'USA',
+      description: 'Stanford University student and community radio.',
+      streamUrl: 'https://kzsu-streams.stanford.edu/kzsu-1-128.mp3',
+      bitrate: '128 kbps',
+      isFavorite: false
+    };
+
+    const view = await renderPlayerView();
+    assert.ok(view.innerHTML.includes('KZSU 90.1 FM (Stanford University)'));
+    assert.ok(view.innerHTML.includes('College &amp; University / Freeform'));
+    assert.ok(view.innerHTML.includes('[LIVE]'));
+    assert.ok(view.innerHTML.includes('Live Stream'));
+    assert.ok(view.innerHTML.includes('128 kbps'));
+    assert.ok(view.innerHTML.includes('Continuous broadcast'));
+    assert.ok(view.innerHTML.includes('[VISUALIZER: OFF]'));
+  } finally {
+    audioEngine.isRadio = prevIsRadio;
+    audioEngine.currentStation = prevStation;
+    audioEngine.isPlaying = prevIsPlaying;
+    audioEngine.streamStatus = prevStatus;
+  }
+});
+
+test('UI Views - renderPlayerView handles empty playback state safely', async () => {
+  const prevCurrentTrack = audioEngine.currentTrack;
+  const prevIsRadio = audioEngine.isRadio;
+  const prevStation = audioEngine.currentStation;
+  const prevIsPlaying = audioEngine.isPlaying;
+
+  try {
+    audioEngine.currentTrack = null;
+    audioEngine.isRadio = false;
+    audioEngine.currentStation = null;
+    audioEngine.isPlaying = false;
+
+    const view = await renderPlayerView();
+    assert.ok(view.innerHTML.includes('Not Playing'));
+    assert.ok(view.innerHTML.includes('No media selected'));
+    assert.ok(view.innerHTML.includes('[PAUSED]'));
+    assert.ok(view.innerHTML.includes('[VISUALIZER: OFF]'));
+  } finally {
+    audioEngine.currentTrack = prevCurrentTrack;
+    audioEngine.isRadio = prevIsRadio;
+    audioEngine.currentStation = prevStation;
+    audioEngine.isPlaying = prevIsPlaying;
+  }
+});
+
 

@@ -260,38 +260,6 @@ export async function renderRadioView(params) {
     // Synchronize current stations with audio engine catalog
     audioEngine.setStationCatalog(allStations);
 
-    const nowPlayingBanner = currentRadio ? `
-      <div class="radio-hero-banner" data-station-id="${currentRadio.id}">
-        <div class="radio-hero-left" style="cursor: pointer;" id="hero-station-info">
-          <img src="${escapeHtml(currentRadio.favicon || getStationFallbackArtwork(currentRadio))}" alt="${escapeHtml(currentRadio.name)}" class="radio-hero-art" />
-          <div class="radio-hero-meta">
-            <div class="radio-hero-title">
-              <span>${escapeHtml(currentRadio.name)}</span>
-              <span class="status-badge badge-active" style="font-size: 10px;"><span class="live-icon" style="font-size: 8px; margin-right: 3px;">●</span> LIVE</span>
-            </div>
-            <div class="radio-hero-sub">${escapeHtml(currentRadio.genre || 'Live Radio')}${currentRadio.country ? ` • ${escapeHtml(currentRadio.country)}` : ''} • ${escapeHtml(currentRadio.bitrate || '128 kbps')}</div>
-          </div>
-        </div>
-        <div class="radio-hero-actions">
-          <button id="btn-hero-prev" class="btn btn-secondary btn-sm" aria-label="Previous Station" title="Previous Station">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
-          </button>
-          <button id="btn-hero-play" class="btn btn-primary btn-sm" aria-label="${audioEngine.isPlaying ? 'Pause' : 'Play'} ${escapeHtml(currentRadio.name)}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              ${audioEngine.isPlaying ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>' : '<polygon points="5 3 19 12 5 21 5 3"></polygon>'}
-            </svg>
-            <span style="margin-left: 4px;">${audioEngine.isPlaying ? 'Pause' : 'Play'}</span>
-          </button>
-          <button id="btn-hero-next" class="btn btn-secondary btn-sm" aria-label="Next Station" title="Next Station">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
-          </button>
-          <button id="btn-hero-details" class="btn btn-secondary btn-sm" aria-label="Station Details">
-            Details
-          </button>
-        </div>
-      </div>
-    ` : '';
-
     container.innerHTML = `
       <div class="view-header">
         <div>
@@ -309,9 +277,6 @@ export async function renderRadioView(params) {
           </button>
         </div>
       </div>
-
-      <!-- Now Playing Hero Banner -->
-      ${nowPlayingBanner}
 
       <!-- Search & Sort Controls Toolbar -->
       <div class="radio-toolbar">
@@ -424,20 +389,6 @@ export async function renderRadioView(params) {
         if (liveBadge) liveBadge.remove();
       }
     });
-
-    const heroBanner = container.querySelector('.radio-hero-banner');
-    if (heroBanner && currentRadio) {
-      const heroPlayBtn = heroBanner.querySelector('#btn-hero-play');
-      if (heroPlayBtn) {
-        heroPlayBtn.setAttribute('aria-label', `${audioEngine.isPlaying ? 'Pause' : 'Play'} ${currentRadio.name}`);
-        heroPlayBtn.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            ${audioEngine.isPlaying ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>' : '<polygon points="5 3 19 12 5 21 5 3"></polygon>'}
-          </svg>
-          <span style="margin-left: 4px;">${audioEngine.isPlaying ? 'Pause' : 'Play'}</span>
-        `;
-      }
-    }
   }
 
   function attachEvents() {
@@ -466,31 +417,6 @@ export async function renderRadioView(params) {
         render();
         const updatedInput = container.querySelector('#radio-search-input');
         if (updatedInput) updatedInput.focus();
-      });
-    }
-
-    // Now Playing Hero Banner handlers
-    const heroPrevBtn = container.querySelector('#btn-hero-prev');
-    const heroNextBtn = container.querySelector('#btn-hero-next');
-    const heroPlayBtn = container.querySelector('#btn-hero-play');
-    const heroDetailsBtn = container.querySelector('#btn-hero-details');
-    const heroInfo = container.querySelector('#hero-station-info');
-
-    if (heroPrevBtn) heroPrevBtn.addEventListener('click', () => audioEngine.previous());
-    if (heroNextBtn) heroNextBtn.addEventListener('click', () => audioEngine.next());
-    if (heroPlayBtn) heroPlayBtn.addEventListener('click', () => audioEngine.togglePlay());
-    if (heroDetailsBtn) {
-      heroDetailsBtn.addEventListener('click', () => {
-        if (audioEngine.isRadio && audioEngine.currentStation && typeof window !== 'undefined' && window.localjamStationModal) {
-          window.localjamStationModal.open(audioEngine.currentStation);
-        }
-      });
-    }
-    if (heroInfo) {
-      heroInfo.addEventListener('click', () => {
-        if (audioEngine.isRadio && audioEngine.currentStation && typeof window !== 'undefined' && window.localjamStationModal) {
-          window.localjamStationModal.open(audioEngine.currentStation);
-        }
       });
     }
 

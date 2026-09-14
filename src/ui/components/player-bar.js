@@ -6,6 +6,7 @@ import { audioEngine } from '../../player/audio-engine.js';
 import { queueManager } from '../../player/queue.js';
 import { db } from '../../storage/db.js';
 import { toggleFavoriteStation, getStationFallbackArtwork } from '../../radio/stations.js';
+import { router } from '../router.js';
 
 export function createPlayerBar({ onOpenStationDetails } = {}) {
   const bar = document.createElement('div');
@@ -193,47 +194,41 @@ export function createPlayerBar({ onOpenStationDetails } = {}) {
     }
   };
 
+  const trackInfoEl = bar.querySelector('.player-track-info');
+
+  const navigateToPlayer = () => {
+    router.navigate('player');
+  };
+
   if (artImg) {
     artImg.style.cursor = 'pointer';
     artImg.setAttribute('role', 'button');
     artImg.setAttribute('tabindex', '0');
-    artImg.setAttribute('aria-label', 'Open Audio Visualizer (V)');
-    artImg.title = 'Open Visualizer (V)';
-    const triggerViz = () => {
-      const vizBtn = typeof document !== 'undefined' ? document.getElementById('btn-toggle-viz') : null;
-      if (vizBtn) {
-        vizBtn.click();
-      }
-    };
-    artImg.onclick = triggerViz;
+    artImg.setAttribute('aria-label', 'Open Now Playing Screen');
+    artImg.title = 'Open Now Playing Screen';
+    artImg.onclick = navigateToPlayer;
     artImg.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        triggerViz();
+        navigateToPlayer();
       }
     };
   }
 
-  titleEl.onclick = () => {
-    if (audioEngine.isRadio && audioEngine.currentStation) {
-      if (typeof onOpenStationDetails === 'function') {
-        onOpenStationDetails(audioEngine.currentStation);
-      } else if (typeof window !== 'undefined' && window.localjamStationModal) {
-        window.localjamStationModal.open(audioEngine.currentStation);
+  if (trackInfoEl) {
+    trackInfoEl.style.cursor = 'pointer';
+    trackInfoEl.setAttribute('role', 'button');
+    trackInfoEl.setAttribute('tabindex', '0');
+    trackInfoEl.setAttribute('aria-label', 'Open Now Playing Screen');
+    trackInfoEl.title = 'Open Now Playing Screen';
+    trackInfoEl.onclick = navigateToPlayer;
+    trackInfoEl.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        navigateToPlayer();
       }
-    }
-  };
-
-  titleEl.onkeydown = (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && audioEngine.isRadio && audioEngine.currentStation) {
-      e.preventDefault();
-      if (typeof onOpenStationDetails === 'function') {
-        onOpenStationDetails(audioEngine.currentStation);
-      } else if (typeof window !== 'undefined' && window.localjamStationModal) {
-        window.localjamStationModal.open(audioEngine.currentStation);
-      }
-    }
-  };
+    };
+  }
 
   const iconVolume = bar.querySelector('#icon-volume');
 

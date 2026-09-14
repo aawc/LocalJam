@@ -45,11 +45,15 @@ if (typeof document === 'undefined') {
         removeAttribute(k) {
           delete this.attributes[k];
         },
+        _childMap: new Map(),
         querySelector(selector) {
-          return createMockElement(selector);
+          if (!this._childMap.has(selector)) {
+            this._childMap.set(selector, createMockElement(selector));
+          }
+          return this._childMap.get(selector);
         },
         querySelectorAll(selector) {
-          return [createMockElement(selector), createMockElement(selector)];
+          return [this.querySelector(selector), createMockElement(selector)];
         },
         addEventListener() {}
       };
@@ -83,7 +87,7 @@ function createMockElement(selector) {
   };
 }
 
-test('UI Components - createPlayerBar renders player bar structure', () => {
+test('UI Components - createPlayerBar renders player bar structure and configures player view navigation', () => {
   let openedStation = null;
   const bar = createPlayerBar({
     onOpenStationDetails: (st) => { openedStation = st; }
@@ -95,6 +99,14 @@ test('UI Components - createPlayerBar renders player bar structure', () => {
   assert.ok(bar.innerHTML.includes('player-progress-bar'));
   assert.ok(bar.innerHTML.includes('player-live-bar'));
   assert.ok(bar.innerHTML.includes('LIVE'));
+
+  const art = bar.querySelector('#player-art-img');
+  assert.ok(art);
+  assert.equal(typeof art.onclick, 'function');
+
+  const info = bar.querySelector('.player-track-info');
+  assert.ok(info);
+  assert.equal(typeof info.onclick, 'function');
 });
 
 test('UI Components - createEqModal renders 10-band equalizer modal', () => {

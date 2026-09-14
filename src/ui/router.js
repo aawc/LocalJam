@@ -44,6 +44,10 @@ export class Router {
 
     this.currentRoute = routePath;
 
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.classList.toggle('viewing-player', routePath === 'player');
+    }
+
     // Update active nav links in sidebar and mobile nav
     document.querySelectorAll('.nav-link').forEach((link) => {
       const linkHash = link.getAttribute('href')?.replace(/^#\/?/, '').trim();

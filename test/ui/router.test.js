@@ -52,3 +52,44 @@ test('Router - hash cleaning and URL parameter parsing', () => {
     assert.equal(params.get('sort'), 'desc');
   }
 });
+
+test('Router - toggles viewing-player class on document.body during route transitions', async () => {
+  const router = new Router();
+  router.registerRoute('player', () => '<div>Player</div>');
+  router.registerRoute('home', () => '<div>Home</div>');
+
+  if (typeof document === 'undefined') {
+    globalThis.document = {
+      body: {
+        classList: {
+          classes: new Set(),
+          add(c) { this.classes.add(c); },
+          remove(c) { this.classes.delete(c); },
+          contains(c) { return this.classes.has(c); },
+          toggle(c, force) {
+            if (force === undefined) {
+              if (this.classes.has(c)) this.classes.delete(c);
+              else this.classes.add(c);
+            } else if (force) this.classes.add(c);
+            else this.classes.delete(c);
+          }
+        }
+      },
+      querySelectorAll: () => [],
+      getElementById: () => null
+    };
+  }
+
+  // Simulate navigating to #/player
+  globalThis.window = {
+    location: { hash: '#/player' }
+  };
+  await router.handleRouteChange();
+  assert.equal(document.body.classList.contains('viewing-player'), true);
+
+  // Simulate navigating back to #/home
+  globalThis.window.location.hash = '#/home';
+  await router.handleRouteChange();
+  assert.equal(document.body.classList.contains('viewing-player'), false);
+});
+

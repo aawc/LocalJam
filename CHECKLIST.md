@@ -101,6 +101,11 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Conduct static analysis and UX evaluation across radio streaming and mobile platforms. Document 10 distinct UX and architectural findings in `RADIO_MOBILE_UX_REPORT.md` (radio station circular cycling, dynamic stream state machine telemetry `connecting`/`buffering`/`playing`/`error`, Now Playing radio hero banner with quick transport and station details access, search clear button trigger, compact 60px mobile mini-player bar, bottom navigation vertical clearance saving 40px, slide-up mobile station details bottom sheet with drag handle, responsive hiding of table columns `.col-num` and `.col-album` on small screens <=640px, and `setCrossfadeDuration` method consistency). Implement complete fixes across player engine, CSS layout, and UI views with comprehensive unit and integration test coverage.
   - *Associated Commits:* `f52bd39`
 
+- [x] **Issue 25: Dedicated Player Screen (`#/player`), Radio Hero Banner Removal, and Curated Station Expansion (University, Rock, Pop, Lo-Fi)** `[DONE]`
+  - *Description:* (1) Remove duplicative Now Playing hero banner from `radio-view.js` to streamline the radio view and eliminate redundancy with the bottom player controls. (2) Build dedicated full "Player" screen (`src/ui/views/player-view.js`) registered at `#/player`, accessible by clicking on the mini player artwork or stream/track info. When active, automatically hide the bottom mini-player (`body.viewing-player`). Embed real-time audio visualizer with on/off toggle switch (off by default) and live mode chips. (3) Expand curated HTTPS radio catalog with premier University radio stations (Stanford KZSU 90.1 FM, Ohlone College KOHL 89.3 FM, UC Berkeley KALX 90.7 FM, Santa Clara University KSCU 103.3 FM, Princeton University WPRB 103.3 FM, MIT WMBR 88.1 FM), Rock (The Current 89.3 FM MPR, SomaFM Left Coast 70s), Pop (Dance Wave!), and Lo-Fi (Chillsky Lo-Fi & Beats, Lofi Radio), with full high-level genre taxonomy and colorblind-safe SVG fallback artwork.
+  - *Associated Commits:* Pending commit
+
+
 ---
 
 ## Feature Requests
