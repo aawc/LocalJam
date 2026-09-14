@@ -99,6 +99,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **Issue 24: Radio & Mobile UX Simplification & Responsive Overhaul** `[DONE]`
   - *Description:* Conduct static analysis and UX evaluation across radio streaming and mobile platforms. Document 10 distinct UX and architectural findings in `RADIO_MOBILE_UX_REPORT.md` (radio station circular cycling, dynamic stream state machine telemetry `connecting`/`buffering`/`playing`/`error`, Now Playing radio hero banner with quick transport and station details access, search clear button trigger, compact 60px mobile mini-player bar, bottom navigation vertical clearance saving 40px, slide-up mobile station details bottom sheet with drag handle, responsive hiding of table columns `.col-num` and `.col-album` on small screens <=640px, and `setCrossfadeDuration` method consistency). Implement complete fixes across player engine, CSS layout, and UI views with comprehensive unit and integration test coverage.
+  - *Associated Commits:* `f52bd39`
 
 ---
 
