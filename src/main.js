@@ -1,93 +1,437 @@
 /**
- * LocalJam - Main Application Bootstrapper
+ * LocalJam - Main Application Bootstrapper (Minimalist One-Screen Redesign)
  */
 
 import { db } from './storage/db.js';
 import { audioEngine } from './player/audio-engine.js';
-import { equalizer } from './player/equalizer.js';
-import { router } from './ui/router.js';
+import { queueManager } from './player/queue.js';
 import { keyboardManager } from './ui/keyboard.js';
-import { createPlayerBar } from './ui/components/player-bar.js';
+import { createStage } from './ui/stage.js';
+import { layers } from './ui/layers.js';
+import { createBrowseSheet } from './ui/components/browse-sheet.js';
+import { createOverflowMenu } from './ui/components/overflow-menu.js';
+import { createToastHost, showToast } from './ui/components/toast.js';
+import { pickFolder, rescan } from './ui/library-source.js';
+import { loadStations, CURATED_STATIONS, toggleFavoriteStation } from './radio/stations.js';
+import { createEqModal } from './ui/components/eq-modal.js';
 import { createAppFooter } from './ui/components/app-footer.js';
 import { createUpdateBanner, initUpdateChecker } from './ui/components/update-banner.js';
-import { createEqModal } from './ui/components/eq-modal.js';
-import { createVisualizerOverlay } from './ui/components/visualizer-overlay.js';
-import { createQueueDrawer } from './ui/components/queue-drawer.js';
-import { createStationModal } from './ui/components/station-modal.js';
-
-import { renderHomeView } from './ui/views/home-view.js';
-import { renderSongsView } from './ui/views/songs-view.js';
-import { renderAlbumsView } from './ui/views/albums-view.js';
-import { renderArtistsView } from './ui/views/artists-view.js';
-import { renderPlaylistsView } from './ui/views/playlists-view.js';
-import { renderFavoritesView } from './ui/views/favorites-view.js';
-import { renderHistoryView } from './ui/views/history-view.js';
-import { renderRadioView } from './ui/views/radio-view.js';
-import { renderPlayerView } from './ui/views/player-view.js';
-import { renderSettingsView } from './ui/views/settings-view.js';
 import { APP_VERSION } from './version.js';
 
+let lastStation = null;
+let lastTrack = null;
+
+/**
+ * Hydrates audioEngine and queueManager on cold start from IndexedDB playbackState.
+ * Ensures the Stage displays playable media immediately on launch (1-tap resume).
+ *
+ * @param {object} [deps]
+ * @returns {Promise<{type:'radio'|'track', station?:object, track?:object}|null>}
+ */
+export async function hydratePlaybackState(deps = {}) {
+  const database = deps.db || db;
+  const engine = deps.audioEngine || audioEngine;
+  const queue = deps.queueManager || queueManager;
+
+  let savedState = null;
+  if (database && typeof database.getPlaybackState === 'function') {
+    try {
+      savedState = await database.getPlaybackState();
+    } catch (err) {
+      console.warn('[LocalJam] Failed to load playback state from DB:', err?.message || err);
+    }
+  }
+
+  // Restore volume and mute if saved
+  if (savedState && typeof savedState.volume === 'number') {
+    engine.volume = savedState.volume;
+    if (typeof engine.setVolume === 'function') {
+      engine.setVolume(savedState.volume);
+    }
+  }
+  if (savedState && typeof savedState.muted === 'boolean') {
+    engine.muted = savedState.muted;
+  }
+  if (savedState && typeof savedState.shuffle === 'boolean' && queue) {
+    queue.shuffle = savedState.shuffle;
+  }
+  if (savedState && typeof savedState.repeat === 'string' && queue) {
+    queue.repeat = savedState.repeat;
+  }
+
+  // Force paused on cold start (never auto-play)
+  engine.isPlaying = false;
+
+  // Radio saved state branch
+  if (savedState?.isRadio) {
+    let station = savedState.currentStation || null;
+    const stationId = savedState.stationId || station?.id;
+    if (!station && stationId) {
+      let stations = [];
+      if (deps.stations) {
+        stations = deps.stations;
+      } else {
+        try {
+          stations = await loadStations(database);
+        } catch {
+          stations = CURATED_STATIONS;
+        }
+      }
+      station = stations.find((s) => s.id === stationId) || { id: stationId, name: 'Radio Station' };
+    }
+    if (station) {
+      engine.isRadio = true;
+      engine.currentStation = station;
+      engine.currentTrack = null;
+      engine.streamState = 'idle';
+      lastStation = station;
+      if (typeof engine.notifyState === 'function') {
+        engine.notifyState();
+      }
+      return { type: 'radio', station };
+    }
+  }
+
+  // Track saved state or local track branch
+  let allTracks = [];
+  if (database && typeof database.getAllTracks === 'function') {
+    try {
+      allTracks = (await database.getAllTracks()) || [];
+    } catch {}
+  }
+  const availableTracks = allTracks.filter((t) => !t.isMissing);
+
+  let targetTrack = null;
+  let targetIndex = 0;
+
+  if (savedState && (savedState.trackId || savedState.currentTrack)) {
+    const trackId = savedState.trackId || savedState.currentTrack.id;
+    const foundIdx = availableTracks.findIndex((t) => t.id === trackId);
+    if (foundIdx >= 0) {
+      targetTrack = availableTracks[foundIdx];
+      targetIndex = foundIdx;
+    } else if (savedState.currentTrack) {
+      targetTrack = savedState.currentTrack;
+    }
+  }
+
+  // Fall back to first available local track if no saved track was matched
+  if (!targetTrack && availableTracks.length > 0) {
+    targetTrack = availableTracks[0];
+    targetIndex = 0;
+  }
+
+  if (targetTrack) {
+    engine.isRadio = false;
+    engine.currentTrack = targetTrack;
+    engine.currentStation = null;
+    lastTrack = targetTrack;
+    if (savedState && typeof savedState.currentTime === 'number') {
+      engine.currentTime = savedState.currentTime;
+    }
+    if (savedState && typeof savedState.duration === 'number') {
+      engine.duration = savedState.duration;
+    } else if (targetTrack.duration) {
+      engine.duration = targetTrack.duration;
+    }
+    if (queue && availableTracks.length > 0 && typeof queue.setQueue === 'function') {
+      queue.setQueue(availableTracks, targetIndex);
+    }
+    if (typeof engine.notifyState === 'function') {
+      engine.notifyState();
+    }
+    return { type: 'track', track: targetTrack };
+  }
+
+  // If no local tracks exist, fall back to first curated station (§6.1)
+  let stations = [];
+  if (deps.stations) {
+    stations = deps.stations;
+  } else {
+    try {
+      stations = await loadStations(database);
+    } catch {
+      stations = CURATED_STATIONS;
+    }
+  }
+  if (stations && stations.length > 0) {
+    const fallbackStation = stations[0];
+    engine.isRadio = true;
+    engine.currentStation = fallbackStation;
+    engine.currentTrack = null;
+    engine.streamState = 'idle';
+    lastStation = fallbackStation;
+    if (typeof engine.notifyState === 'function') {
+      engine.notifyState();
+    }
+    return { type: 'radio', station: fallbackStation };
+  }
+
+  if (typeof engine.notifyState === 'function') {
+    engine.notifyState();
+  }
+  return null;
+}
+
+/**
+ * Switches active source between last-played Local track and last-played Radio station in 1 gesture.
+ *
+ * @param {object} [deps]
+ */
+export async function togglePlaybackSource(deps = {}) {
+  const database = deps.db || db;
+  const engine = deps.audioEngine || audioEngine;
+  const queue = deps.queueManager || queueManager;
+  const toast = deps.onToast || showToast;
+
+  if (engine.isRadio) {
+    if (engine.currentStation) {
+      lastStation = engine.currentStation;
+    }
+    // Switch from Radio to Local Track
+    let track = engine.currentTrack || deps.lastTrack || lastTrack || queue?.getCurrent?.()?.track;
+    if (!track && database && typeof database.getAllTracks === 'function') {
+      try {
+        const allTracks = await database.getAllTracks();
+        const available = allTracks.filter((t) => !t.isMissing);
+        if (available.length > 0) {
+          if (queue && typeof queue.setQueue === 'function') {
+            queue.setQueue(available, 0);
+          }
+          track = available[0];
+        }
+      } catch {}
+    }
+    if (track) {
+      engine.isRadio = false;
+      lastTrack = track;
+      await engine.playTrack(track);
+      toast('[SOURCE: LOCAL]');
+    } else {
+      toast('[NO LOCAL TRACKS]');
+    }
+  } else {
+    if (engine.currentTrack) {
+      lastTrack = engine.currentTrack;
+    }
+    // Switch from Local Track to Radio
+    let station = engine.currentStation || deps.lastStation || lastStation;
+    if (!station) {
+      let stations = [];
+      if (deps.stations) {
+        stations = deps.stations;
+      } else {
+        try {
+          stations = await loadStations(database);
+        } catch {
+          stations = CURATED_STATIONS;
+        }
+      }
+      if (stations.length > 0) {
+        station = stations[0];
+      }
+    }
+    if (station) {
+      lastStation = station;
+      await engine.playRadio(station);
+      toast('[SOURCE: RADIO]');
+    } else {
+      toast('[NO RADIO STATIONS]');
+    }
+  }
+}
+
+/**
+ * Persists current playback state into IndexedDB.
+ *
+ * @param {object} state
+ * @param {object} [customDb]
+ */
+export async function savePlaybackState(state, customDb = db) {
+  if (!state || !customDb || typeof customDb.savePlaybackState !== 'function') return;
+  return customDb.savePlaybackState({
+    isRadio: Boolean(state.isRadio),
+    stationId: state.currentStation?.id || state.stationId || null,
+    currentStation: state.currentStation || null,
+    trackId: state.currentTrack?.id || state.trackId || null,
+    currentTrack: state.currentTrack || null,
+    currentTime: typeof state.currentTime === 'number' ? state.currentTime : 0,
+    duration: typeof state.duration === 'number' ? state.duration : 0,
+    volume: typeof state.volume === 'number' ? state.volume : 1.0,
+    muted: Boolean(state.muted),
+    repeat: state.repeat || 'off',
+    shuffle: Boolean(state.shuffle)
+  });
+}
+
+/**
+ * Initializes the LocalJam application shell.
+ */
 export async function initApp() {
   try {
     // 1. Initialize IndexedDB
     await db.init();
 
-    // 2. Register Routes
-    router.registerRoute('home', renderHomeView);
-    router.registerRoute('songs', renderSongsView);
-    router.registerRoute('albums', renderAlbumsView);
-    router.registerRoute('artists', renderArtistsView);
-    router.registerRoute('playlists', renderPlaylistsView);
-    router.registerRoute('favorites', renderFavoritesView);
-    router.registerRoute('history', renderHistoryView);
-    router.registerRoute('radio', renderRadioView);
-    router.registerRoute('player', renderPlayerView);
-    router.registerRoute('settings', renderSettingsView);
+    // 2. Mount Toast Notification Host into #toast-root
+    const toastRoot = document.getElementById('toast-root');
+    if (toastRoot) {
+      const toastHost = createToastHost();
+      toastRoot.appendChild(toastHost.element);
+    }
 
-    // 3. Mount UI Components
+    // 3. Initialize Layer Controller into #layer-root
+    const layerRoot = document.getElementById('layer-root');
+    if (layerRoot) {
+      layers.init(layerRoot);
+    }
+
+    // 4. Instantiate Modals and Register Layers
     const eqModal = createEqModal();
-    document.body.appendChild(eqModal.element);
-
-    const visualizerOverlay = createVisualizerOverlay();
-    document.body.appendChild(visualizerOverlay.element);
-
-    const stationModal = createStationModal({
-      onToggleEq: () => eqModal.toggle(),
-      onToggleViz: () => visualizerOverlay.toggle()
+    layers.register('eq', () => {
+      eqModal.element.style.display = 'flex';
+      return {
+        element: eqModal.element,
+        onOpen: () => eqModal.open(),
+        onClose: () => eqModal.close(),
+        focusFirst: () => {
+          const select = eqModal.element.querySelector('#eq-preset-select');
+          if (select) select.focus();
+        }
+      };
     });
-    document.body.appendChild(stationModal.element);
-    if (typeof window !== 'undefined') {
-      window.localjamStationModal = stationModal;
-    }
-
-    const playerBarMount = document.getElementById('player-bar-container');
-    if (playerBarMount) {
-      playerBarMount.appendChild(
-        createPlayerBar({
-          onOpenStationDetails: (station) => stationModal.open(station)
-        })
-      );
-    }
-
-    const queueDrawer = createQueueDrawer();
-    document.body.appendChild(queueDrawer.element);
 
     const releaseNotesModal = createAppFooter();
-    document.body.appendChild(releaseNotesModal.element);
     if (typeof window !== 'undefined') {
       window.localjamReleaseNotesModal = releaseNotesModal;
     }
+    layers.register('notes', () => ({
+      element: releaseNotesModal.element,
+      onOpen: () => releaseNotesModal.open(),
+      onClose: () => releaseNotesModal.close(),
+      focusFirst: () => {
+        const btn = releaseNotesModal.element.querySelector('#btn-done-release-notes') ||
+                    releaseNotesModal.element.querySelector('#btn-close-release-notes');
+        if (btn) btn.focus();
+      }
+    }));
 
+    layers.register('browse', () => createBrowseSheet({
+      onPlayTrack: (track, index, tracks) => {
+        audioEngine.isRadio = false;
+        lastTrack = track;
+        queueManager.setQueue(tracks, index);
+        audioEngine.playTrack(track);
+      },
+      onPlayStation: (station) => {
+        lastStation = station;
+        audioEngine.playRadio(station);
+      },
+      onPickFolder: async () => pickFolder(),
+      onToast: (msg) => showToast(msg)
+    }));
+
+    let stageInstance = null;
+
+    layers.register('overflow', () => createOverflowMenu({
+      onOpenEq: () => layers.open('eq'),
+      onOpenNotes: () => layers.open('notes'),
+      onPickFolder: async () => pickFolder(),
+      onRescan: async () => rescan(),
+      onReset: async () => {
+        audioEngine.pause();
+      },
+      onToggleVisualizer: () => {
+        if (stageInstance) {
+          const vizCanvas = stageInstance.element.querySelector('.stage-visualizer-canvas');
+          const isViz = vizCanvas && vizCanvas.style.display !== 'none';
+          stageInstance.setVisualizer(!isViz);
+          showToast(`[VIZ ${!isViz ? 'ON' : 'OFF'}]`);
+        }
+      },
+      onToast: (msg) => showToast(msg)
+    }));
+
+    // 5. Create and Mount Stage Viewport into #stage-root
+    const stageRoot = document.getElementById('stage-root');
+    if (stageRoot) {
+      stageInstance = createStage({
+        onOpenBrowse: (tab) => layers.open('browse', { tab }),
+        onOpenOverflow: () => layers.open('overflow'),
+        onPickFolder: async () => pickFolder(),
+        onToggleSource: async () => togglePlaybackSource(),
+        onToast: (msg) => showToast(msg)
+      });
+      stageRoot.appendChild(stageInstance.element);
+    }
+
+    // 6. Initialize Global Keyboard Navigation
+    keyboardManager.init({
+      audioEngine,
+      queueManager,
+      layers,
+      onToast: (msg) => showToast(msg),
+      onToggleSource: () => togglePlaybackSource(),
+      onToggleVisualizer: () => {
+        if (stageInstance) {
+          const vizCanvas = stageInstance.element.querySelector('.stage-visualizer-canvas');
+          const isViz = vizCanvas && vizCanvas.style.display !== 'none';
+          stageInstance.setVisualizer(!isViz);
+          showToast(`[VIZ ${!isViz ? 'ON' : 'OFF'}]`);
+        }
+      },
+      onToggleFavorite: async () => {
+        if (audioEngine.isRadio && audioEngine.currentStation) {
+          const st = audioEngine.currentStation;
+          const isFav = await toggleFavoriteStation(st.id, db);
+          showToast(isFav ? `[STARRED] ${st.name}` : `[UNSTARRED] ${st.name}`);
+          audioEngine.notifyState();
+        } else if (audioEngine.currentTrack) {
+          const trk = audioEngine.currentTrack;
+          const isFav = await db.toggleFavorite(trk.id);
+          showToast(isFav ? `[STARRED] ${trk.title}` : `[UNSTARRED] ${trk.title}`);
+          audioEngine.notifyState();
+        }
+      }
+    });
+
+    // 7. Cold-Start Playback State Hydration (Ready/Paused in 1-Tap)
+    await hydratePlaybackState();
+
+    // 8. Debounced State Persistence (500ms)
+    let persistTimer = null;
+    audioEngine.subscribe((state) => {
+      if (state.isRadio && state.currentStation) {
+        lastStation = state.currentStation;
+      } else if (!state.isRadio && state.currentTrack) {
+        lastTrack = state.currentTrack;
+      }
+      if (persistTimer) clearTimeout(persistTimer);
+      persistTimer = setTimeout(() => {
+        savePlaybackState(state).catch((err) => {
+          console.warn('[LocalJam] Failed to persist playback state:', err?.message || err);
+        });
+      }, 500);
+    });
+
+    // 9. Global User Interaction Audio Unlock for Mobile & Desktop
+    const unlockAudio = () => {
+      if (audioEngine && typeof audioEngine.unlock === 'function') {
+        audioEngine.unlock();
+      }
+    };
+    ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach((evt) => {
+      document.addEventListener(evt, unlockAudio, { passive: true });
+    });
+
+    // 10. Update Banner & Service Worker Lifecycle
     const updateBanner = createUpdateBanner();
     document.body.appendChild(updateBanner.element);
 
     let updateCheckerInstance = null;
-
     const handleUpdateReady = (newVersion, worker) => {
       updateBanner.show(newVersion, worker);
     };
 
-    // Dynamically check deployed version.json for updates and synchronize release notes modal
     if (typeof fetch === 'function') {
       fetch(`./version.json?_t=${Date.now()}`, { cache: 'no-cache' })
         .then((res) => (res.ok ? res.json() : null))
@@ -96,7 +440,7 @@ export async function initApp() {
             if (typeof window !== 'undefined') {
               window.localjamRemoteVersionData = verData;
             }
-            if (typeof releaseNotesModal.updateVersion === 'function') {
+            if (typeof releaseNotesModal?.updateVersion === 'function') {
               releaseNotesModal.updateVersion(verData);
             }
             if (verData.version !== APP_VERSION) {
@@ -118,61 +462,6 @@ export async function initApp() {
         });
     }
 
-    // 4. Connect Toggle Triggers
-    const btnToggleEq = document.getElementById('btn-toggle-eq');
-    if (btnToggleEq) {
-      btnToggleEq.addEventListener('click', () => eqModal.toggle());
-    }
-
-    const btnToggleViz = document.getElementById('btn-toggle-viz');
-    if (btnToggleViz) {
-      btnToggleViz.addEventListener('click', () => visualizerOverlay.toggle());
-    }
-
-    const btnToggleQueue = document.getElementById('btn-toggle-queue');
-    if (btnToggleQueue) {
-      btnToggleQueue.addEventListener('click', () => queueDrawer.toggle());
-    }
-
-    // 5. Global Search in Topbar
-    const searchForm = document.getElementById('global-search-form');
-    const searchInput = document.getElementById('global-search-input');
-    if (searchForm && searchInput) {
-      searchForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const query = searchInput.value.trim();
-        if (query) {
-          router.navigate(`songs?q=${encodeURIComponent(query)}`);
-        }
-      });
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          const query = searchInput.value.trim();
-          if (query) {
-            router.navigate(`songs?q=${encodeURIComponent(query)}`);
-          }
-        }
-      });
-    }
-
-    // 6. Init Router with Main Content Area
-    const mainContent = document.getElementById('main-content');
-    router.init(mainContent);
-
-    // 7. Initialize Global Keyboard Shortcuts
-    keyboardManager.init();
-
-    // 8. Global User Interaction Audio Unlock for Mobile & Desktop
-    const unlockAudio = () => {
-      if (audioEngine && typeof audioEngine.unlock === 'function') {
-        audioEngine.unlock();
-      }
-    };
-    ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach((evt) => {
-      document.addEventListener(evt, unlockAudio, { passive: true });
-    });
-
-    // 9. Initialize Update Checker & Register Service Worker for PWA
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {

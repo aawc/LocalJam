@@ -32,11 +32,10 @@
   --status-error: var(--status-missing);
 
   /* Dimensions & Spacing */
-  --sidebar-width: 240px;
-  --player-height: 88px;
-  --player-height-mobile: 60px;
-  --mobile-nav-height: 52px;
-  --topbar-height: 60px;
+  --stage-max: 420px;
+  --sheet-max: 720px;
+  --row-h: 48px;
+  --row-h-coarse: 52px;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -80,4 +79,3 @@
     scroll-behavior: auto !important;
   }
 }
-
