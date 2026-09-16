@@ -193,8 +193,5 @@ This checklist tracks resolution of reported issues and feature requests. Each c
     - Minimalist shell container in `index.html` with cold-start hydration and debounced persistence in `src/main.js`.
     - Dead code elimination: deleted obsolete router (`src/ui/router.js`), 10 legacy views (`src/ui/views/*`), obsolete components (`player-bar.js`, `queue-drawer.js`, `station-modal.js`, `visualizer-overlay.js`), and obsolete tests.
     - Updated `sw.js` app shell asset manifest to 37 live assets and updated security tests.
-  - *Associated Commits:* `5180f14`, `69c037f`, `008f6bc`, `30b1dd0`, `eef727b`, `1ce2691`, `8fd7bbb`, `c1b8854`, `87ccf37`, `4125908`, `e1577de`, `678a2dc`
-
-
-
-
+- [x] **FR 19: Fix Stage Viewport Styles Mismatch & Add v2 Redirect Route** `[DONE]`
+  - *Description:* Resolve visual layout collapse on Stage by aligning `src/ui/app.css` and `src/ui/stage.js` selectors and element class names. Correct fallback artwork icon path from `./icons/icon-192.svg` to `./public/icons/icon-192.svg` with station SVG fallback on load errors. Add `v2/index.html` and `404.html` to cleanly resolve and redirect `/v2` requests to canonical root application on GitHub Pages. Bump Service Worker cache to `localjam-v2026.09.041` and include redirect assets.
