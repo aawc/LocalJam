@@ -71,7 +71,7 @@ export function createStage(deps) {
   let lastSourceStateKey = '';
 
   const stageEl = document.createElement('main');
-  stageEl.className = 'stage-viewport';
+  stageEl.className = 'stage-viewport stage-container';
   stageEl.setAttribute('role', 'main');
 
   const columnEl = document.createElement('div');
@@ -80,18 +80,18 @@ export function createStage(deps) {
 
   // --- Row 1: Status Chips + Overflow Button ---
   const row1El = document.createElement('div');
-  row1El.className = 'stage-row-status';
+  row1El.className = 'stage-row-status stage-row-1';
   columnEl.appendChild(row1El);
 
   const chipsContainer = document.createElement('div');
-  chipsContainer.className = 'stage-status-chips';
+  chipsContainer.className = 'stage-status-chips stage-chips-group';
   chipsContainer.setAttribute('role', 'toolbar');
   chipsContainer.setAttribute('aria-label', 'Active playback modes');
   row1El.appendChild(chipsContainer);
 
   const overflowBtn = document.createElement('button');
   overflowBtn.type = 'button';
-  overflowBtn.className = 'btn-stage-overflow';
+  overflowBtn.className = 'btn-stage-overflow stage-btn-overflow';
   overflowBtn.setAttribute('aria-label', 'More options and settings');
   overflowBtn.textContent = '•••';
   overflowBtn.addEventListener('click', () => {
@@ -101,22 +101,29 @@ export function createStage(deps) {
 
   // --- Row 2: Artwork & Visualizer Container ---
   const row2El = document.createElement('div');
-  row2El.className = 'stage-row-artwork';
+  row2El.className = 'stage-row-artwork stage-row-2';
   columnEl.appendChild(row2El);
 
   const artworkContainer = document.createElement('div');
-  artworkContainer.className = 'stage-artwork-container';
+  artworkContainer.className = 'stage-artwork-container stage-artwork-wrapper';
   artworkContainer.setAttribute('tabindex', '0');
   artworkContainer.setAttribute('role', 'button');
   artworkContainer.setAttribute('aria-label', 'Album artwork and visualizer. Tap to cycle visualizer, double tap to star, long press for options.');
   row2El.appendChild(artworkContainer);
 
   const artworkImg = document.createElement('img');
-  artworkImg.className = 'stage-artwork-img';
+  artworkImg.className = 'stage-artwork-img stage-artwork';
   artworkImg.alt = 'Album artwork';
   artworkImg.addEventListener('error', () => {
-    if (artworkImg.src !== './icons/icon-192.svg') {
-      artworkImg.src = './icons/icon-192.svg';
+    if (lastIsRadio && lastStationId && typeof getStationFallbackArtwork === 'function') {
+      const station = audioEngine.currentStation;
+      if (station && !artworkImg.src.startsWith('data:image/svg+xml')) {
+        artworkImg.src = getStationFallbackArtwork(station);
+        return;
+      }
+    }
+    if (artworkImg.src !== './public/icons/icon-192.svg') {
+      artworkImg.src = './public/icons/icon-192.svg';
     }
   });
   artworkContainer.appendChild(artworkImg);
@@ -128,7 +135,7 @@ export function createStage(deps) {
 
   // --- Row 3: Metadata (Title & Subtitle) ---
   const row3El = document.createElement('div');
-  row3El.className = 'stage-row-metadata';
+  row3El.className = 'stage-row-metadata stage-row-3';
   columnEl.appendChild(row3El);
 
   const titleEl = document.createElement('h1');
@@ -141,7 +148,7 @@ export function createStage(deps) {
 
   // --- Row 4: Timeline Seek Bar (Local) or Radio Status Line (Radio) ---
   const row4El = document.createElement('div');
-  row4El.className = 'stage-row-timeline';
+  row4El.className = 'stage-row-timeline stage-row-4';
   columnEl.appendChild(row4El);
 
   // Seek slider elements (created once and reused)
@@ -165,12 +172,12 @@ export function createStage(deps) {
   timestampsContainer.className = 'stage-timestamps';
 
   const currentTimeEl = document.createElement('span');
-  currentTimeEl.className = 'timestamp-current';
+  currentTimeEl.className = 'timestamp-current stage-time-current';
   currentTimeEl.textContent = '0:00';
   timestampsContainer.appendChild(currentTimeEl);
 
   const remainingTimeEl = document.createElement('span');
-  remainingTimeEl.className = 'timestamp-remaining';
+  remainingTimeEl.className = 'timestamp-remaining stage-time-remaining';
   remainingTimeEl.textContent = '-0:00';
   timestampsContainer.appendChild(remainingTimeEl);
 
@@ -179,12 +186,12 @@ export function createStage(deps) {
 
   // --- Row 5: Transport Controls ---
   const row5El = document.createElement('div');
-  row5El.className = 'stage-row-transport';
+  row5El.className = 'stage-row-transport stage-row-5';
   columnEl.appendChild(row5El);
 
   const prevBtn = document.createElement('button');
   prevBtn.type = 'button';
-  prevBtn.className = 'btn-stage-transport btn-stage-prev';
+  prevBtn.className = 'btn-stage-transport stage-btn-transport btn-stage-prev';
   prevBtn.setAttribute('aria-label', 'Previous track');
   prevBtn.textContent = '⏮';
   prevBtn.addEventListener('click', () => {
@@ -194,7 +201,7 @@ export function createStage(deps) {
 
   const playBtn = document.createElement('button');
   playBtn.type = 'button';
-  playBtn.className = 'btn-stage-transport btn-stage-play';
+  playBtn.className = 'btn-stage-transport stage-btn-transport btn-stage-play stage-btn-play';
   playBtn.setAttribute('aria-label', 'Play');
   playBtn.textContent = '▶';
   playBtn.addEventListener('click', () => {
@@ -204,7 +211,7 @@ export function createStage(deps) {
 
   const nextBtn = document.createElement('button');
   nextBtn.type = 'button';
-  nextBtn.className = 'btn-stage-transport btn-stage-next';
+  nextBtn.className = 'btn-stage-transport stage-btn-transport btn-stage-next';
   nextBtn.setAttribute('aria-label', 'Next track');
   nextBtn.textContent = '⏭';
   nextBtn.addEventListener('click', () => {
@@ -214,11 +221,11 @@ export function createStage(deps) {
 
   // --- Row 6: Dual-Source Handle Bar ---
   const row6El = document.createElement('div');
-  row6El.className = 'stage-row-source-bar';
+  row6El.className = 'stage-row-source-bar stage-row-6';
   columnEl.appendChild(row6El);
 
   const sourceBar = document.createElement('div');
-  sourceBar.className = 'stage-source-bar';
+  sourceBar.className = 'stage-source-bar stage-source-handle-bar';
   sourceBar.setAttribute('role', 'navigation');
   sourceBar.setAttribute('aria-label', 'Media source selection');
   row6El.appendChild(sourceBar);
@@ -516,7 +523,7 @@ export function createStage(deps) {
       } else if (typeof getStationFallbackArtwork === 'function') {
         artworkImg.src = getStationFallbackArtwork(station);
       } else {
-        artworkImg.src = './icons/icon-192.svg';
+        artworkImg.src = './public/icons/icon-192.svg';
       }
     } else if (track) {
       if (track.artwork && track.artwork.dataUrl) {
@@ -526,16 +533,16 @@ export function createStage(deps) {
           if (art && art.thumbnailDataUrl) {
             artworkImg.src = art.thumbnailDataUrl;
           } else {
-            artworkImg.src = './icons/icon-192.svg';
+            artworkImg.src = './public/icons/icon-192.svg';
           }
         }).catch(() => {
-          artworkImg.src = './icons/icon-192.svg';
+          artworkImg.src = './public/icons/icon-192.svg';
         });
       } else {
-        artworkImg.src = './icons/icon-192.svg';
+        artworkImg.src = './public/icons/icon-192.svg';
       }
     } else {
-      artworkImg.src = './icons/icon-192.svg';
+      artworkImg.src = './public/icons/icon-192.svg';
     }
   }
 
