@@ -1,11 +1,11 @@
 /**
- * LocalJam - Persistent Application Release Footer & Release Notes Modal Component
+ * LocalJam - Release Notes Modal Component
  */
 
 import { CURRENT_RELEASE } from "../../version.js";
 import { escapeHtml } from "../../utils/sanitize.js";
 
-export function createAppFooter() {
+export function createReleaseNotesModal() {
   const container = document.createElement("div");
   container.id = "release-notes-dialog-wrapper";
 
@@ -36,8 +36,8 @@ export function createAppFooter() {
                 .map(
                   (c) => `
                 <div class="commit-item">
-                  <code class="commit-hash">[${c.hash}]</code>
-                  <span class="commit-msg">${escapeHtml(c.message)}</span>
+                  <code class="commit-hash">[${escapeHtml(c.hash)}]</code>
+                  ${c.message ? `<span class="commit-msg">${escapeHtml(c.message)}</span>` : ""}
                 </div>
               `
                 )
@@ -115,3 +115,5 @@ export function createAppFooter() {
     updateVersion
   };
 }
+
+export const createAppFooter = createReleaseNotesModal;

@@ -7,26 +7,21 @@ import { fileURLToPath } from 'node:url';
 
 import { createServer } from '../server.js';
 import { escapeHtml, sanitizeUrl, isValidHttpUrl, sanitizeMimeType, sanitizeText } from '../src/utils/sanitize.js';
-import { createStationModal } from '../src/ui/components/station-modal.js';
-import { renderRadioView } from '../src/ui/views/radio-view.js';
-import { renderHomeView } from '../src/ui/views/home-view.js';
-import { renderPlaylistsView } from '../src/ui/views/playlists-view.js';
+import { createBrowseSheet } from '../src/ui/components/browse-sheet.js';
+import { createOverflowMenu } from '../src/ui/components/overflow-menu.js';
+import { createStage } from '../src/ui/stage.js';
+import { LayerController } from '../src/ui/layers.js';
 import { addCustomStation } from '../src/radio/stations.js';
 import { parseID3v2 } from '../src/metadata/id3v2.js';
 import { parseFLAC } from '../src/metadata/flac.js';
-import { Router } from '../src/ui/router.js';
+import { setupMockDom, teardownMockDom } from './helpers/mock-dom.js';
 import { db } from '../src/storage/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-// Global DB mocks for views in test environment
-db.getAllTracks = async () => [{ id: 'trk_1', title: 'Song 1', artist: 'Artist 1', album: 'Album 1', duration: 180, isMissing: 0 }];
-db.getAllAlbums = async () => [{ name: 'Album 1', artist: 'Artist 1' }];
-db.getAllArtists = async () => [{ name: 'Artist 1' }];
-db.getAllPlaylists = async () => [{ id: 'pl_1', name: 'Chill', trackIds: ['trk_1'] }];
-db.getRecentHistory = async () => [{ trackId: 'trk_1', timestamp: Date.now(), track: { title: 'Song 1' } }];
+// Default DB stubs for test environment
 db.getStations = async () => [];
 db.saveStations = async () => {};
 db.isFavorite = async () => false;
@@ -62,78 +57,6 @@ function sendRawRequest(port, method, rawPath, headers = {}) {
   });
 }
 
-// Setup minimal mock DOM for UI testing in Node.js
-if (typeof document === 'undefined') {
-  function createMockElement(tag = 'div') {
-    const el = {
-      tagName: tag.toUpperCase(),
-      className: '',
-      id: '',
-      style: {},
-      attributes: {},
-      _innerHTML: '',
-      children: [],
-      classList: {
-        classes: new Set(),
-        add(c) { this.classes.add(c); },
-        remove(c) { this.classes.delete(c); },
-        contains(c) { return this.classes.has(c); },
-        toggle(c) {
-          if (this.classes.has(c)) this.classes.delete(c);
-          else this.classes.add(c);
-        }
-      },
-      setAttribute(k, v) { this.attributes[k] = String(v); },
-      getAttribute(k) { return this.attributes[k] || null; },
-      removeAttribute(k) { delete this.attributes[k]; },
-      appendChild(child) { this.children.push(child); return child; },
-      addEventListener() {},
-      removeEventListener() {},
-      focus() {},
-      select() {},
-      querySelector(selector) {
-        if (selector === '#station-modal-title') return createMockElement('span');
-        if (selector === '#station-modal-subtitle') return createMockElement('span');
-        if (selector === '#station-modal-description') return createMockElement('span');
-        if (selector === '#station-modal-genre') return createMockElement('span');
-        if (selector === '#station-modal-country') return createMockElement('span');
-        if (selector === '#station-modal-bitrate') return createMockElement('span');
-        if (selector === '#station-modal-pipeline') return createMockElement('span');
-        if (selector === '#station-modal-favicon') return createMockElement('img');
-        if (selector === '#station-modal-url-input') return createMockElement('input');
-        if (selector === '#btn-copy-stream-url') return createMockElement('button');
-        if (selector === '#station-copy-feedback') return createMockElement('div');
-        if (selector === '#station-modal-homepage-link') return createMockElement('a');
-        if (selector === '#btn-modal-star') return createMockElement('button');
-        if (selector === '#btn-modal-eq') return createMockElement('button');
-        if (selector === '#btn-modal-viz') return createMockElement('button');
-        if (selector === '#btn-close-station-modal') return createMockElement('button');
-        if (selector === '#btn-done-station-modal') return createMockElement('button');
-        return createMockElement('div');
-      },
-      querySelectorAll() { return []; }
-    };
-
-    Object.defineProperty(el, 'innerHTML', {
-      get() { return this._innerHTML; },
-      set(val) { this._innerHTML = String(val); }
-    });
-
-    Object.defineProperty(el, 'outerHTML', {
-      get() { return `<${tag.toLowerCase()} class="${this.className}" id="${this.id}">${this._innerHTML}</${tag.toLowerCase()}>`; }
-    });
-
-    return el;
-  }
-
-  globalThis.document = {
-    activeElement: null,
-    createElement: (tag) => createMockElement(tag),
-    getElementById: (id) => createMockElement('div'),
-    querySelector: (sel) => createMockElement('div'),
-    querySelectorAll: (sel) => []
-  };
-}
 
 test('Security Audit Suite - SEC-01: Local Development Server Path Traversal Protection', async (t) => {
   const server = createServer(rootDir);
@@ -317,72 +240,108 @@ test('Security Audit Suite - SEC-05: Sanitization Utilities (src/utils/sanitize.
   });
 });
 
-test('Security Audit Suite - SEC-03: Station Modal DOM XSS Prevention', () => {
-  const maliciousStation = {
-    id: 'station-xss-test',
-    name: '<script>alert("xss")</script>',
-    genre: '"><img src=x onerror=alert(1)>',
-    codec: 'MP3\' onmouseover=\'alert(1)',
-    bitrate: 320,
-    homepageUrl: 'javascript:alert(document.cookie)',
-    streamUrl: 'https://example.com/stream'
-  };
-
-  const modal = createStationModal({
-    onToggleEq: () => {},
-    onToggleVisualizer: () => {},
-    onToggleFavorite: () => {}
-  });
-
-  assert.ok(modal.element, 'Modal element must be created');
-  const innerHtml = modal.element.innerHTML;
-
-  // Assert modal template does not contain unescaped script injections
-  assert.ok(!innerHtml.includes('<script>alert("xss")</script>'));
-  assert.ok(!innerHtml.includes('href="javascript:'));
-});
-
-test('Security Audit Suite - SEC-04 & SEC-06: Views CSP Compliance & No Inline Handlers', async () => {
-  // Test Radio View output
-  const radioEl = await renderRadioView();
-  const radioHtml = radioEl.innerHTML;
-  assert.ok(!radioHtml.includes('onerror='), 'renderRadioView must not contain inline onerror= attributes');
-  assert.ok(!radioHtml.includes('onclick='), 'renderRadioView must not contain inline onclick= attributes');
-
-  // Test Home View output
-  const homeEl = await renderHomeView();
-  const homeHtml = homeEl.innerHTML;
-  assert.ok(!homeHtml.includes('onclick='), 'renderHomeView must not contain inline onclick= attributes');
-  assert.ok(homeHtml.includes('href="#/songs"'), 'renderHomeView must use semantic href links');
-
-  // Test Playlists View output
-  const playlistsEl = await renderPlaylistsView();
-  const playlistsHtml = playlistsEl.innerHTML;
-  assert.ok(!playlistsHtml.includes('onclick='), 'renderPlaylistsView must not contain inline onclick= attributes');
-});
-
-test('Security Audit Suite - SEC-07: Router Error View HTML Sanitization', async () => {
-  const routerInstance = new Router();
-  const testContainer = document.createElement('div');
-  const prevWindow = globalThis.window;
+test('Security Audit Suite - SEC-03: Browse Sheet Station DOM XSS Prevention', async () => {
+  setupMockDom();
+  const prevGetStations = db.getStations;
   try {
-    globalThis.window = {
-      location: { hash: '#/malicious-route' },
-      addEventListener: () => {},
-      removeEventListener: () => {}
+    const maliciousStation = {
+      id: 'station-xss-test',
+      name: '<script>alert("xss")</script>',
+      genre: '"><img src=x onerror=alert(1)>',
+      codec: 'MP3\' onmouseover=\'alert(1)',
+      bitrate: 320,
+      homepageUrl: 'javascript:alert(document.cookie)',
+      streamUrl: 'https://example.com/stream'
     };
-    routerInstance.init(testContainer);
-    routerInstance.registerRoute('malicious-route', () => {
-      throw new Error('<script>alert("router-xss")</script><img src=x onerror=prompt(1)>');
+
+    db.getStations = async () => [maliciousStation];
+
+    const sheet = createBrowseSheet({
+      onPlayTrack: () => {},
+      onPlayStation: () => {},
+      onPickFolder: async () => {},
+      onToast: () => {}
     });
 
-    await routerInstance.handleRouteChange();
+    assert.ok(sheet.element, 'Browse sheet element must be created');
+    await sheet.onOpen({ tab: 'radio' });
+    const innerHtml = sheet.element.innerHTML;
 
-    assert.ok(testContainer.innerHTML.includes('&lt;script&gt;alert(&quot;router-xss&quot;)&lt;/script&gt;'));
-    assert.ok(testContainer.innerHTML.includes('&lt;img src=x onerror=prompt(1)&gt;'));
-    assert.ok(!testContainer.innerHTML.includes('<script>alert("router-xss")</script>'));
+    // Assert sheet template renders escaped entity text and does not contain unescaped script injections
+    assert.ok(innerHtml.includes('&lt;script&gt;alert("xss")&lt;/script&gt;'), 'Must render escaped station name');
+    assert.ok(!innerHtml.includes('<script>alert("xss")</script>'), 'Must not contain raw script tag');
+    assert.ok(!innerHtml.includes('href="javascript:'), 'Must not contain javascript: URLs');
   } finally {
-    globalThis.window = prevWindow;
+    db.getStations = prevGetStations;
+    teardownMockDom();
+  }
+});
+
+test('Security Audit Suite - SEC-04 & SEC-06: UI Components CSP Compliance & No Inline Handlers', async () => {
+  setupMockDom();
+  try {
+    // Test Browse Sheet output
+    const sheet = createBrowseSheet({
+      onPlayTrack: () => {},
+      onPlayStation: () => {},
+      onPickFolder: async () => {},
+      onToast: () => {}
+    });
+    await sheet.onOpen({ tab: 'library' });
+    const sheetHtml = sheet.element.innerHTML;
+    assert.ok(!sheetHtml.includes('onerror='), 'createBrowseSheet must not contain inline onerror= attributes');
+    assert.ok(!sheetHtml.includes('onclick='), 'createBrowseSheet must not contain inline onclick= attributes');
+
+    // Test Overflow Menu output
+    const overflow = createOverflowMenu({
+      onOpenEq: () => {},
+      onOpenNotes: () => {},
+      onPickFolder: async () => {},
+      onRescan: async () => {},
+      onReset: async () => {},
+      onToggleVisualizer: () => {},
+      onToast: () => {}
+    });
+    overflow.onOpen({ isRadio: false });
+    const overflowHtml = overflow.element.innerHTML;
+    assert.ok(!overflowHtml.includes('onerror='), 'createOverflowMenu must not contain inline onerror= attributes');
+    assert.ok(!overflowHtml.includes('onclick='), 'createOverflowMenu must not contain inline onclick= attributes');
+
+    // Test Stage output
+    const stage = createStage({
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => {},
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+    const stageHtml = stage.element.innerHTML;
+    assert.ok(!stageHtml.includes('onerror='), 'createStage must not contain inline onerror= attributes');
+    assert.ok(!stageHtml.includes('onclick='), 'createStage must not contain inline onclick= attributes');
+    stage.destroy();
+  } finally {
+    teardownMockDom();
+  }
+});
+
+test('Security Audit Suite - SEC-07: Layer Controller Error Boundary HTML Sanitization', async () => {
+  setupMockDom();
+  const layerController = new LayerController();
+  const testContainer = document.createElement('div');
+  try {
+    layerController.init(testContainer);
+    layerController.register('malicious-layer', () => {
+      throw new Error('<script>alert("layer-xss")</script><img src=x onerror=prompt(1)>');
+    });
+
+    layerController.open('malicious-layer');
+
+    assert.ok(testContainer.innerHTML.includes('&lt;script&gt;alert(&quot;layer-xss&quot;)&lt;/script&gt;'));
+    assert.ok(testContainer.innerHTML.includes('&lt;img src=x onerror=prompt(1)&gt;'));
+    assert.ok(!testContainer.innerHTML.includes('<script>alert("layer-xss")</script>'));
+  } finally {
+    layerController.destroy();
+    teardownMockDom();
   }
 });
 

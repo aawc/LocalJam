@@ -1,10 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createPlayerBar } from '../../src/ui/components/player-bar.js';
 import { createEqModal } from '../../src/ui/components/eq-modal.js';
-import { createVisualizerOverlay } from '../../src/ui/components/visualizer-overlay.js';
-import { createQueueDrawer } from '../../src/ui/components/queue-drawer.js';
-import { createStationModal } from '../../src/ui/components/station-modal.js';
 
 // Setup minimal mock DOM if running in headless node
 if (typeof document === 'undefined') {
@@ -87,28 +83,6 @@ function createMockElement(selector) {
   };
 }
 
-test('UI Components - createPlayerBar renders player bar structure and configures player view navigation', () => {
-  let openedStation = null;
-  const bar = createPlayerBar({
-    onOpenStationDetails: (st) => { openedStation = st; }
-  });
-  assert.equal(bar.className, 'player-bar');
-  assert.equal(bar.getAttribute('role'), 'region');
-  assert.equal(bar.getAttribute('aria-label'), 'Audio Player Controls');
-  assert.ok(bar.innerHTML.includes('player-controls'));
-  assert.ok(bar.innerHTML.includes('player-progress-bar'));
-  assert.ok(bar.innerHTML.includes('player-live-bar'));
-  assert.ok(bar.innerHTML.includes('LIVE'));
-
-  const art = bar.querySelector('#player-art-img');
-  assert.ok(art);
-  assert.equal(typeof art.onclick, 'function');
-
-  const info = bar.querySelector('.player-track-info');
-  assert.ok(info);
-  assert.equal(typeof info.onclick, 'function');
-});
-
 test('UI Components - createEqModal renders 10-band equalizer modal', () => {
   const eq = createEqModal();
   assert.equal(eq.element.id, 'eq-modal');
@@ -118,40 +92,3 @@ test('UI Components - createEqModal renders 10-band equalizer modal', () => {
   assert.equal(typeof eq.toggle, 'function');
   assert.ok(eq.element.innerHTML.includes('Graphic Equalizer'));
 });
-
-test('UI Components - createVisualizerOverlay renders visualizer overlay', () => {
-  const viz = createVisualizerOverlay();
-  assert.equal(viz.element.id, 'visualizer-overlay');
-  assert.equal(typeof viz.open, 'function');
-  assert.equal(typeof viz.close, 'function');
-  assert.equal(typeof viz.toggle, 'function');
-  assert.equal(typeof viz.toggleFullscreen, 'function');
-  assert.equal(typeof viz.isFullscreenActive, 'function');
-  assert.ok(viz.element.innerHTML.includes('visualizer-canvas'));
-  assert.ok(viz.element.innerHTML.includes('btn-toggle-visualizer-fullscreen'));
-  assert.ok(viz.element.innerHTML.includes('Enter Fullscreen'));
-});
-
-test('UI Components - createQueueDrawer renders queue drawer component', () => {
-  const queue = createQueueDrawer();
-  assert.equal(queue.element.id, 'queue-drawer');
-  assert.equal(typeof queue.open, 'function');
-  assert.equal(typeof queue.close, 'function');
-  assert.equal(typeof queue.toggle, 'function');
-  assert.ok(queue.element.innerHTML.includes('Play Queue'));
-});
-
-test('UI Components - createStationModal renders mobile bottom-sheet-handle and modal controls', () => {
-  const modal = createStationModal({
-    onToggleEq: () => {},
-    onToggleViz: () => {}
-  });
-  assert.equal(modal.element.id, 'station-modal-overlay');
-  assert.ok(modal.element.innerHTML.includes('bottom-sheet-handle'));
-  assert.ok(modal.element.innerHTML.includes('station-modal-card'));
-  assert.ok(modal.element.innerHTML.includes('btn-close-station-modal'));
-  assert.ok(modal.element.innerHTML.includes('btn-modal-star'));
-  assert.equal(typeof modal.open, 'function');
-  assert.equal(typeof modal.close, 'function');
-});
-

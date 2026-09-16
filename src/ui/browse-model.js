@@ -228,7 +228,7 @@ export function buildLibraryRows({
 
 /**
  * Filters and sorts radio stations based on genre, search query, and sort order.
- * Ports the proven predicate from src/ui/views/radio-view.js.
+ * Predicate matching radio station name, genre, category, description, and country.
  * @param {Array<object>} stations
  * @param {{
  *   genre?: string,

@@ -14,7 +14,7 @@ import { createToastHost, showToast } from './ui/components/toast.js';
 import { pickFolder, rescan } from './ui/library-source.js';
 import { loadStations, CURATED_STATIONS, toggleFavoriteStation } from './radio/stations.js';
 import { createEqModal } from './ui/components/eq-modal.js';
-import { createAppFooter } from './ui/components/app-footer.js';
+import { createReleaseNotesModal } from './ui/components/release-notes-modal.js';
 import { createUpdateBanner, initUpdateChecker } from './ui/components/update-banner.js';
 import { APP_VERSION } from './version.js';
 
@@ -300,7 +300,7 @@ export async function initApp() {
       };
     });
 
-    const releaseNotesModal = createAppFooter();
+    const releaseNotesModal = createReleaseNotesModal();
     if (typeof window !== 'undefined') {
       window.localjamReleaseNotesModal = releaseNotesModal;
     }

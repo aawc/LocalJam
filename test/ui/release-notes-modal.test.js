@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createAppFooter } from "../../src/ui/components/app-footer.js";
+import { createReleaseNotesModal } from "../../src/ui/components/release-notes-modal.js";
 import { CURRENT_RELEASE } from "../../src/version.js";
 
-test("App Footer & Release Notes Modal Suite", async (t) => {
+test("Release Notes Modal Suite", async (t) => {
   // Setup minimal DOM mock if in Node
   const prevDoc = globalThis.document;
   try {
@@ -39,34 +39,34 @@ test("App Footer & Release Notes Modal Suite", async (t) => {
       }
     };
 
-    const footerComponent = createAppFooter();
-    assert.ok(footerComponent.element);
-    assert.equal(typeof footerComponent.open, "function");
-    assert.equal(typeof footerComponent.close, "function");
-    assert.equal(typeof footerComponent.updateVersion, "function");
+    const notesComponent = createReleaseNotesModal();
+    assert.ok(notesComponent.element);
+    assert.equal(typeof notesComponent.open, "function");
+    assert.equal(typeof notesComponent.close, "function");
+    assert.equal(typeof notesComponent.updateVersion, "function");
 
     // Verify modal overlay presence
-    assert.ok(footerComponent.element.innerHTML.includes("release-notes-modal"));
-    assert.ok(!footerComponent.element.innerHTML.includes("[LOCAL-FIRST]"), "Modal wrapper must not contain [LOCAL-FIRST]");
-    assert.ok(!footerComponent.element.innerHTML.includes("Zero tracking"), "Modal wrapper must not contain Zero tracking");
+    assert.ok(notesComponent.element.innerHTML.includes("release-notes-modal"));
+    assert.ok(!notesComponent.element.innerHTML.includes("[LOCAL-FIRST]"), "Modal wrapper must not contain [LOCAL-FIRST]");
+    assert.ok(!notesComponent.element.innerHTML.includes("Zero tracking"), "Modal wrapper must not contain Zero tracking");
 
-    footerComponent.open();
+    notesComponent.open();
     assert.equal(modalMock.style.display, "flex");
 
-    footerComponent.close();
+    notesComponent.close();
     assert.equal(modalMock.style.display, "none");
 
     // Test updateVersion dynamic synchronization
     const modalSubtitleMock = { textContent: "" };
     const commitsListMock = { innerHTML: "" };
 
-    footerComponent.element.querySelector = (sel) => {
+    notesComponent.element.querySelector = (sel) => {
       if (sel === ".modal-subtitle") return modalSubtitleMock;
       if (sel === ".release-commits-list") return commitsListMock;
       return null;
     };
 
-    footerComponent.updateVersion({
+    notesComponent.updateVersion({
       version: "v2026.09.008",
       releaseDate: "2026-09-04",
       commits: ["0fbf4ff", "7df8d9d"]
