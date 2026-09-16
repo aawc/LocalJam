@@ -77,3 +77,22 @@ test('PWA - index.html contains correct relative links and meta tags for GitHub 
   assert.ok(html.includes('<meta name="theme-color" content="#0b0f17" />'), 'Theme color meta');
   assert.ok(html.includes('<script type="module" src="./src/main.js"></script>'), 'Relative main.js module script');
 });
+
+test('PWA - v2/index.html exists and redirects to root', () => {
+  const v2Path = path.join(ROOT_DIR, 'v2', 'index.html');
+  assert.ok(fs.existsSync(v2Path), 'v2/index.html must exist on disk');
+
+  const html = fs.readFileSync(v2Path, 'utf8');
+  assert.ok(html.includes('http-equiv="refresh"'), 'Must include meta http-equiv refresh');
+  assert.ok(html.includes('window.location.replace'), 'Must include client-side replace script');
+});
+
+test('PWA - 404.html exists and handles fallback routing to root', () => {
+  const notFoundPath = path.join(ROOT_DIR, '404.html');
+  assert.ok(fs.existsSync(notFoundPath), '404.html must exist on disk');
+
+  const html = fs.readFileSync(notFoundPath, 'utf8');
+  assert.ok(html.includes('http-equiv="refresh"'), 'Must include meta http-equiv refresh');
+  assert.ok(html.includes('window.location.replace'), 'Must include fallback routing script');
+});
+
