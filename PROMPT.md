@@ -204,7 +204,7 @@ LocalJam implements a hybrid Web Audio API and HTMLAudioElement playback engine:
    - Oscilloscope Waveform
    - Circular Frequency Nebula
    - Audio Starfield
-4. **Internet Radio & Live Station Details Modal:** Curated HTTPS radio streams (Radio Paradise Main, Mellow, Rock, World; SomaFM Groove Salad, DEF CON, Lush, Space Station, Deep Space One, Synphaera, Sonic Universe, Suburbs of Goa, Illinois Street Lounge; KEXP Seattle; BBC Radio 6; Classical KUSC; Classical KING FM; Jazz24; WNYC 93.9 FM; BBC World Service). Clicking active playing radio station launches comprehensive metadata inspection modal with stream details, direct links, and audio engine status. If an external stream blocks Web Audio CORS, audio falls back to direct `HTMLAudioElement` speaker output without crashing the player.
+4. **Internet Radio & Live Stream Telemetry:** Curated HTTPS radio streams (Radio Paradise Main, Mellow, Rock, World; SomaFM Groove Salad, DEF CON, Lush, Space Station, Deep Space One, Synphaera, Sonic Universe, Suburbs of Goa, Illinois Street Lounge; KEXP Seattle; BBC Radio 6; Classical KUSC; Classical KING FM; Jazz24; WNYC 93.9 FM; BBC World Service). Displays live metadata (station title, genre, country, bitrate) and stream telemetry (`[READY]`, `[CONNECTING]`, `[BUFFERING]`, `[LIVE]`, `[OFFLINE]`) directly on the Stage viewport. If an external stream blocks Web Audio CORS, audio falls back to direct `HTMLAudioElement` speaker output without crashing the player.
 5. **Media Session API Integration:** Sets lockscreen metadata (title, artist, album, multi-size artwork icons) and handles action events (`play`, `pause`, `previoustrack`, `nexttrack`, `seekbackward`, `seekforward`, `seekto`). Synchronizes position state via `navigator.mediaSession.setPositionState()`.
 
 ---
@@ -226,17 +226,21 @@ LocalJam enforces complete red-green color blindness accessibility (Protanopia, 
 
 ### Global Keyboard Navigation Matrix
 - `Space`: Play / Pause (guarded when typing in search or text inputs)
-- `ArrowRight` / `ArrowLeft`: Seek forward / backward 5 seconds
-- `Shift + ArrowRight` / `Shift + ArrowLeft`: Next / Previous track
-- `ArrowUp` / `ArrowDown`: Volume +5% / -5%
-- `M`: Toggle Mute
-- `S`: Toggle Shuffle
-- `R`: Cycle Repeat Mode (`off` -> `all` -> `one`)
-- `Q`: Toggle Playback Queue Drawer
-- `E`: Toggle Equalizer Modal
-- `V`: Toggle Audio Visualizer Mode
-- `/` or `Ctrl+K` / `Cmd+K`: Focus Search Input
-- `Escape`: Close Modals / Overlays / Unfocus Search
+- `ArrowLeft` / `ArrowRight`: Seek backward / forward 5 seconds (local tracks only)
+- `Shift + ArrowLeft` / `Shift + ArrowRight`: Previous / Next track
+- `ArrowUp` / `ArrowDown`: Volume +5% / -5% with `[VOLUME XX%]` toast
+- `M`: Toggle Mute with `[MUTED]` toast
+- `X`: Switch audio source (Local Files ⇋ Internet Radio)
+- `S`: Toggle Shuffle (tracks only) with `[SHUFFLE: ON/OFF]` toast
+- `R`: Cycle Repeat Mode (`off` -> `all` -> `one`, tracks only) with toast
+- `F`: Toggle Star / Favorite with `[STARRED]` toast
+- `E`: Toggle 10-Band Equalizer Modal
+- `V`: Cycle Canvas Audio Visualizer Mode (Off -> Bars -> Wave -> Nebula -> Starfield)
+- `L`: Toggle L1 Browse Sheet (Local Library tab)
+- `Shift + L`: Open L1 Browse Sheet (Internet Radio tab)
+- `/`: Open L1 Browse Sheet with focus in search filter input
+- `.`: Open L2 Overflow Menu (`•••`)
+- `Escape`: Dismiss active input / Close topmost layer
 
 ---
 
@@ -245,8 +249,8 @@ LocalJam enforces complete red-green color blindness accessibility (Protanopia, 
 LocalJam is engineered to run seamlessly as an offline PWA on any subpath or custom domain:
 
 1. **Relative Path Resolution:** All asset links in `index.html`, CSS, and JavaScript use relative paths (`./`) rather than root-relative paths (`/`), ensuring instant functionality under `https://<username>.github.io/LocalJam/`.
-2. **Hash-Based Client Router:** Uses `/#/home`, `/#/songs`, `/#/albums`, `/#/artists`, `/#/genres`, `/#/playlists`, `/#/favorites`, `/#/history`, `/#/radio`, `/#/settings`. Hash routing prevents 404 errors on GitHub Pages without requiring server rewrite configuration.
-3. **Standardized Release Scheme & Dynamic Semantic Tagging (`v$yyyy.$mm.$nnn`):** Automated GitHub Actions workflow (`.github/workflows/release.yml`) dynamically generating timestamped semantic tags (`v$yyyy.$mm.$nnn`) using bash date commands and zero-padded GitHub run numbers (`$(printf "%03d" ${{ github.run_number }})`), pushing the tag back to the repository, and building release zip packages. Persistent footer component with interactive release notes modal detailing included commit hashes.
+2. **Hash-Based Layer Synchronization:** Synchronizes `window.location.hash` with the L1 Browse Sheet (`#/browse?tab=library` or `#/browse?tab=radio`), resetting to `#/` when closed. Prevents 404 errors on GitHub Pages without requiring server rewrite configuration.
+3. **Standardized Release Scheme & Dynamic Semantic Tagging (`v$yyyy.$mm.$nnn`):** Automated GitHub Actions workflow (`.github/workflows/release.yml`) dynamically generating timestamped semantic tags (`v$yyyy.$mm.$nnn`) using bash date commands and zero-padded GitHub run numbers (`$(printf "%03d" ${{ github.run_number }})`), pushing the tag back to the repository, and building release zip packages. Interactive release notes modal (`src/ui/components/release-notes-modal.js`) detailing included commit hashes.
 4. **Cache-First App Shell Service Worker & Update Detection:**
    - Caches HTML, CSS, JavaScript modules, fonts, and SVG icons.
    - Network-First strategy for `version.json` allowing immediate background release detection.

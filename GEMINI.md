@@ -44,6 +44,14 @@
    - GitHub Actions workflow (`.github/workflows/release.yml`) dynamically generates timestamped semantic tags (`v$yyyy.$mm.$nnn`) using bash date commands and zero-padded GitHub run numbers (`$(printf "%03d" ${{ github.run_number }})`).
    - Automatically pushes release tags to repository (`git push origin "${TAG_NAME}"`) and bundles standalone offline zip distributions.
 
+8. **One-Screen Minimalist Player & Layer Architecture:**
+   - Unified 6-row Stage (`src/ui/stage.js`) without persistent sidebars or footers: Status Chips, Artwork/Visualizer Canvas, Track & Station Metadata, Timeline Scrubber / Stream Telemetry, Transport Cluster, and Dual-Source Handle Bar (`[ Local ] · [ Radio ]`).
+   - L1 Browse Sheet (`src/ui/components/browse-sheet.js`) for library and radio queries with URL hash sync (`#/browse?tab=...`).
+   - L2 Overflow Menu (`src/ui/components/overflow-menu.js`) for auxiliary controls with 8 verified stores wiped on reset (`RESET_STORE_NAMES`).
+   - Layer Stack Coordinator (`src/ui/layers.js`) managing LIFO dialog stack with focus trapping and error boundary.
+   - Pure pointer gesture classifier (`src/ui/gestures.js`) with pointer capture, long-press timers, and swipe heuristics.
+   - Global keyboard navigation matrix (`src/ui/keyboard.js`) mapped to exact §5.2 controls.
+
 ---
 
 ## Public Repository & Sanitization Standards

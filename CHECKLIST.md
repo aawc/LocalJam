@@ -178,6 +178,23 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Description:* Remove duplicative Now Playing hero banner from Radio View in favor of the persistent mini player bar. Create dedicated Full Player screen (`#/player`) with metadata, transport controls, timeline, volume, and technical badges. Embed real-time Web Audio API visualizer with accessible ON/OFF toggle switch (OFF by default) and mode selectors (`bars`, `wave`, `nebula`, `starfield`), automatically hiding the mini-player bar when on `#/player`. Expand curated radio catalog with 11 verified HTTPS stations across College & University (KZSU, KOHL, KALX, KSCU, WPRB, WMBR), Rock (The Current 89.3, SomaFM Left Coast 70s), Pop (Dance Wave!), and Lo-Fi (Chillsky, Lofi Radio).
   - *Associated Commits:* `9eb2574`
 
+- [x] **FR 18 / Issue 25: One-Screen Minimalist Player Redesign (v2 Architecture)** `[DONE]`
+  - *Description:* Implement the approved one-screen minimalist player redesign specification (`docs/design/2026-09-15-minimalist-player-redesign.md`):
+    - Update GitHub Actions release framework to support automated test, release, and deploy on `v2`.
+    - Pure pointer gesture classifier (`src/ui/gestures.js`) with pointer capture, long-press timer, and horizontal swipe classification.
+    - Pure browse query model (`src/ui/browse-model.js`) for local library and internet radio streams.
+    - Transient toast notification host (`src/ui/components/toast.js`) with `aria-live="polite"` support.
+    - L1 Browse Sheet (`src/ui/components/browse-sheet.js`) with tabs, search filter, sort controls, and category chips.
+    - L2 Overflow Menu (`src/ui/components/overflow-menu.js`) with double-coded labels and 8-store reset confirmation.
+    - Library source abstraction (`src/ui/library-source.js`) separating folder picker and background rescan.
+    - 6-Row Stage Viewport (`src/ui/stage.js`) with status chips, artwork/canvas visualizer, metadata, timeline/stream telemetry, transport controls, and Dual-Source Handle Bar (`[ Local ] · [ Radio ]`).
+    - Layer Stack Coordinator (`src/ui/layers.js`) with LIFO dialog stack, backdrop dismiss, Escape dismiss, URL hash synchronization (`#/browse?tab=...`), and error boundary.
+    - Keyboard Manager (`src/ui/keyboard.js`) mapped to §5.2 shortcut matrix with text input suppression.
+    - Minimalist shell container in `index.html` with cold-start hydration and debounced persistence in `src/main.js`.
+    - Dead code elimination: deleted obsolete router (`src/ui/router.js`), 10 legacy views (`src/ui/views/*`), obsolete components (`player-bar.js`, `queue-drawer.js`, `station-modal.js`, `visualizer-overlay.js`), and obsolete tests.
+    - Updated `sw.js` app shell asset manifest to 37 live assets and updated security tests.
+  - *Associated Commits:* `5180f14`, `69c037f`, `008f6bc`, `30b1dd0`, `eef727b`, `1ce2691`, `8fd7bbb`, `c1b8854`, `87ccf37`, `4125908`, `e1577de`, `678a2dc`
+
 
 
 

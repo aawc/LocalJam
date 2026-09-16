@@ -21,14 +21,16 @@ LocalJam is a privacy-first, local-first music and media player built as a Progr
   - Real-time canvas audio visualizers (Spectrum Bars, Oscilloscope Waveform, Circular Nebula, Starfield).
   - Media Session API integration with lockscreen album art and timeline synchronization.
   - Seamless memory management with automatic `URL.revokeObjectURL()` lifecycle.
-- **Dedicated Now Playing Player Screen & Embedded Visualizer:** Full-screen detailed player view (`/#/player`) with large artwork, live stream and track telemetry, timeline scrubber, comprehensive transport controls, and an embedded real-time audio visualizer with on/off toggle (off by default) and live mode switching. Automatically hides the bottom mini-player while viewing.
-- **Internet Radio & Live Stream Directory:** 45+ curated high-fidelity HTTPS internet radio stations spanning **College & University** (Stanford KZSU, Ohlone KOHL, UC Berkeley KALX, Santa Clara KSCU, Princeton WPRB, MIT WMBR), **Rock** (The Current MPR, SomaFM Left Coast 70s, Indie Pop), **Pop** (Dance Wave!, PopTron), **Lo-Fi** (Chillsky, Lofi Radio), Ambient, Classical, Jazz, Electronic, Kids & Family, News & Talk, Folk & Roots, and World with circular station navigation, stream telemetry (`[LIVE]`, `[BUFFERING]`, `[CONNECTING]`, `[OFFLINE]`), search filtering, and slide-up station details sheet.
-- **Mobile-First Responsive Usability:** Compact 60px mini-player bar, streamlined bottom navigation (saving 40px vertical screen space), slide-up bottom sheet with swipe handle for station details on mobile viewports (<=768px), and responsive table columns (`.col-num`, `.col-album`) hiding on small screens (<=640px).
-- **Red-Green Color Blindness Accessible:** Designed with dual-coded status indicators (color + distinct SVG icons + text labels), high-contrast dark theme, and visible focus rings.
-- **Standardized Release Management & Semantic Tagging:** Dynamic timestamped semantic tagging (`v$yyyy.$mm.$nnn`), automated repository tag push, persistent application footer displaying active release badge, and integrated release notes modal listing commit history and highlights.
+- **Unified One-Screen Stage Viewport:** A distraction-free 6-row player canvas (Status Chips, Artwork/Visualizer Canvas, Track & Station Metadata, Timeline Scrubber / Live Telemetry, Transport Cluster, and Dual-Source Handle Bar) with zero permanent sidebar or footer chrome.
+- **Dual-Source Audio Architecture:** Seamless instant switching between your local music library and 45+ curated internet radio streams via the Dual-Source Handle Bar (`[ Local ] · [ Radio ]`) or keyboard shortcut (`X`).
+- **Layered Sheet & Modal Hierarchy (L1 / L2):**
+  - **L1 Browse Sheet (`src/ui/components/browse-sheet.js`):** Unified slide-up browser for local songs, albums, artists, playlists, favorites, and live radio streams with instant filter search.
+  - **L2 Overflow Menu (`src/ui/components/overflow-menu.js`):** Auxiliary controls (Star, Shuffle, Repeat, Volume, Equalizer, Visualizer, Folder Import, Rescan, Release Notes, and confirmed Library Reset).
+- **Tactile Gesture & Keyboard Navigation:** Swipe horizontally across the source bar to switch audio sources, tap artwork to cycle visualizers, double-tap to star/favorite, long-press to open overflow menu, and use wheel or middle-click anywhere on stage for volume and mute.
+- **Red-Green Color Blindness Accessible:** Designed with dual-coded status indicators (explicit text labels `[PASS]`, `[FAIL]`, `[LIVE]`, `[READY]`, `[STARRED]`, `[DESTRUCTIVE]` + distinct geometric symbols), high-contrast focus rings, and accessible color palettes.
+- **Standardized Release Management & Semantic Tagging:** Dynamic timestamped semantic tagging (`v$yyyy.$mm.$nnn`), automated repository tag push, and integrated release notes modal listing commit history and highlights.
 - **Automatic Update Detection & Refresh Toast:** Background update checker with Service Worker `updatefound` listeners and `version.json` polling providing one-click seamless application refresh.
-- **Global Keyboard Controls:** Complete hotkey matrix for playback, volume, seeking, queue, equalizer, visualizer, and search.
-- **100% Offline PWA & GitHub Pages Ready:** Cache-first Service Worker with hash-based client routing (`/#/`) and relative asset paths for effortless deployment to GitHub Pages subpaths.
+- **100% Offline PWA & GitHub Pages Ready:** Cache-first Service Worker with relative asset paths for effortless deployment to GitHub Pages subpaths.
 
 ---
 
@@ -56,6 +58,26 @@ User Filesystem (Authoritative Source)
          │
          ▼
 [Hybrid Audio Engine] ──> Web Audio API Graph (EQ, Analyser) ──> Speakers
+```
+
+### UI Layer & Stage Hierarchy
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                      Layer Root (L1 / L2)                       │
+│  ├── L1: Browse Sheet (#/browse?tab=library|radio)              │
+│  ├── L2: Overflow Menu (•••)                                    │
+│  ├── L2: 10-Band Equalizer Modal                                │
+│  └── L2: Release Notes Dialog                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                     Stage Root (L0 Viewport)                    │
+│  ├── Row 1: Status Chips [★][SHUFFLE][EQ] + [•••] Menu Trigger  │
+│  ├── Row 2: 280x280 Artwork / Real-Time Canvas Visualizer       │
+│  ├── Row 3: Track Title / Station Metadata                      │
+│  ├── Row 4: Timeline Scrubber / Live Stream Telemetry           │
+│  ├── Row 5: Transport Cluster (⏮   ▶ / ⏸   ⏭)                   │
+│  └── Row 6: Dual-Source Handle Bar [ Local ] · [ Radio ]        │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -97,17 +119,21 @@ node --test
 | Key | Action |
 | :--- | :--- |
 | `Space` | Play / Pause |
-| `ArrowRight` / `ArrowLeft` | Seek forward / backward 5s |
-| `Shift + ArrowRight` / `Shift + ArrowLeft` | Next track / Previous track |
-| `ArrowUp` / `ArrowDown` | Volume +5% / -5% |
-| `M` | Toggle Mute |
-| `S` | Toggle Shuffle |
-| `R` | Cycle Repeat (`off` -> `all` -> `one`) |
-| `Q` | Toggle Queue Drawer |
-| `E` | Toggle 10-Band Equalizer |
-| `V` | Toggle Full-Screen Visualizer |
-| `/` or `Ctrl+K` | Focus Search Bar |
-| `Escape` | Close Overlays / Modals |
+| `ArrowLeft` / `ArrowRight` | Seek backward / forward 5s (local tracks) |
+| `Shift + ArrowLeft` / `Shift + ArrowRight` | Previous / Next track |
+| `ArrowUp` / `ArrowDown` | Volume +5% / -5% with `[VOLUME XX%]` toast |
+| `M` | Toggle Mute with `[MUTED]` toast |
+| `X` | Switch audio source (Local Files ⇋ Internet Radio) |
+| `S` | Toggle Shuffle (tracks only) with `[SHUFFLE: ON/OFF]` toast |
+| `R` | Cycle Repeat (`off` -> `all` -> `one`, tracks only) |
+| `F` | Toggle Star / Favorite with `[STARRED]` toast |
+| `E` | Toggle 10-Band Equalizer modal |
+| `V` | Cycle Canvas Visualizer mode (Off -> Bars -> Wave -> Nebula -> Starfield) |
+| `L` | Toggle Browse Sheet (Local Library tab) |
+| `Shift + L` | Open Browse Sheet (Internet Radio tab) |
+| `/` | Open Browse Sheet with focus in search |
+| `.` | Open Overflow Menu (`•••`) |
+| `Escape` | Dismiss active input / Close topmost layer |
 
 ---
 
