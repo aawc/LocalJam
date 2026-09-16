@@ -504,7 +504,7 @@ suppressed while focus is in an `INPUT`, `TEXTAREA`, or `contentEditable` elemen
 | `src/ui/layers.js` | `LayerController`, `layers` | Layer stack, hash sync (`#/browse?tab=library` / `#/browse?tab=radio`), sanitized error boundary |
 | `src/ui/components/browse-sheet.js` | `createBrowseSheet(deps)` | L1 Browse Sheet with `Library`/`Radio` tabs, `[+ Folder]` button, chips, and filter input |
 | `src/ui/components/overflow-menu.js` | `createOverflowMenu(deps)`, `RESET_STORE_NAMES` | L2 Overflow Menu with explicit bracketed state labels and corrected reset store list |
-| `src/ui/components/toast.js` | `createToastHost`, `showToast` | Transient 1.6 s feedback + ARIA live region announcement |
+| `src/ui/components/toast.js` | `createToastHost`, `showToast`, `TOAST_DURATION_MS` | Transient 1.6 s visual feedback (`aria-hidden="true"`, `destroy()`) + single-announcer `#aria-live-region` synchronization |
 
 ### 6.2 Files to Delete
 
@@ -743,11 +743,13 @@ export function createOverflowMenu({
 ### 7.8 `src/ui/components/toast.js`
 
 ```js
-export function createToastHost() {} // returns { element, show(message) }
+export function createToastHost() {} // returns { element, show(message), destroy() }
 export function showToast(message) {} // module-level convenience; writes to #aria-live-region
 ```
 
-Toasts: 1.6 s duration, bottom-centre above transport, `role="status"`, explicit bracketed status
+Toasts: 1.6 s duration, bottom-centre above transport. The visual host is `aria-hidden="true"`;
+`#aria-live-region` is the single announcer, written from inside `show()` so that a direct
+`host.show()` announces exactly once without double-speaking. Explicit bracketed status
 labels (`[STARRED] Midnight City`, `[SHUFFLE ON]`, `[VOLUME 65%]`, `[SOURCE: RADIO]`).
 
 ### 7.9 Cold-Start Hydration & Source Toggle (`src/main.js`)
