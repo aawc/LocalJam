@@ -109,6 +109,14 @@ export class MockElement {
     this._value = String(val ?? '');
   }
 
+  get type() {
+    return this.getAttribute('type') || '';
+  }
+
+  set type(val) {
+    this.setAttribute('type', val);
+  }
+
   get disabled() {
     return this._disabled;
   }
@@ -560,7 +568,8 @@ export function setupMockDom(options = {}) {
     CustomEvent: globalThis.CustomEvent,
     KeyboardEvent: globalThis.KeyboardEvent,
     MouseEvent: globalThis.MouseEvent,
-    PointerEvent: globalThis.PointerEvent
+    PointerEvent: globalThis.PointerEvent,
+    WheelEvent: globalThis.WheelEvent
   };
 
   const body = new MockElement('body');
@@ -645,6 +654,16 @@ export function setupMockDom(options = {}) {
     }
   };
 
+  globalThis.WheelEvent = class WheelEvent extends globalThis.MouseEvent {
+    constructor(type, options = {}) {
+      super(type, options);
+      this.deltaX = options.deltaX || 0;
+      this.deltaY = options.deltaY || 0;
+      this.deltaZ = options.deltaZ || 0;
+      this.deltaMode = options.deltaMode || 0;
+    }
+  };
+
   return { document: doc, window: win, body };
 }
 
@@ -658,6 +677,7 @@ export function teardownMockDom() {
     globalThis.KeyboardEvent = savedGlobals.KeyboardEvent;
     globalThis.MouseEvent = savedGlobals.MouseEvent;
     globalThis.PointerEvent = savedGlobals.PointerEvent;
+    globalThis.WheelEvent = savedGlobals.WheelEvent;
     savedGlobals = null;
   }
 }
