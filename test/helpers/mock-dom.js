@@ -577,6 +577,9 @@ export function setupMockDom(options = {}) {
   liveRegion.id = 'aria-live-region';
   body.appendChild(liveRegion);
 
+  const docListeners = new Map();
+  const winListeners = new Map();
+
   const doc = {
     body,
     activeElement: null,
@@ -587,8 +590,22 @@ export function setupMockDom(options = {}) {
     },
     querySelector: (sel) => body.querySelector(sel),
     querySelectorAll: (sel) => body.querySelectorAll(sel),
-    addEventListener: () => {},
-    removeEventListener: () => {}
+    addEventListener: (type, handler) => {
+      if (!docListeners.has(type)) docListeners.set(type, new Set());
+      docListeners.get(type).add(handler);
+    },
+    removeEventListener: (type, handler) => {
+      if (docListeners.has(type)) docListeners.get(type).delete(handler);
+    },
+    dispatchEvent: (event) => {
+      if (!event) return true;
+      event.target = event.target || doc;
+      const handlers = docListeners.get(event.type);
+      if (handlers) {
+        for (const h of Array.from(handlers)) h.call(doc, event);
+      }
+      return !event.defaultPrevented;
+    }
   };
 
   const win = {
@@ -598,9 +615,22 @@ export function setupMockDom(options = {}) {
       href: 'http://localhost:3000/#/'
     },
     confirm: options.confirm || (() => true),
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => true
+    addEventListener: (type, handler) => {
+      if (!winListeners.has(type)) winListeners.set(type, new Set());
+      winListeners.get(type).add(handler);
+    },
+    removeEventListener: (type, handler) => {
+      if (winListeners.has(type)) winListeners.get(type).delete(handler);
+    },
+    dispatchEvent: (event) => {
+      if (!event) return true;
+      event.target = event.target || win;
+      const handlers = winListeners.get(event.type);
+      if (handlers) {
+        for (const h of Array.from(handlers)) h.call(win, event);
+      }
+      return !event.defaultPrevented;
+    }
   };
 
   globalThis.document = doc;
