@@ -177,8 +177,9 @@ test('Internet Radio Stations Suite', async (t) => {
     const suburbs = CURATED_STATIONS.find((s) => s.id === 'soma_suburbs');
     assert.equal(suburbs.streamUrl, 'https://ice1.somafm.com/suburbsofgoa-128-mp3');
 
-    const bbc6 = CURATED_STATIONS.find((s) => s.id === 'bbc_radio_6');
-    assert.equal(bbc6.streamUrl, 'https://stream.live.vc.bbcmedia.co.uk/bbc_6music');
+    const nts = CURATED_STATIONS.find((s) => s.id === 'nts_radio_1');
+    assert.equal(nts.streamUrl, 'https://stream-relay-geo.ntslive.net/stream');
+    assert.equal(getStationCategory(nts), 'Rock', 'NTS Radio 1 must be classified under Rock');
   });
 
   await t.test('getStationFallbackArtwork produces valid, accessible SVG data URIs for each genre', () => {

@@ -124,15 +124,15 @@ export const CURATED_STATIONS = [
     isFavorite: false
   },
   {
-    id: 'bbc_radio_6',
-    name: 'BBC Radio 6 Music',
-    description: 'Alternative music, indie rock, electronic, and rare grooves.',
-    streamUrl: 'https://stream.live.vc.bbcmedia.co.uk/bbc_6music',
-    homepageUrl: 'https://www.bbc.co.uk/6music',
+    id: 'nts_radio_1',
+    name: 'NTS Radio 1 (London)',
+    description: 'Independent London-based underground music, alternative, eclectic, and rare grooves.',
+    streamUrl: 'https://stream-relay-geo.ntslive.net/stream',
+    homepageUrl: 'https://www.nts.live',
     genre: 'Alternative / Indie',
     country: 'UK',
     bitrate: '128 kbps',
-    favicon: 'https://www.bbc.co.uk/favicon.ico',
+    favicon: 'https://www.nts.live/favicon.ico',
     isCustom: false,
     isFavorite: false
   },
@@ -797,7 +797,7 @@ export function getStationCategory(station) {
   if (g.includes('pop') || g.includes('dance wave') || name.includes('poptron') || name.includes('dance wave')) {
     return 'Pop';
   }
-  if (g.includes('rock') || g.includes('indie') || g.includes('alternative') || g.includes('eclectic') || g.includes('70s') || name.includes('kexp') || name.includes('the current') || name.includes('bbc radio 6') || name.includes('left coast') || name.includes('indie pop')) {
+  if (g.includes('rock') || g.includes('indie') || g.includes('alternative') || g.includes('eclectic') || g.includes('70s') || name.includes('kexp') || name.includes('the current') || name.includes('nts radio') || name.includes('bbc radio 6') || name.includes('left coast') || name.includes('indie pop')) {
     return 'Rock';
   }
   if (g.includes('lounge') || g.includes('exotica') || g.includes('spy') || g.includes('trip-hop') || g.includes('illinois street') || g.includes('secret agent')) {
@@ -962,6 +962,25 @@ export async function loadStations(db) {
     // Check existing records: update outdated URLs/metadata for curated stations while preserving user isFavorite
     for (let i = 0; i < saved.length; i++) {
       const station = saved[i];
+      if (station.id === 'bbc_radio_6' || station.streamUrl?.includes('bbc_6music')) {
+        const nts = curatedMap.get('nts_radio_1');
+        if (nts) {
+          const alreadyHasNts = saved.some((s, idx) => idx !== i && s.id === 'nts_radio_1');
+          if (alreadyHasNts) {
+            saved.splice(i, 1);
+            i--;
+            modified = true;
+            continue;
+          }
+          saved[i] = {
+            ...nts,
+            isFavorite: Boolean(station.isFavorite),
+            lastPlayedAt: station.lastPlayedAt || null
+          };
+          modified = true;
+          continue;
+        }
+      }
       if (curatedMap.has(station.id)) {
         const curated = curatedMap.get(station.id);
         if (

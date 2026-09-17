@@ -79,6 +79,28 @@ export async function hydratePlaybackState(deps = {}) {
       }
       station = stations.find((s) => s.id === stationId) || { id: stationId, name: 'Radio Station' };
     }
+
+    // Automatic migration for decommissioned BBC 6 Music stream
+    if (station?.id === 'bbc_radio_6' || station?.streamUrl?.includes('bbc_6music') || stationId === 'bbc_radio_6') {
+      let stations = [];
+      if (deps.stations) {
+        stations = deps.stations;
+      } else {
+        try {
+          stations = await loadStations(database);
+        } catch {
+          stations = CURATED_STATIONS;
+        }
+      }
+      const ntsStation = stations.find((s) => s.id === 'nts_radio_1') || CURATED_STATIONS.find((s) => s.id === 'nts_radio_1');
+      if (ntsStation) {
+        station = ntsStation;
+        if (database && typeof database.savePlaybackState === 'function') {
+          database.savePlaybackState({ ...savedState, stationId: ntsStation.id, currentStation: ntsStation }).catch(() => {});
+        }
+      }
+    }
+
     if (station) {
       engine.isRadio = true;
       engine.currentStation = station;

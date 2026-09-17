@@ -429,3 +429,50 @@ test('Shell Persistence - savePlaybackState serializes state cleanly with null s
   assert.equal(savedRecord.repeat, 'off', 'Default repeat off');
   assert.equal(savedRecord.shuffle, false, 'Default shuffle false');
 });
+
+test('Shell Hydration - automatically migrates saved bbc_radio_6 to nts_radio_1', async () => {
+  let savedRecord = null;
+  const mockDb = {
+    async getPlaybackState() {
+      return {
+        isRadio: true,
+        stationId: 'bbc_radio_6',
+        currentStation: { id: 'bbc_radio_6', name: 'BBC Radio 6 Music', streamUrl: 'https://stream.live.vc.bbcmedia.co.uk/bbc_6music' },
+        volume: 0.8
+      };
+    },
+    async savePlaybackState(state) {
+      savedRecord = state;
+    },
+    async getAllTracks() {
+      return [];
+    },
+    async getStations() {
+      return [];
+    },
+    async saveStations() {}
+  };
+
+  const mockAudioEngine = {
+    isRadio: false,
+    isPlaying: true,
+    volume: 1.0,
+    muted: false,
+    currentStation: null,
+    currentTrack: null,
+    streamState: 'idle',
+    notifyState() {}
+  };
+
+  const result = await hydratePlaybackState({
+    db: mockDb,
+    audioEngine: mockAudioEngine,
+    queueManager: { clear() {}, setQueue() {} }
+  });
+
+  assert.equal(result.type, 'radio');
+  assert.equal(result.station.id, 'nts_radio_1', 'Must migrate bbc_radio_6 to nts_radio_1');
+  assert.equal(mockAudioEngine.currentStation.id, 'nts_radio_1');
+  assert.equal(mockAudioEngine.isRadio, true);
+  assert.equal(savedRecord?.stationId, 'nts_radio_1', 'Must persist migrated stationId to DB');
+});
