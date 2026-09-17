@@ -555,6 +555,12 @@ export function createStage(deps) {
     const duration = state.duration !== undefined ? state.duration : (audioEngine.duration || 0);
     const streamState = state.streamState !== undefined ? state.streamState : (audioEngine.streamState || 'idle');
 
+    if (isRadio && streamState === 'error' && lastStreamState !== undefined && lastStreamState !== 'error') {
+      deps.onToast?.('[STREAM OFFLINE]');
+    }
+    lastStreamState = streamState;
+    lastIsPlaying = isPlaying;
+
     // Transport button states
     playBtn.textContent = isPlaying ? '⏸' : '▶';
     playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');

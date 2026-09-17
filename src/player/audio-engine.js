@@ -24,6 +24,7 @@ export class AudioEngine {
     this.isRadio = false;
     /** @type {'idle'|'connecting'|'buffering'|'playing'|'error'} */
     this.streamState = 'idle';
+    this.isUsingRadioFallback = false;
     this.volume = 0.8;
     this.muted = false;
     this.crossfadeSeconds = 0;
@@ -198,7 +199,7 @@ export class AudioEngine {
   }
 
   getActiveAudio() {
-    if (this.isRadio && this.radioAudio && this.radioAudio.src && !this.radioAudio.paused) {
+    if (this.isRadio && this.isUsingRadioFallback && this.radioAudio) {
       return this.radioAudio;
     }
     return this.activePlayer === 'A' ? this.audioA : this.audioB;
@@ -272,9 +273,16 @@ export class AudioEngine {
     this.isRadio = false;
     this.currentStation = null;
     this.currentTrack = track;
+    this.isUsingRadioFallback = false;
     if (this.radioAudio) {
-      this.radioAudio.pause();
+      try {
+        if (typeof this.radioAudio.pause === 'function') this.radioAudio.pause();
+      } catch (_) {}
+      if (typeof this.radioAudio.removeAttribute === 'function') {
+        this.radioAudio.removeAttribute('src');
+      }
       this.radioAudio.src = '';
+      if (typeof this.radioAudio.load === 'function') this.radioAudio.load();
     }
 
     // Trigger background audio unlock
@@ -455,13 +463,16 @@ export class AudioEngine {
     }
 
     if (this.radioAudio) {
-      if (typeof this.radioAudio.pause === 'function') {
-        try {
-          this.radioAudio.pause();
-        } catch (_) {}
+      try {
+        if (typeof this.radioAudio.pause === 'function') this.radioAudio.pause();
+      } catch (_) {}
+      if (typeof this.radioAudio.removeAttribute === 'function') {
+        this.radioAudio.removeAttribute('src');
       }
       this.radioAudio.src = '';
+      if (typeof this.radioAudio.load === 'function') this.radioAudio.load();
     }
+    this.isUsingRadioFallback = false;
 
     await this.ensureAudioContextActive().catch(() => {});
 
@@ -495,6 +506,7 @@ export class AudioEngine {
 
         this.isPlaying = true;
         this.streamState = 'playing';
+        this.isUsingRadioFallback = false;
         this.updateMediaSessionRadio(station);
         this.notifyState();
 
@@ -507,12 +519,22 @@ export class AudioEngine {
         return;
       } catch (err) {
         console.warn(`[AudioEngine] Web Audio radio playback failed, attempting direct fallback: ${err?.message}`);
+        try {
+          if (typeof nextAudio.pause === 'function') nextAudio.pause();
+        } catch (_) {}
+        if (typeof nextAudio.removeAttribute === 'function') {
+          nextAudio.removeAttribute('crossOrigin');
+          nextAudio.removeAttribute('src');
+        }
+        nextAudio.src = '';
+        if (typeof nextAudio.load === 'function') nextAudio.load();
       }
     }
 
     // Direct fallback with radioAudio (for non-CORS streams or standalone element)
     if (this.radioAudio) {
       try {
+        this.isUsingRadioFallback = true;
         if (typeof this.radioAudio.removeAttribute === 'function') {
           this.radioAudio.removeAttribute('crossOrigin');
         }
@@ -536,7 +558,18 @@ export class AudioEngine {
             db.recordStationPlay(station.id).catch(() => {});
           }
         }
+        return;
       } catch (fbErr) {
+        this.isUsingRadioFallback = false;
+        try {
+          if (typeof this.radioAudio.pause === 'function') this.radioAudio.pause();
+        } catch (_) {}
+        if (typeof this.radioAudio.removeAttribute === 'function') {
+          this.radioAudio.removeAttribute('src');
+        }
+        this.radioAudio.src = '';
+        if (typeof this.radioAudio.load === 'function') this.radioAudio.load();
+
         if (fbErr?.name !== 'AbortError') {
           console.error(`[AudioEngine] Radio stream fallback playback failed: ${fbErr?.message}`);
           this.isPlaying = false;
@@ -545,6 +578,7 @@ export class AudioEngine {
         }
       }
     } else {
+      this.isUsingRadioFallback = false;
       this.isPlaying = false;
       this.streamState = 'error';
       this.notifyState();
@@ -553,6 +587,12 @@ export class AudioEngine {
 
   async play() {
     this.unlock();
+    if (this.isRadio) {
+      if (this.currentStation) {
+        await this.playRadio(this.currentStation);
+      }
+      return;
+    }
     const audio = this.getActiveAudio();
     if (audio && audio.src && audio.src !== (typeof window !== 'undefined' ? window.location.href : '')) {
       try {
@@ -561,14 +601,10 @@ export class AudioEngine {
           await playPromise;
         }
         this.isPlaying = true;
-        if (this.isRadio) this.streamState = 'playing';
         this.notifyState();
       } catch (err) {
         console.error(`[AudioEngine] Play error: ${err?.message}`);
-        if (this.isRadio) this.streamState = 'error';
       }
-    } else if (this.isRadio && this.currentStation) {
-      await this.playRadio(this.currentStation);
     } else {
       let item = queueManager.getCurrent();
       if (!item && db && typeof db.getAllTracks === 'function') {
@@ -591,11 +627,35 @@ export class AudioEngine {
 
   pause() {
     const audio = this.getActiveAudio();
-    if (audio) audio.pause();
+    if (audio && typeof audio.pause === 'function') {
+      try { audio.pause(); } catch (_) {}
+    }
+    if (this.isRadio && this.radioAudio && typeof this.radioAudio.pause === 'function') {
+      try { this.radioAudio.pause(); } catch (_) {}
+    }
     this.isPlaying = false;
     if (this.isRadio && this.streamState !== 'error') {
       this.streamState = 'idle';
     }
+    this.notifyState();
+  }
+
+  stop() {
+    this.pause();
+    [this.audioA, this.audioB, this.radioAudio].forEach((audio) => {
+      if (!audio) return;
+      try {
+        if (typeof audio.pause === 'function') audio.pause();
+      } catch (_) {}
+      if (typeof audio.removeAttribute === 'function') {
+        audio.removeAttribute('src');
+      }
+      audio.src = '';
+      if (typeof audio.load === 'function') audio.load();
+    });
+    this.isUsingRadioFallback = false;
+    this.isPlaying = false;
+    this.streamState = 'idle';
     this.notifyState();
   }
 

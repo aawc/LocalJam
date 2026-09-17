@@ -327,4 +327,129 @@ test('Audio Engine State & Control Suite', async (t) => {
       db.getAllTracks = prevGetAllTracks;
     }
   });
+
+  await t.test('playRadio falls back to radioAudio when Web Audio player rejects with CORS/media error', async () => {
+    const engine = new AudioEngine();
+    let radioPlayCalled = false;
+
+    engine.audioB = {
+      src: '',
+      crossOrigin: '',
+      play: async () => {
+        throw new Error('MEDIA_ELEMENT_ERROR: Format error');
+      },
+      pause: () => {},
+      load: () => {},
+      removeAttribute: () => {}
+    };
+    engine.audioA = {
+      src: '',
+      play: async () => Promise.resolve(),
+      pause: () => {},
+      load: () => {},
+      removeAttribute: () => {}
+    };
+    engine.radioAudio = {
+      src: '',
+      crossOrigin: '',
+      volume: 1,
+      play: async () => {
+        radioPlayCalled = true;
+        return Promise.resolve();
+      },
+      pause: () => {},
+      load: () => {},
+      removeAttribute: () => {}
+    };
+
+    const station = {
+      id: 'test_stream',
+      name: 'Test Radio',
+      streamUrl: 'https://stream.example.com/live.mp3'
+    };
+
+    await engine.playRadio(station);
+    assert.equal(radioPlayCalled, true, 'radioAudio.play must be invoked as direct fallback');
+    assert.equal(engine.isUsingRadioFallback, true, 'isUsingRadioFallback flag must be true');
+    assert.equal(engine.getActiveAudio(), engine.radioAudio, 'getActiveAudio must return radioAudio');
+    assert.equal(engine.isPlaying, true, 'isPlaying must be true');
+    assert.equal(engine.streamState, 'playing', 'streamState must be playing');
+    assert.equal(engine.audioB.src, '', 'audioB.src must be cleared after Web Audio failure');
+  });
+
+  await t.test('playRadio unloads radioAudio and sets streamState=error when both Web Audio and direct fallback fail', async () => {
+    const engine = new AudioEngine();
+
+    engine.audioB = {
+      src: '',
+      play: async () => {
+        throw new Error('CORS blocked');
+      },
+      pause: () => {},
+      load: () => {},
+      removeAttribute: () => {}
+    };
+    engine.radioAudio = {
+      src: '',
+      play: async () => {
+        throw new Error('Format error');
+      },
+      pause: () => {},
+      load: () => {},
+      removeAttribute: () => {}
+    };
+
+    const station = {
+      id: 'failing_stream',
+      name: 'Failing Radio',
+      streamUrl: 'https://stream.example.com/fail.mp3'
+    };
+
+    await engine.playRadio(station);
+    assert.equal(engine.isUsingRadioFallback, false, 'isUsingRadioFallback must be false');
+    assert.equal(engine.isPlaying, false, 'isPlaying must be false');
+    assert.equal(engine.streamState, 'error', 'streamState must be error');
+    assert.equal(engine.radioAudio.src, '', 'radioAudio.src must be cleared on failure');
+  });
+
+  await t.test('play() re-invokes playRadio when isRadio is true', async () => {
+    const engine = new AudioEngine();
+    let playRadioStation = null;
+    engine.isRadio = true;
+    engine.currentStation = { id: 'station_play_test', name: 'Play Test', streamUrl: 'https://example.com/play.mp3' };
+    engine.playRadio = async (st) => {
+      playRadioStation = st;
+      engine.isPlaying = true;
+    };
+
+    await engine.play();
+    assert.ok(playRadioStation);
+    assert.equal(playRadioStation.id, 'station_play_test');
+    assert.equal(engine.isPlaying, true);
+  });
+
+  await t.test('stop() cleanly pauses and unloads all audio elements and resets state', () => {
+    const engine = new AudioEngine();
+    let pauseACalled = false;
+    let pauseBCalled = false;
+    let pauseRadioCalled = false;
+
+    engine.audioA = { src: 'blob:a', pause: () => { pauseACalled = true; }, load: () => {}, removeAttribute: () => {} };
+    engine.audioB = { src: 'blob:b', pause: () => { pauseBCalled = true; }, load: () => {}, removeAttribute: () => {} };
+    engine.radioAudio = { src: 'https://radio', pause: () => { pauseRadioCalled = true; }, load: () => {}, removeAttribute: () => {} };
+    engine.isPlaying = true;
+    engine.streamState = 'playing';
+    engine.isUsingRadioFallback = true;
+
+    engine.stop();
+    assert.equal(pauseACalled, true);
+    assert.equal(pauseBCalled, true);
+    assert.equal(pauseRadioCalled, true);
+    assert.equal(engine.audioA.src, '');
+    assert.equal(engine.audioB.src, '');
+    assert.equal(engine.radioAudio.src, '');
+    assert.equal(engine.isPlaying, false);
+    assert.equal(engine.streamState, 'idle');
+    assert.equal(engine.isUsingRadioFallback, false);
+  });
 });

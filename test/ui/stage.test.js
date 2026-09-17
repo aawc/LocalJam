@@ -155,6 +155,62 @@ describe('Stage Viewport Component (L0)', () => {
     stage.destroy();
   });
 
+  it('dispatches [STREAM OFFLINE] toast when streamState transitions to error', () => {
+    let capturedToast = null;
+    let registeredListener = null;
+
+    const mockStation = {
+      id: 'station-err-test',
+      name: 'Stream Error Test',
+      genre: 'Alternative',
+      country: 'UK',
+      bitrate: '128'
+    };
+
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: false,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'connecting',
+      subscribe: (listener) => {
+        registeredListener = listener;
+        return () => {};
+      },
+      setVolume: () => {},
+      togglePlay: () => {},
+      next: () => {},
+      previous: () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: (msg) => {
+        capturedToast = msg;
+      }
+    });
+
+    container.appendChild(stage.element);
+    assert.equal(capturedToast, null, 'No toast before error transition');
+
+    // Simulate transition to error
+    registeredListener?.({
+      isRadio: true,
+      isPlaying: false,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'error',
+      volume: 0.8
+    });
+
+    assert.equal(capturedToast, '[STREAM OFFLINE]', 'Must announce [STREAM OFFLINE] toast upon error transition');
+    stage.destroy();
+  });
+
   it('renders radio station with streamState: playing and isPlaying: false as [READY], not [LIVE]', () => {
     const mockStation = {
       id: 'station-1',
