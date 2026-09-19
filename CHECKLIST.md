@@ -212,3 +212,7 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 - [x] **FR 25: Radio Stream Fallback Hardening, KOHL Endpoint Update, & Browse Header Styling** `[DONE]`
   - *Description:* Resolve premature `[STREAM OFFLINE]` toast errors during internet radio playback by guarding audio element error listeners in `src/player/audio-engine.js` so Web Audio radio attempts do not transition to `streamState='error'` when standalone `radioAudio` fallback is pending. Fix `prevAudio` reference error in `playRadio` and restore synthetic visualizer spectrum and waveform generators for CORS-isolated radio streams. Update KOHL 89.3 FM endpoint to verified live HTTPS stream (`https://ice10.securenetsystems.net/KOHL`). Reconcile Browse Sheet header and chip CSS selectors in `src/ui/app.css` (`.browse-header`, `.segmented-tabs`, `.tab-btn`, `.browse-folder-btn`, `.browse-close-btn`, `.browse-chips-bar`, `.chip`, `.browse-sort-select`) to eliminate raw browser button borders, and bump Service Worker cache to `localjam-v2026.09.045`.
   - *Associated Commits:* `d1d6785`
+
+- [x] **FR 26: Remove v2 Branch Release, Deploy, and CI Workflow Triggers Following Main Merge and Archival** `[DONE]`
+  - *Description:* Remove `v2` branch triggers from `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, and `.github/workflows/release.yml` now that branch `v2` has been archived (`archive/v2`) and merged into `main`. Ensure all releases, deployments, and CI actions run exclusively on `main`.
+  - *Associated Commits:* `b5a3dd4`
