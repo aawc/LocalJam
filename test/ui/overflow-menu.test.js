@@ -370,6 +370,7 @@ describe('Overflow Menu Component (L2)', () => {
   it('action buttons invoke callbacks and close menu', async () => {
     let eqOpened = false;
     let notesOpened = false;
+    let feedbackOpened = false;
     let folderPicked = false;
     let rescanCalled = false;
     let closeCount = 0;
@@ -377,6 +378,7 @@ describe('Overflow Menu Component (L2)', () => {
     const menu = createOverflowMenu({
       onOpenEq: () => { eqOpened = true; },
       onOpenNotes: () => { notesOpened = true; },
+      onOpenFeedback: () => { feedbackOpened = true; },
       onPickFolder: () => { folderPicked = true; },
       onRescan: () => { rescanCalled = true; },
       onClose: () => { closeCount++; },
@@ -411,6 +413,13 @@ describe('Overflow Menu Component (L2)', () => {
     await notesBtn.dispatchEvent(new Event('click'));
     assert.equal(notesOpened, true);
     assert.equal(closeCount, 4);
+
+    menu.onOpen();
+    const feedbackBtn = menu.element.querySelector('[data-action="feedback"]');
+    assert.ok(feedbackBtn);
+    await feedbackBtn.dispatchEvent(new Event('click'));
+    assert.equal(feedbackOpened, true);
+    assert.equal(closeCount, 5);
   });
 
   it('focusFirst directs focus to the first focusable element', () => {

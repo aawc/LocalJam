@@ -15,8 +15,10 @@ import { pickFolder, rescan } from './ui/library-source.js';
 import { loadStations, CURATED_STATIONS, toggleFavoriteStation } from './radio/stations.js';
 import { createEqModal } from './ui/components/eq-modal.js';
 import { createReleaseNotesModal } from './ui/components/release-notes-modal.js';
+import { createFeedbackModal } from './ui/components/feedback-modal.js';
 import { createUpdateBanner, initUpdateChecker } from './ui/components/update-banner.js';
 import { APP_VERSION } from './version.js';
+import { recordDiagnosticError } from './utils/diagnostics.js';
 
 let lastStation = null;
 let lastTrack = null;
@@ -370,6 +372,20 @@ export async function initApp() {
       }
     }));
 
+    const feedbackModal = createFeedbackModal({
+      onToast: (msg) => showToast(msg),
+      db,
+      audioEngine,
+      queueManager,
+      equalizer
+    });
+    layers.register('feedback', () => ({
+      element: feedbackModal.element,
+      onOpen: (props) => feedbackModal.open(props),
+      onClose: () => feedbackModal.close(),
+      focusFirst: () => feedbackModal.focusFirst?.()
+    }));
+
     layers.register('browse', () => createBrowseSheet({
       onPlayTrack: (track, index, tracks) => {
         audioEngine.isRadio = false;
@@ -391,6 +407,7 @@ export async function initApp() {
     layers.register('overflow', () => createOverflowMenu({
       onOpenEq: () => layers.open('eq'),
       onOpenNotes: () => layers.open('notes'),
+      onOpenFeedback: () => layers.open('feedback'),
       onPickFolder: async () => pickFolder(),
       onRescan: async () => rescan(),
       onReset: async () => {
@@ -565,7 +582,18 @@ export async function initApp() {
     }
   } catch (err) {
     console.error('[LocalJam] Initialization failure:', err);
+    recordDiagnosticError(err, 'App bootstrap failure');
   }
+}
+
+// Global runtime diagnostic error listeners
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    recordDiagnosticError(event.error || event.message, 'Uncaught window error');
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    recordDiagnosticError(event.reason, 'Unhandled promise rejection');
+  });
 }
 
 // Auto-boot when loaded in browser

@@ -53,6 +53,7 @@ export function createOverflowMenu(deps = {}) {
   const {
     onOpenEq,
     onOpenNotes,
+    onOpenFeedback,
     onPickFolder,
     onRescan,
     onReset,
@@ -187,6 +188,11 @@ export function createOverflowMenu(deps = {}) {
           <span class="overflow-state">[RELEASE NOTES]</span>
         </button>
 
+        <button type="button" class="overflow-row" data-action="feedback" role="menuitem">
+          <span class="overflow-label">Diagnostics &amp; Feedback</span>
+          <span class="overflow-state">[DEBUG]</span>
+        </button>
+
         <hr class="overflow-divider" />
 
         <button type="button" class="overflow-row overflow-row-destructive" data-action="reset" role="menuitem">
@@ -284,6 +290,14 @@ export function createOverflowMenu(deps = {}) {
       notesBtn.addEventListener('click', () => {
         handleClose();
         if (typeof onOpenNotes === 'function') onOpenNotes();
+      });
+    }
+
+    const feedbackBtn = contentEl.querySelector('[data-action="feedback"]');
+    if (feedbackBtn) {
+      feedbackBtn.addEventListener('click', () => {
+        handleClose();
+        if (typeof onOpenFeedback === 'function') onOpenFeedback();
       });
     }
 

@@ -1358,3 +1358,102 @@ body {
 .update-banner-text { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .status-badge { font-size: 10px; font-weight: 700; color: var(--accent-amber); }
 .update-banner-actions { display: flex; gap: 8px; }
+
+/* Diagnostics & Feedback Modal */
+.feedback-modal-card {
+  max-width: 520px;
+  width: 92%;
+  max-height: 85vh;
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-modal-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+}
+
+.feedback-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 480px) {
+  .feedback-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feedback-metric-card {
+  background: var(--bg-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 8px);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feedback-metric-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.feedback-metric-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #f8fafc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feedback-notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.feedback-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.feedback-textarea {
+  background: var(--bg-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-md, 8px);
+  padding: 10px 12px;
+  color: var(--text-primary, #f8fafc);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 64px;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.feedback-textarea:focus {
+  border-color: var(--accent-cyan, #38bdf8);
+}
+
+.feedback-modal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}

@@ -3,7 +3,7 @@
  * Cache-First App Shell Strategy with explicit audio stream bypass.
  */
 
-const CACHE_NAME = 'localjam-v2026.09.046';
+const CACHE_NAME = 'localjam-v2026.09.047';
 
 const APP_SHELL_ASSETS = [
   './',
@@ -30,6 +30,7 @@ const APP_SHELL_ASSETS = [
   './src/ui/components/toast.js',
   './src/ui/components/eq-modal.js',
   './src/ui/components/release-notes-modal.js',
+  './src/ui/components/feedback-modal.js',
   './src/ui/components/update-banner.js',
   './src/player/audio-engine.js',
   './src/player/equalizer.js',
@@ -44,7 +45,8 @@ const APP_SHELL_ASSETS = [
   './src/metadata/flac.js',
   './src/metadata/m4a.js',
   './src/metadata/filename-parser.js',
-  './src/utils/sanitize.js'
+  './src/utils/sanitize.js',
+  './src/utils/diagnostics.js'
 ];
 
 self.addEventListener('install', (event) => {
