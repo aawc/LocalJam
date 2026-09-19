@@ -863,4 +863,58 @@ describe('Stage Viewport Component (L0)', () => {
 
     stage.destroy();
   });
+
+  it('initializes visualizer canvas and reflects isVisualizerEnabled state accurately', () => {
+    let initializedCanvas = null;
+    const mockVisualizer = {
+      canvas: null,
+      isRunning: false,
+      mode: 'bars',
+      init: (c) => {
+        mockVisualizer.canvas = c;
+        initializedCanvas = c;
+      },
+      start: () => { mockVisualizer.isRunning = true; },
+      pause: () => { mockVisualizer.isRunning = false; },
+      setMode: (m) => { mockVisualizer.mode = m; },
+      resize: () => {}
+    };
+
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: false,
+      currentTrack: null,
+      subscribe: () => () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      visualizer: mockVisualizer,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const canvas = stage.element.querySelector('.stage-visualizer-canvas');
+    assert.ok(canvas, 'Canvas must exist');
+    assert.equal(initializedCanvas, canvas, 'visualizer.init must be called with stage canvas');
+    assert.equal(stage.isVisualizerEnabled(), false, 'Visualizer must be disabled initially');
+
+    stage.setVisualizer(true, 'wave');
+    assert.equal(stage.isVisualizerEnabled(), true, 'isVisualizerEnabled must be true when enabled');
+    assert.equal(mockVisualizer.isRunning, true, 'Visualizer must start even when isPlaying is false');
+    assert.equal(mockVisualizer.mode, 'wave');
+    assert.equal(canvas.hidden, false, 'Canvas must not be hidden when visualizer is enabled');
+
+    stage.setVisualizer(false);
+    assert.equal(stage.isVisualizerEnabled(), false, 'isVisualizerEnabled must be false when disabled');
+    assert.equal(mockVisualizer.isRunning, false, 'Visualizer must pause when disabled');
+    assert.equal(canvas.hidden, true, 'Canvas must be hidden when visualizer is disabled');
+
+    stage.destroy();
+  });
 });

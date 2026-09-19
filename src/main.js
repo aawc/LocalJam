@@ -415,10 +415,12 @@ export async function initApp() {
       },
       onToggleVisualizer: () => {
         if (stageInstance) {
-          const vizCanvas = stageInstance.element.querySelector('.stage-visualizer-canvas');
-          const isViz = vizCanvas && vizCanvas.style.display !== 'none';
-          stageInstance.setVisualizer(!isViz);
-          showToast(`[VIZ ${!isViz ? 'ON' : 'OFF'}]`);
+          const isViz = typeof stageInstance.isVisualizerEnabled === 'function'
+            ? stageInstance.isVisualizerEnabled()
+            : !stageInstance.element.querySelector('.stage-visualizer-canvas')?.hidden;
+          const nextViz = !isViz;
+          stageInstance.setVisualizer(nextViz);
+          showToast(`[VIZ ${nextViz ? 'ON' : 'OFF'}]`);
         }
       },
       onToast: (msg) => showToast(msg),
@@ -447,10 +449,12 @@ export async function initApp() {
       onToggleSource: () => togglePlaybackSource(),
       onToggleVisualizer: () => {
         if (stageInstance) {
-          const vizCanvas = stageInstance.element.querySelector('.stage-visualizer-canvas');
-          const isViz = vizCanvas && vizCanvas.style.display !== 'none';
-          stageInstance.setVisualizer(!isViz);
-          showToast(`[VIZ ${!isViz ? 'ON' : 'OFF'}]`);
+          const isViz = typeof stageInstance.isVisualizerEnabled === 'function'
+            ? stageInstance.isVisualizerEnabled()
+            : !stageInstance.element.querySelector('.stage-visualizer-canvas')?.hidden;
+          const nextViz = !isViz;
+          stageInstance.setVisualizer(nextViz);
+          showToast(`[VIZ ${nextViz ? 'ON' : 'OFF'}]`);
         }
       },
       onToggleFavorite: async () => {

@@ -133,6 +133,10 @@ export function createStage(deps) {
   visualizerCanvas.hidden = true;
   artworkContainer.appendChild(visualizerCanvas);
 
+  if (visualizer && typeof visualizer.init === 'function') {
+    visualizer.init(visualizerCanvas);
+  }
+
   // --- Row 3: Metadata (Title & Subtitle) ---
   const row3El = document.createElement('div');
   row3El.className = 'stage-row-metadata stage-row-3';
@@ -367,18 +371,22 @@ export function createStage(deps) {
     visualizerEnabled = Boolean(enabled);
     if (visualizerEnabled) {
       currentVizMode = modeId;
-      if (!visualizer && typeof AudioVisualizer === 'function') {
+      if (visualizer) {
+        if (!visualizer.canvas || visualizer.canvas !== visualizerCanvas) {
+          if (typeof visualizer.init === 'function') {
+            visualizer.init(visualizerCanvas);
+          }
+        }
+        visualizer.mode = modeId;
+        if (typeof visualizer.setMode === 'function') visualizer.setMode(modeId);
+        if (typeof visualizer.resize === 'function') visualizer.resize();
+      } else if (typeof AudioVisualizer === 'function') {
         visualizer = new AudioVisualizer(visualizerCanvas);
       }
       visualizerCanvas.hidden = false;
       artworkImg.style.display = 'none';
-      if (visualizer) {
-        visualizer.mode = modeId;
-        if (typeof visualizer.setMode === 'function') visualizer.setMode(modeId);
-        if (typeof visualizer.resize === 'function') visualizer.resize();
-        if (audioEngine.isPlaying && typeof visualizer.start === 'function') {
-          visualizer.start();
-        }
+      if (visualizer && typeof visualizer.start === 'function') {
+        visualizer.start();
       }
     } else {
       visualizerCanvas.hidden = true;
@@ -580,10 +588,8 @@ export function createStage(deps) {
 
     // Update Visualizer running state
     if (visualizerEnabled && visualizer) {
-      if (isPlaying && !visualizer.isRunning && typeof visualizer.start === 'function') {
+      if (!visualizer.isRunning && typeof visualizer.start === 'function') {
         visualizer.start();
-      } else if (!isPlaying && visualizer.isRunning && typeof visualizer.pause === 'function') {
-        visualizer.pause();
       }
     }
 
@@ -758,6 +764,7 @@ export function createStage(deps) {
     element: stageEl,
     destroy,
     setVisualizer,
-    setVisualizerMode
+    setVisualizerMode,
+    isVisualizerEnabled: () => visualizerEnabled
   };
 }
