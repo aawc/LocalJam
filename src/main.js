@@ -211,18 +211,24 @@ export async function togglePlaybackSource(deps = {}) {
       lastStation = engine.currentStation;
     }
     // Switch from Radio to Local Track
-    let track = engine.currentTrack || deps.lastTrack || lastTrack || queue?.getCurrent?.()?.track;
-    if (!track && database && typeof database.getAllTracks === 'function') {
+    let track = engine.currentTrack || (deps.lastTrack !== undefined ? deps.lastTrack : lastTrack) || queue?.getCurrent?.()?.track;
+    if (database && typeof database.getAllTracks === 'function') {
       try {
-        const allTracks = await database.getAllTracks();
+        const allTracks = (await database.getAllTracks()) || [];
         const available = allTracks.filter((t) => !t.isMissing);
         if (available.length > 0) {
-          if (queue && typeof queue.setQueue === 'function') {
-            queue.setQueue(available, 0);
+          if (!track || !available.some((t) => t.id === track.id)) {
+            track = available[0];
           }
-          track = available[0];
+          if (queue && typeof queue.setQueue === 'function') {
+            queue.setQueue(available, Math.max(0, available.findIndex((t) => t.id === track.id)));
+          }
+        } else {
+          track = null;
         }
-      } catch {}
+      } catch (err) {
+        console.warn('[LocalJam] Error querying tracks during source toggle:', err?.message || err);
+      }
     }
     if (track) {
       engine.isRadio = false;
@@ -230,6 +236,33 @@ export async function togglePlaybackSource(deps = {}) {
       await engine.playTrack(track);
       toast('[SOURCE: LOCAL]');
     } else {
+      // Prompt user to pick a folder instead of merely showing [NO LOCAL TRACKS]
+      const picker = deps.onPickFolder || pickFolder;
+      let picked = false;
+      try {
+        picked = await picker();
+      } catch (err) {
+        console.warn('[LocalJam] Folder picker error during source toggle:', err?.message || err);
+      }
+      if (picked && database && typeof database.getAllTracks === 'function') {
+        try {
+          const freshTracks = (await database.getAllTracks()) || [];
+          const freshAvailable = freshTracks.filter((t) => !t.isMissing);
+          if (freshAvailable.length > 0) {
+            if (queue && typeof queue.setQueue === 'function') {
+              queue.setQueue(freshAvailable, 0);
+            }
+            track = freshAvailable[0];
+            engine.isRadio = false;
+            lastTrack = track;
+            await engine.playTrack(track);
+            toast('[SOURCE: LOCAL]');
+            return;
+          }
+        } catch (err) {
+          console.warn('[LocalJam] Error reading tracks after folder pick:', err?.message || err);
+        }
+      }
       toast('[NO LOCAL TRACKS]');
     }
   } else {

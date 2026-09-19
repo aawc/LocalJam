@@ -285,6 +285,89 @@ test('Shell Source Switching - togglePlaybackSource switches radio to local trac
   assert.ok(toasts.includes('[SOURCE: LOCAL]'), 'Toast announcing [SOURCE: LOCAL] must be shown');
 });
 
+test('Shell Source Switching - togglePlaybackSource prompts pickFolder when switching from radio with no local tracks', async () => {
+  let pickFolderCalled = false;
+  let playedTrack = null;
+  const toasts = [];
+
+  const mockAudioEngine = {
+    isRadio: true,
+    currentTrack: null,
+    currentStation: { id: 'st-1', name: 'Radio One' },
+    async playTrack(t) {
+      playedTrack = t;
+      this.isRadio = false;
+    }
+  };
+
+  let tracksInDb = [];
+  const mockDb = {
+    async getAllTracks() {
+      return tracksInDb;
+    }
+  };
+
+  const mockQueueManager = {
+    getCurrent() { return null; },
+    setQueue() {}
+  };
+
+  await togglePlaybackSource({
+    audioEngine: mockAudioEngine,
+    queueManager: mockQueueManager,
+    db: mockDb,
+    onPickFolder: async () => {
+      pickFolderCalled = true;
+      tracksInDb = [{ id: 'new-trk', title: 'New Local Song' }];
+      return true;
+    },
+    onToast: (msg) => toasts.push(msg)
+  });
+
+  assert.equal(pickFolderCalled, true, 'pickFolder must be invoked when switching to local without tracks');
+  assert.equal(playedTrack?.id, 'new-trk', 'Should play newly indexed track after folder selection');
+  assert.equal(mockAudioEngine.isRadio, false, 'Audio engine isRadio must be false');
+  assert.ok(toasts.includes('[SOURCE: LOCAL]'), 'Toast announcing [SOURCE: LOCAL] must be shown');
+});
+
+test('Shell Source Switching - togglePlaybackSource retains radio when folder picker is canceled', async () => {
+  let playedTrack = null;
+  const toasts = [];
+
+  const mockAudioEngine = {
+    isRadio: true,
+    currentTrack: null,
+    currentStation: { id: 'st-1', name: 'Radio One' },
+    async playTrack(t) {
+      playedTrack = t;
+      this.isRadio = false;
+    }
+  };
+
+  const mockDb = {
+    async getAllTracks() {
+      return [];
+    }
+  };
+
+  const mockQueueManager = {
+    getCurrent() { return null; },
+    setQueue() {}
+  };
+
+  await togglePlaybackSource({
+    audioEngine: mockAudioEngine,
+    queueManager: mockQueueManager,
+    db: mockDb,
+    onPickFolder: async () => false,
+    onToast: (msg) => toasts.push(msg)
+  });
+
+  assert.equal(playedTrack, null, 'No track should be played when picker is canceled');
+  assert.equal(mockAudioEngine.isRadio, true, 'Audio engine must remain on radio');
+  assert.ok(toasts.includes('[NO LOCAL TRACKS]'), 'Toast announcing [NO LOCAL TRACKS] must be shown');
+});
+
 test('Shell Source Switching - togglePlaybackSource switches local track to radio station', async () => {
   const mockStation = { id: 'st-fav', name: 'Favorite Radio' };
   let playedStation = null;
