@@ -78,6 +78,7 @@ export function attachGestures(el, handlers = {}) {
   let startY = 0;
   let startTime = 0;
   let activePointerId = null;
+  let pointerCaptured = false;
   let longPressTimer = null;
   let longPressTriggered = false;
   let lastTapTime = 0;
@@ -93,16 +94,7 @@ export function attachGestures(el, handlers = {}) {
     startY = e.clientY || 0;
     startTime = Date.now();
     longPressTriggered = false;
-
-    if (typeof el.setPointerCapture === 'function' && e.pointerId !== undefined) {
-      try {
-        el.setPointerCapture(e.pointerId);
-      } catch (err) {
-        if (err?.name !== 'NotFoundError' && err?.name !== 'InvalidStateError') {
-          console.warn(`[Gestures] setPointerCapture failed (${err?.name}): ${err?.message}`);
-        }
-      }
-    }
+    pointerCaptured = false;
 
     if (typeof handlers.onLongPress === 'function') {
       if (longPressTimer) clearTimeout(longPressTimer);
@@ -118,11 +110,21 @@ export function attachGestures(el, handlers = {}) {
     const dx = (e.clientX || 0) - startX;
     const dy = (e.clientY || 0) - startY;
 
-    // If movement reaches or exceeds tap threshold, cancel long-press
+    // If movement reaches or exceeds tap threshold, cancel long-press and engage pointer capture for swipe tracking
     if (Math.abs(dx) >= TAP_MAX_PX || Math.abs(dy) >= TAP_MAX_PX) {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
+      }
+      if (!pointerCaptured && typeof el.setPointerCapture === 'function' && e.pointerId !== undefined) {
+        try {
+          el.setPointerCapture(e.pointerId);
+          pointerCaptured = true;
+        } catch (err) {
+          if (err?.name !== 'NotFoundError' && err?.name !== 'InvalidStateError') {
+            console.warn(`[Gestures] setPointerCapture failed (${err?.name}): ${err?.message}`);
+          }
+        }
       }
     }
   };
@@ -134,7 +136,7 @@ export function attachGestures(el, handlers = {}) {
       longPressTimer = null;
     }
 
-    if (typeof el.releasePointerCapture === 'function' && e.pointerId !== undefined) {
+    if (pointerCaptured && typeof el.releasePointerCapture === 'function' && e.pointerId !== undefined) {
       try {
         el.releasePointerCapture(e.pointerId);
       } catch (err) {
@@ -143,6 +145,7 @@ export function attachGestures(el, handlers = {}) {
         }
       }
     }
+    pointerCaptured = false;
 
     activePointerId = null;
 
@@ -204,7 +207,7 @@ export function attachGestures(el, handlers = {}) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
     }
-    if (typeof el.releasePointerCapture === 'function' && e.pointerId !== undefined) {
+    if (pointerCaptured && typeof el.releasePointerCapture === 'function' && e.pointerId !== undefined) {
       try {
         el.releasePointerCapture(e.pointerId);
       } catch (err) {
@@ -213,6 +216,7 @@ export function attachGestures(el, handlers = {}) {
         }
       }
     }
+    pointerCaptured = false;
     activePointerId = null;
   };
 

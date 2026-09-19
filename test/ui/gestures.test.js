@@ -241,4 +241,36 @@ describe('Gesture Recognition & Classification Engine', () => {
     assert.equal(longPressed, 0);
     assert.equal(tapped, 0);
   });
+
+  it('does not call setPointerCapture on pointerdown, only capturing when movement exceeds TAP_MAX_PX', () => {
+    let captured = 0;
+    let released = 0;
+    const listeners = {};
+    const el = {
+      addEventListener(event, handler) { listeners[event] = handler; },
+      removeEventListener(event, handler) { delete listeners[event]; },
+      setPointerCapture() { captured++; },
+      releasePointerCapture() { released++; }
+    };
+
+    attachGestures(el, {
+      onSwipeLeft: () => {}
+    });
+
+    // 1. Pointerdown should NOT capture pointer (preserving child click events)
+    listeners.pointerdown({ clientX: 100, clientY: 100, pointerId: 1 });
+    assert.equal(captured, 0, 'pointerdown without movement must not capture pointer');
+
+    // 2. Small movement (< TAP_MAX_PX) must still not capture pointer
+    listeners.pointermove({ clientX: 104, clientY: 100, pointerId: 1 });
+    assert.equal(captured, 0, 'small movement under TAP_MAX_PX must not capture pointer');
+
+    // 3. Movement exceeding TAP_MAX_PX engages pointer capture
+    listeners.pointermove({ clientX: 120, clientY: 100, pointerId: 1 });
+    assert.equal(captured, 1, 'movement exceeding TAP_MAX_PX must capture pointer');
+
+    // 4. Pointerup releases pointer capture
+    listeners.pointerup({ clientX: 160, clientY: 100, pointerId: 1 });
+    assert.equal(released, 1, 'pointerup after movement must release pointer capture');
+  });
 });

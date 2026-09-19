@@ -300,6 +300,11 @@ export class MockElement {
       }
     }
 
+    const onHandler = typeof this['on' + event.type] === 'function' ? this['on' + event.type] : null;
+    if (onHandler) {
+      onHandler.call(this, event);
+    }
+
     if (event.bubbles !== false && this.parentElement && !event._propagationStopped) {
       this.parentElement.dispatchEvent(event);
     }

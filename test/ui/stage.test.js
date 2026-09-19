@@ -694,4 +694,173 @@ describe('Stage Viewport Component (L0)', () => {
 
     stage.destroy();
   });
+
+  it('clicking inactive Radio pill when Local is active triggers onToggleSource', () => {
+    let sourceToggled = false;
+    let browseOpenedWith = null;
+
+    const mockTrack = { id: 't1', title: 'Local Song', artist: 'Artist' };
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: mockTrack,
+      currentStation: null,
+      subscribe: () => () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      hasFSAA: true,
+      onOpenBrowse: (tab) => { browseOpenedWith = tab; },
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => { sourceToggled = true; },
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const radioPill = stage.element.querySelector('[data-source="radio"]');
+    assert.ok(radioPill, "Radio pill must exist");
+    radioPill.click();
+
+    assert.equal(sourceToggled, true, "Clicking inactive Radio option must trigger onToggleSource");
+    assert.equal(browseOpenedWith, null, "Clicking inactive Radio option must not open browse sheet");
+
+    stage.destroy();
+  });
+
+  it('clicking active Local pill when Local is active opens library browse sheet', () => {
+    let sourceToggled = false;
+    let browseOpenedWith = null;
+
+    const mockTrack = { id: 't1', title: 'Local Song', artist: 'Artist' };
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: mockTrack,
+      currentStation: null,
+      subscribe: () => () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      hasFSAA: true,
+      onOpenBrowse: (tab) => { browseOpenedWith = tab; },
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => { sourceToggled = true; },
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const localPill = stage.element.querySelector('[data-source="local"]');
+    assert.ok(localPill, "Local pill must exist");
+    localPill.click();
+
+    assert.equal(sourceToggled, false, "Clicking active Local option must not trigger onToggleSource");
+    assert.equal(browseOpenedWith, 'library', "Clicking active Local option must open library browse sheet");
+
+    stage.destroy();
+  });
+
+  it('clicking inactive Local pill when Radio is active triggers onToggleSource', () => {
+    let sourceToggled = false;
+    let browseOpenedWith = null;
+
+    const mockStation = { id: 's1', name: 'NTS Radio 1' };
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      subscribe: () => () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: (tab) => { browseOpenedWith = tab; },
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => { sourceToggled = true; },
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const localPill = stage.element.querySelector('[data-source="local"]');
+    assert.ok(localPill, "Local pill must exist");
+    localPill.click();
+
+    assert.equal(sourceToggled, true, "Clicking inactive Local option must trigger onToggleSource");
+    assert.equal(browseOpenedWith, null, "Clicking inactive Local option must not open browse sheet");
+
+    stage.destroy();
+  });
+
+  it('clicking active Radio pill when Radio is active opens radio browse sheet', () => {
+    let sourceToggled = false;
+    let browseOpenedWith = null;
+
+    const mockStation = { id: 's1', name: 'NTS Radio 1' };
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      subscribe: () => () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: (tab) => { browseOpenedWith = tab; },
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => { sourceToggled = true; },
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const radioPill = stage.element.querySelector('[data-source="radio"]');
+    assert.ok(radioPill, "Radio pill must exist");
+    radioPill.click();
+
+    assert.equal(sourceToggled, false, "Clicking active Radio option must not trigger onToggleSource");
+    assert.equal(browseOpenedWith, 'radio', "Clicking active Radio option must open radio browse sheet");
+
+    stage.destroy();
+  });
+
+  it('clicking sourceBar separator dot triggers onToggleSource', () => {
+    let sourceToggled = false;
+
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: { id: 't1' },
+      currentStation: null,
+      subscribe: () => () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => { sourceToggled = true; },
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const separator = stage.element.querySelector('.stage-source-separator');
+    assert.ok(separator, "Separator dot must exist");
+    separator.click();
+
+    assert.equal(sourceToggled, true, "Clicking separator must trigger onToggleSource");
+
+    stage.destroy();
+  });
 });

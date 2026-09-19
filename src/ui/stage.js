@@ -236,9 +236,14 @@ export function createStage(deps) {
   localPill.setAttribute('data-source', 'local');
   sourceBar.appendChild(localPill);
 
-  const barDot = document.createElement('span');
+  const barDot = document.createElement('button');
+  barDot.type = 'button';
   barDot.className = 'stage-source-separator';
   barDot.textContent = '·';
+  barDot.setAttribute('aria-label', 'Toggle playback source');
+  barDot.addEventListener('click', () => {
+    deps.onToggleSource?.();
+  });
   sourceBar.appendChild(barDot);
 
   const radioPill = document.createElement('button');
@@ -644,7 +649,7 @@ export function createStage(deps) {
         rLabel.textContent = 'Radio';
         radioPill.appendChild(rLabel);
         radioPill.className = 'stage-source-pill';
-        radioPill.onclick = () => deps.onOpenBrowse?.('radio');
+        radioPill.onclick = () => deps.onToggleSource?.();
       } else if (!hasMedia) {
         localPill.replaceChildren();
         const icon = document.createElement('span');
@@ -668,7 +673,7 @@ export function createStage(deps) {
         rLabel.textContent = 'Listen to radio';
         radioPill.appendChild(rLabel);
         radioPill.className = 'stage-source-pill';
-        radioPill.onclick = () => deps.onOpenBrowse?.('radio');
+        radioPill.onclick = () => deps.onToggleSource?.();
       } else {
         localPill.replaceChildren();
         const label = document.createElement('span');
@@ -676,7 +681,13 @@ export function createStage(deps) {
         label.textContent = !isRadio ? '● Local' : 'Local';
         localPill.appendChild(label);
         localPill.className = `stage-source-pill ${!isRadio ? 'active' : ''}`;
-        localPill.onclick = () => deps.onOpenBrowse?.('library');
+        localPill.onclick = () => {
+          if (isRadio) {
+            deps.onToggleSource?.();
+          } else {
+            deps.onOpenBrowse?.('library');
+          }
+        };
 
         radioPill.replaceChildren();
         const rLabel = document.createElement('span');
@@ -684,7 +695,13 @@ export function createStage(deps) {
         rLabel.textContent = isRadio ? '● Radio' : 'Radio';
         radioPill.appendChild(rLabel);
         radioPill.className = `stage-source-pill ${isRadio ? 'active' : ''}`;
-        radioPill.onclick = () => deps.onOpenBrowse?.('radio');
+        radioPill.onclick = () => {
+          if (!isRadio) {
+            deps.onToggleSource?.();
+          } else {
+            deps.onOpenBrowse?.('radio');
+          }
+        };
       }
     }
 
