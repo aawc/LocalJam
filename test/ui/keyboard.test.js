@@ -261,6 +261,20 @@ describe('Keyboard Shortcut Manager (src/ui/keyboard.js)', () => {
     assert.equal(mockLayers.top, 'browse');
     assert.equal(mockLayers._stack[mockLayers._stack.length - 1].props?.focusSearch, true);
     mockLayers.close();
+
+    // KeyD -> Toggles feedback layer
+    const keyDEvt = createMockEvent('KeyD', { key: 'd' });
+    km.handleKeyDown(keyDEvt);
+    assert.equal(mockLayers.top, 'feedback', 'KeyD must open feedback layer');
+    km.handleKeyDown(createMockEvent('KeyD', { key: 'd' }));
+    assert.equal(mockLayers.top, null, 'KeyD must close feedback layer if already open');
+
+    // Shift+Slash (?) -> Toggles feedback layer
+    const questionEvt = createMockEvent('Slash', { shiftKey: true, key: '?' });
+    km.handleKeyDown(questionEvt);
+    assert.equal(mockLayers.top, 'feedback', 'Shift+Slash (?) must open feedback layer');
+    km.handleKeyDown(createMockEvent('Slash', { shiftKey: true, key: '?' }));
+    assert.equal(mockLayers.top, null, 'Shift+Slash (?) must close feedback layer if already open');
   });
 
   it('handles Escape: blurs active input or closes topmost layer', () => {

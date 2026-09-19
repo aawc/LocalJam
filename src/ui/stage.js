@@ -89,6 +89,19 @@ export function createStage(deps) {
   chipsContainer.setAttribute('aria-label', 'Active playback modes');
   row1El.appendChild(chipsContainer);
 
+  const actionsEl = document.createElement('div');
+  actionsEl.className = 'stage-row1-actions';
+
+  const feedbackBtn = document.createElement('button');
+  feedbackBtn.type = 'button';
+  feedbackBtn.className = 'stage-btn-feedback';
+  feedbackBtn.setAttribute('aria-label', 'Diagnostics and feedback');
+  feedbackBtn.textContent = 'Feedback';
+  feedbackBtn.addEventListener('click', () => {
+    if (typeof deps.onOpenFeedback === 'function') deps.onOpenFeedback();
+  });
+  actionsEl.appendChild(feedbackBtn);
+
   const overflowBtn = document.createElement('button');
   overflowBtn.type = 'button';
   overflowBtn.className = 'btn-stage-overflow stage-btn-overflow';
@@ -97,7 +110,9 @@ export function createStage(deps) {
   overflowBtn.addEventListener('click', () => {
     if (typeof deps.onOpenOverflow === 'function') deps.onOpenOverflow();
   });
-  row1El.appendChild(overflowBtn);
+  actionsEl.appendChild(overflowBtn);
+
+  row1El.appendChild(actionsEl);
 
   // --- Row 2: Artwork & Visualizer Container ---
   const row2El = document.createElement('div');

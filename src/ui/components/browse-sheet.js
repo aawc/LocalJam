@@ -52,6 +52,7 @@ export function createBrowseSheet(deps = {}) {
     onPlayTrack,
     onPlayStation,
     onPickFolder,
+    onOpenFeedback,
     onToast,
     onClose: onParentClose,
     db = defaultDb,
@@ -210,6 +211,10 @@ export function createBrowseSheet(deps = {}) {
       <button type="button" class="browse-folder-btn" data-action="add-folder" aria-label="Add music folder" ${folderStyle}>+ Folder</button>
     `;
 
+    const feedbackHtml = `
+      <button type="button" class="browse-feedback-btn" data-action="feedback" aria-label="Diagnostics and feedback">Feedback</button>
+    `;
+
     const filterPlaceholder = isLibrary ? 'Filter tracks...' : 'Filter stations...';
     const filterLabel = isLibrary ? 'Filter tracks' : 'Filter stations';
     const filterHtml = `
@@ -282,6 +287,7 @@ export function createBrowseSheet(deps = {}) {
         <div class="browse-header-row1">
           ${tabHtml}
           ${folderHtml}
+          ${feedbackHtml}
           ${filterHtml}
           ${closeHtml}
         </div>
@@ -393,6 +399,16 @@ export function createBrowseSheet(deps = {}) {
       folderBtn.addEventListener('click', () => {
         if (typeof onPickFolder === 'function') {
           onPickFolder();
+        }
+      });
+    }
+
+    // Feedback
+    const feedbackBtn = sheetEl.querySelector('[data-action="feedback"]');
+    if (feedbackBtn) {
+      feedbackBtn.addEventListener('click', () => {
+        if (typeof onOpenFeedback === 'function') {
+          onOpenFeedback();
         }
       });
     }

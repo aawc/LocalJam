@@ -864,6 +864,37 @@ describe('Stage Viewport Component (L0)', () => {
     stage.destroy();
   });
 
+  it('renders stage feedback button in Row 1 and triggers onOpenFeedback callback on click', () => {
+    let feedbackOpened = false;
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: false,
+      currentTrack: null,
+      subscribe: () => () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onOpenFeedback: () => {
+        feedbackOpened = true;
+      },
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const feedbackBtn = stage.element.querySelector('.stage-btn-feedback');
+    assert.ok(feedbackBtn, 'Stage feedback button must exist in Row 1');
+    feedbackBtn.click();
+
+    assert.equal(feedbackOpened, true, 'Clicking feedback button must invoke onOpenFeedback callback');
+    stage.destroy();
+  });
+
   it('initializes visualizer canvas and reflects isVisualizerEnabled state accurately', () => {
     let initializedCanvas = null;
     const mockVisualizer = {

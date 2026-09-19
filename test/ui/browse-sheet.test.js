@@ -892,4 +892,23 @@ describe('Browse Sheet Component (L1)', () => {
     assert.ok(stationMain.querySelector('.browse-row-primary'));
     assert.ok(stationMain.querySelector('.browse-row-secondary'));
   });
+
+  it('renders feedback button in header and invokes onOpenFeedback callback on click', async () => {
+    let feedbackOpened = false;
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      onOpenFeedback: () => {
+        feedbackOpened = true;
+      }
+    });
+    await sheet.onOpen({ tab: 'library' });
+
+    const feedbackBtn = sheet.element.querySelector('[data-action="feedback"]');
+    assert.ok(feedbackBtn, 'Feedback button must exist in header');
+    feedbackBtn.click();
+
+    assert.equal(feedbackOpened, true, 'Clicking feedback button must invoke onOpenFeedback callback');
+  });
 });

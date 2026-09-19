@@ -191,9 +191,28 @@ export class KeyboardManager {
         }
         break;
 
-      case 'Slash':
+      case 'KeyD':
         event.preventDefault();
         if (layers) {
+          if (layers.top === 'feedback') {
+            layers.close();
+          } else {
+            layers.open('feedback');
+          }
+        }
+        break;
+
+      case 'Slash':
+        event.preventDefault();
+        if (event.shiftKey) {
+          if (layers) {
+            if (layers.top === 'feedback') {
+              layers.close();
+            } else {
+              layers.open('feedback');
+            }
+          }
+        } else if (layers) {
           layers.open('browse', { tab: 'library', focusSearch: true });
         }
         break;

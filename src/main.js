@@ -398,6 +398,7 @@ export async function initApp() {
         audioEngine.playRadio(station);
       },
       onPickFolder: async () => pickFolder(),
+      onOpenFeedback: () => layers.open('feedback'),
       onToast: (msg) => showToast(msg),
       onClose: () => layers.close()
     }));
@@ -433,6 +434,7 @@ export async function initApp() {
       stageInstance = createStage({
         onOpenBrowse: (tab) => layers.open('browse', { tab }),
         onOpenOverflow: () => layers.open('overflow'),
+        onOpenFeedback: () => layers.open('feedback'),
         onPickFolder: async () => pickFolder(),
         onToggleSource: async () => togglePlaybackSource(),
         onToast: (msg) => showToast(msg)
