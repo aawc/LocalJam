@@ -202,3 +202,4 @@ This checklist tracks resolution of reported issues and feature requests. Each c
   - *Associated Commits:* `002bd7d`
 - [x] **FR 22: Host v2 Player at /LocalJam/v2 Without Redirect** `[DONE]`
   - *Description:* Resolve `/LocalJam/v2` redirect loop and host the v2 branch player directly at `/LocalJam/v2`. Replace client-side redirect in `v2/index.html` with the complete v2 application shell incorporating `<base href="../" />`, mounting `#stage-root`, `#layer-root`, `#toast-root`, and `#aria-live-region`, and loading `./src/main.js` with matching Content Security Policy. Update `404.html` with boundary-safe regex matching (`/^(.*\/v2)(?:\/.*)?$/`) to preserve the `/v2` path on deep links, update `sw.js` navigation fallback to serve `./v2/index.html` when offline for `/v2` routes, and bump Service Worker cache to `localjam-v2026.09.043`.
+  - *Associated Commits:* `640c635`
