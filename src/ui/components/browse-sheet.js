@@ -339,8 +339,10 @@ export function createBrowseSheet(deps = {}) {
         return `
         <div class="browse-row ${isPlaying ? 'is-playing' : ''}" role="option" aria-selected="${isPlaying ? 'true' : 'false'}" tabindex="0" data-index="${idx}" data-id="${escapeHtml(row.id)}" data-primary="${escapeHtml(row.primary)}" data-kind="${row.kind}">
           ${playingBar}
-          <span class="browse-row-primary">${escapeHtml(row.primary)}</span>
-          <span class="browse-row-secondary">${escapeHtml(row.secondary)}</span>
+          <div class="browse-row-main">
+            <span class="browse-row-primary">${escapeHtml(row.primary)}</span>
+            <span class="browse-row-secondary">${escapeHtml(row.secondary)}</span>
+          </div>
           <span class="browse-row-trailing">${escapeHtml(row.trailing)}</span>
         </div>
       `;

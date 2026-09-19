@@ -857,4 +857,39 @@ describe('Browse Sheet Component (L1)', () => {
 
     assert.equal(eventFired, true, 'clicking close button must dispatch layer-close event');
   });
+
+  it('renders browse rows with .browse-row-main wrapping primary and secondary labels', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'library' });
+
+    const rows = sheet.element.querySelectorAll('.browse-row');
+    assert.ok(rows.length > 0, 'must render library rows');
+
+    const firstRow = rows[0];
+    const rowMain = firstRow.querySelector('.browse-row-main');
+    assert.ok(rowMain, 'must contain .browse-row-main wrapper');
+
+    const primary = rowMain.querySelector('.browse-row-primary');
+    const secondary = rowMain.querySelector('.browse-row-secondary');
+    assert.ok(primary, 'primary label must reside inside .browse-row-main');
+    assert.ok(secondary, 'secondary label must reside inside .browse-row-main');
+
+    const trailing = firstRow.querySelector('.browse-row-trailing');
+    assert.ok(trailing, 'trailing label must exist as sibling of .browse-row-main');
+
+    // Test radio tab rows
+    await sheet.onOpen({ tab: 'radio' });
+    const stationRows = sheet.element.querySelectorAll('.browse-row');
+    assert.ok(stationRows.length > 0, 'must render radio station rows');
+
+    const firstStationRow = stationRows[0];
+    const stationMain = firstStationRow.querySelector('.browse-row-main');
+    assert.ok(stationMain, 'station row must contain .browse-row-main wrapper');
+    assert.ok(stationMain.querySelector('.browse-row-primary'));
+    assert.ok(stationMain.querySelector('.browse-row-secondary'));
+  });
 });

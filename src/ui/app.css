@@ -851,39 +851,118 @@ body {
 
 .browse-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  min-height: var(--row-h);
+  gap: 12px;
+  padding: 8px 20px;
+  min-height: 52px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  background: transparent;
+  transition: background 0.15s ease;
+  user-select: none;
+  text-align: left;
+  box-sizing: border-box;
 }
-@media (pointer: coarse) { .browse-row { min-height: var(--row-h-coarse); } }
-.browse-row:hover { background: var(--bg-surface-hover); }
-.browse-row-main { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+
+@media (pointer: coarse) {
+  .browse-row {
+    min-height: 56px;
+    padding: 10px 20px;
+  }
+}
+
+.browse-row:hover {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
+}
+
+.browse-row:focus-visible {
+  outline: 2px solid var(--accent-cyan, #38bdf8);
+  outline-offset: -2px;
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
+}
+
+.browse-row.is-playing {
+  background: rgba(56, 189, 248, 0.1);
+  border-left: 3px solid var(--accent-cyan, #38bdf8);
+  padding-left: 17px;
+}
+
+.browse-playing-bar {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--accent-cyan, #38bdf8);
+  box-shadow: 0 0 8px var(--accent-cyan, #38bdf8);
+  flex-shrink: 0;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.browse-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .browse-row-primary {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-primary, #f8fafc);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
+
+.browse-row.is-playing .browse-row-primary {
+  color: var(--accent-cyan, #38bdf8);
+}
+
 .browse-row-secondary {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #94a3b8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
+
 .browse-row-trailing {
-  font-size: 12px;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-  margin-left: 12px;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted, #64748b);
+  margin-left: auto;
   white-space: nowrap;
+  flex-shrink: 0;
+  padding-left: 12px;
+  letter-spacing: 0.02em;
 }
-.browse-sheet-empty { padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 14px; }
+
+.browse-row > .browse-row-primary:not(.browse-row-main *) {
+  flex: 1;
+  min-width: 0;
+}
+
+.browse-empty-state,
+.browse-sheet-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px;
+  gap: 12px;
+}
 
 /* ==========================================================================
    L2 Overflow Menu (Desktop Popover & Mobile Bottom Sheet)

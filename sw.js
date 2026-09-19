@@ -3,7 +3,7 @@
  * Cache-First App Shell Strategy with explicit audio stream bypass.
  */
 
-const CACHE_NAME = 'localjam-v2026.09.045';
+const CACHE_NAME = 'localjam-v2026.09.046';
 
 const APP_SHELL_ASSETS = [
   './',
