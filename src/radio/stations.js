@@ -608,7 +608,7 @@ export const CURATED_STATIONS = [
     id: 'ohlone_kohl',
     name: 'KOHL 89.3 FM (Ohlone College)',
     description: 'Ohlone College student-operated contemporary hit radio and modern music from Fremont, California.',
-    streamUrl: 'https://ice24.securenetsystems.net/KOHL',
+    streamUrl: 'https://ice10.securenetsystems.net/KOHL',
     homepageUrl: 'https://www.kohlradio.com',
     genre: 'College & University / Pop & Rock',
     country: 'USA',

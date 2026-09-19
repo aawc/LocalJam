@@ -132,7 +132,7 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.equal(kzsu.streamUrl, 'https://kzsu-streams.stanford.edu/kzsu-1-128.mp3');
 
     const kohl = CURATED_STATIONS.find((s) => s.id === 'ohlone_kohl');
-    assert.equal(kohl.streamUrl, 'https://ice24.securenetsystems.net/KOHL');
+    assert.equal(kohl.streamUrl, 'https://ice10.securenetsystems.net/KOHL');
 
     const kalx = CURATED_STATIONS.find((s) => s.id === 'berkeley_kalx');
     assert.equal(kalx.streamUrl, 'https://stream.kalx.berkeley.edu:8443/kalx-128.mp3');
