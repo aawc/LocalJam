@@ -604,6 +604,15 @@ body {
 }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
+.browse-sheet-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
 .browse-header,
 .browse-sheet-header {
   display: flex;
@@ -801,7 +810,45 @@ body {
   white-space: nowrap;
 }
 
-.browse-sheet-list { flex: 1; overflow-y: auto; padding: 8px 0; -webkit-overflow-scrolling: touch; }
+.browse-list-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.browse-list,
+.browse-sheet-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0 24px 0;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.browse-list::-webkit-scrollbar,
+.browse-sheet-list::-webkit-scrollbar {
+  width: 6px;
+}
+.browse-list::-webkit-scrollbar-track,
+.browse-sheet-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.browse-list::-webkit-scrollbar-thumb,
+.browse-sheet-list::-webkit-scrollbar-thumb {
+  background: var(--border-subtle, #334155);
+  border-radius: var(--radius-full, 9999px);
+}
+.browse-list::-webkit-scrollbar-thumb:hover,
+.browse-sheet-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted, #64748b);
+}
+
 .browse-row {
   display: flex;
   justify-content: space-between;
@@ -876,6 +923,10 @@ body {
   z-index: 2;
   width: 100%;
   max-width: 360px;
+  max-height: 85vh;
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
   background: var(--surface-glass, rgba(16, 24, 39, 0.92));
   backdrop-filter: blur(var(--backdrop-blur, 16px));
   -webkit-backdrop-filter: blur(var(--backdrop-blur, 16px));
@@ -888,12 +939,15 @@ body {
   margin: auto;
   box-sizing: border-box;
   pointer-events: auto;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   .overflow-panel,
   .overflow-menu {
     max-width: 100%;
+    max-height: 85vh;
+    max-height: 85dvh;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     border-bottom: none;
@@ -915,6 +969,7 @@ body {
   border-radius: var(--radius-full, 9999px);
   margin: 0 auto 12px auto;
   display: none;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -954,6 +1009,11 @@ body {
 
 .overflow-content {
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
 }
 
 .overflow-list,

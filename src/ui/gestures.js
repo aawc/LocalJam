@@ -105,24 +105,39 @@ export function attachGestures(el, handlers = {}) {
     }
   };
 
+  const hasHorizontalSwipe = Boolean(handlers.onSwipeLeft || handlers.onSwipeRight);
+  const hasVerticalSwipe = Boolean(handlers.onSwipeUp || handlers.onSwipeDown);
+  const hasSwipeHandlers = hasHorizontalSwipe || hasVerticalSwipe;
+
   const onPointerMove = (e) => {
     if (e.pointerId !== activePointerId) return;
     const dx = (e.clientX || 0) - startX;
     const dy = (e.clientY || 0) - startY;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
 
-    // If movement reaches or exceeds tap threshold, cancel long-press and engage pointer capture for swipe tracking
-    if (Math.abs(dx) >= TAP_MAX_PX || Math.abs(dy) >= TAP_MAX_PX) {
+    // If movement reaches or exceeds tap threshold, cancel long-press
+    if (absX >= TAP_MAX_PX || absY >= TAP_MAX_PX) {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
       }
-      if (!pointerCaptured && typeof el.setPointerCapture === 'function' && e.pointerId !== undefined) {
-        try {
-          el.setPointerCapture(e.pointerId);
-          pointerCaptured = true;
-        } catch (err) {
-          if (err?.name !== 'NotFoundError' && err?.name !== 'InvalidStateError') {
-            console.warn(`[Gestures] setPointerCapture failed (${err?.name}): ${err?.message}`);
+
+      // Only engage pointer capture if swipe handlers are present AND movement aligns with the registered swipe axes.
+      // Crucial: elements with only long-press, taps, or orthogonal scrolling motions must NOT capture the pointer,
+      // which would suppress native touch scrolling.
+      if (hasSwipeHandlers && !pointerCaptured && typeof el.setPointerCapture === 'function' && e.pointerId !== undefined) {
+        const canCaptureHorizontal = hasHorizontalSwipe && (absX >= TAP_MAX_PX) && (absX >= absY || !hasVerticalSwipe);
+        const canCaptureVertical = hasVerticalSwipe && (absY >= TAP_MAX_PX) && (absY >= absX || !hasHorizontalSwipe);
+
+        if (canCaptureHorizontal || canCaptureVertical) {
+          try {
+            el.setPointerCapture(e.pointerId);
+            pointerCaptured = true;
+          } catch (err) {
+            if (err?.name !== 'NotFoundError' && err?.name !== 'InvalidStateError') {
+              console.warn(`[Gestures] setPointerCapture failed (${err?.name}): ${err?.message}`);
+            }
           }
         }
       }

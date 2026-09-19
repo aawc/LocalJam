@@ -273,4 +273,48 @@ describe('Gesture Recognition & Classification Engine', () => {
     listeners.pointerup({ clientX: 160, clientY: 100, pointerId: 1 });
     assert.equal(released, 1, 'pointerup after movement must release pointer capture');
   });
+
+  it('does not capture pointer when only onLongPress is bound (preserving native touch scroll)', () => {
+    let captured = 0;
+    const listeners = {};
+    const el = {
+      addEventListener(event, handler) { listeners[event] = handler; },
+      removeEventListener(event, handler) { delete listeners[event]; },
+      setPointerCapture() { captured++; },
+      releasePointerCapture() {}
+    };
+
+    attachGestures(el, {
+      onLongPress: () => {}
+    });
+
+    listeners.pointerdown({ clientX: 100, clientY: 100, pointerId: 1 });
+    // User moves finger vertically to scroll (dy = 40px)
+    listeners.pointermove({ clientX: 100, clientY: 140, pointerId: 1 });
+    assert.equal(captured, 0, 'must not capture pointer when no swipe handlers are registered');
+  });
+
+  it('does not capture pointer during vertical scroll when only horizontal swipe is bound', () => {
+    let captured = 0;
+    const listeners = {};
+    const el = {
+      addEventListener(event, handler) { listeners[event] = handler; },
+      removeEventListener(event, handler) { delete listeners[event]; },
+      setPointerCapture() { captured++; },
+      releasePointerCapture() {}
+    };
+
+    attachGestures(el, {
+      onSwipeRight: () => {}
+    });
+
+    listeners.pointerdown({ clientX: 100, clientY: 100, pointerId: 1 });
+    // User scrolls vertically: dy = 50px, dx = 5px
+    listeners.pointermove({ clientX: 105, clientY: 150, pointerId: 1 });
+    assert.equal(captured, 0, 'vertical scroll must not trigger pointer capture on horizontal-only swipe handler');
+
+    // User swipes horizontally: dx = 50px, dy = 5px
+    listeners.pointermove({ clientX: 150, clientY: 105, pointerId: 1 });
+    assert.equal(captured, 1, 'horizontal swipe must engage pointer capture');
+  });
 });
