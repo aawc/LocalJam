@@ -78,21 +78,29 @@ test('PWA - index.html contains correct relative links and meta tags for GitHub 
   assert.ok(html.includes('<script type="module" src="./src/main.js"></script>'), 'Relative main.js module script');
 });
 
-test('PWA - v2/index.html exists and redirects to root', () => {
+test('PWA - v2/index.html exists and renders the v2 player application shell', () => {
   const v2Path = path.join(ROOT_DIR, 'v2', 'index.html');
   assert.ok(fs.existsSync(v2Path), 'v2/index.html must exist on disk');
 
   const html = fs.readFileSync(v2Path, 'utf8');
-  assert.ok(html.includes('http-equiv="refresh"'), 'Must include meta http-equiv refresh');
-  assert.ok(html.includes('window.location.replace'), 'Must include client-side replace script');
+  assert.ok(!html.includes('window.location.replace'), 'Must not redirect away from v2');
+  assert.ok(!html.includes('http-equiv="refresh"'), 'Must not include meta http-equiv refresh redirect');
+  assert.ok(html.includes('<base href="../" />'), 'Must include base tag pointing to parent root');
+  assert.ok(html.includes('id="stage-root"'), 'Must contain stage-root container');
+  assert.ok(html.includes('id="layer-root"'), 'Must contain layer-root container');
+  assert.ok(html.includes('id="toast-root"'), 'Must contain toast-root container');
+  assert.ok(html.includes('id="aria-live-region"'), 'Must contain aria-live-region container');
+  assert.ok(html.includes('<script type="module" src="./src/main.js"></script>'), 'Must mount main.js module script');
+  assert.ok(html.includes('Content-Security-Policy'), 'Must include CSP meta tag');
 });
 
-test('PWA - 404.html exists and handles fallback routing to root', () => {
+test('PWA - 404.html exists and preserves v2 routing', () => {
   const notFoundPath = path.join(ROOT_DIR, '404.html');
   assert.ok(fs.existsSync(notFoundPath), '404.html must exist on disk');
 
   const html = fs.readFileSync(notFoundPath, 'utf8');
   assert.ok(html.includes('http-equiv="refresh"'), 'Must include meta http-equiv refresh');
   assert.ok(html.includes('window.location.replace'), 'Must include fallback routing script');
+  assert.ok(html.includes('/v2'), 'Must preserve /v2 route on deep link fallback');
 });
 

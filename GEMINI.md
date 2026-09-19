@@ -37,7 +37,7 @@
 
 6. **PWA & GitHub Pages Compatibility:**
    - Relative asset paths (`./`).
-   - Hash-based routing (`/#/`).
+   - Hash-based routing (`/#/`) and multi-channel deployment routing (`/v2/` application shell with `<base href="../" />`).
    - Cache-first Service Worker (`sw.js`).
 
 7. **Release Automation & Dynamic Semantic Tagging:**
@@ -45,11 +45,11 @@
    - Automatically pushes release tags to repository (`git push origin "${TAG_NAME}"`) and bundles standalone offline zip distributions.
 
 8. **One-Screen Minimalist Player & Layer Architecture:**
-   - Unified 6-row Stage (`src/ui/stage.js`) without persistent sidebars or footers: Status Chips, Artwork/Visualizer Canvas, Track & Station Metadata, Timeline Scrubber / Stream Telemetry, Transport Cluster, and Dual-Source Handle Bar (`[ Local ] · [ Radio ]`).
+   - Unified 6-row Stage (`src/ui/stage.js`) without persistent sidebars or footers: Status Chips, Artwork/Visualizer Canvas, Track & Station Metadata, Timeline Scrubber / Stream Telemetry, Transport Cluster, and Dual-Source Handle Bar (`[ Local ] · [ Radio ]`) with active-browse / inactive-toggle pill taps and semantic separator button.
    - L1 Browse Sheet (`src/ui/components/browse-sheet.js`) for library and radio queries with URL hash sync (`#/browse?tab=...`).
    - L2 Overflow Menu (`src/ui/components/overflow-menu.js`) for auxiliary controls with 8 verified stores wiped on reset (`RESET_STORE_NAMES`).
    - Layer Stack Coordinator (`src/ui/layers.js`) managing LIFO dialog stack with focus trapping and error boundary.
-   - Pure pointer gesture classifier (`src/ui/gestures.js`) with pointer capture, long-press timers, and swipe heuristics.
+   - Pure pointer gesture classifier (`src/ui/gestures.js`) with deferred pointer capture on movement threshold (`TAP_MAX_PX = 10`) to preserve child button clicks, long-press timers, and swipe heuristics.
    - Global keyboard navigation matrix (`src/ui/keyboard.js`) mapped to exact §5.2 controls.
 
 ---

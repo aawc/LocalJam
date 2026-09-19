@@ -3,7 +3,7 @@
  * Cache-First App Shell Strategy with explicit audio stream bypass.
  */
 
-const CACHE_NAME = 'localjam-v2026.09.042';
+const CACHE_NAME = 'localjam-v2026.09.043';
 
 const APP_SHELL_ASSETS = [
   './',
@@ -137,8 +137,11 @@ self.addEventListener('fetch', (event) => {
 
         return networkResponse;
       }).catch(() => {
-        // Fallback to index.html for navigation requests when offline
+        // Fallback to app shell for navigation requests when offline
         if (request.mode === 'navigate') {
+          if (url.pathname.includes('/v2')) {
+            return caches.match('./v2/index.html');
+          }
           return caches.match('./index.html');
         }
       });

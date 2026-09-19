@@ -7,8 +7,9 @@
   <title>LocalJam</title>
   <script>
     const path = window.location.pathname;
-    if (path.includes('/v2')) {
-      window.location.replace(window.location.origin + path.replace(/\/v2(?:\/(.*))?$/, '/$1') + (window.location.hash || ''));
+    const match = path.match(/^(.*\/v2)(?:\/.*)?$/);
+    if (match) {
+      window.location.replace(window.location.origin + match[1] + '/' + (window.location.hash || ''));
     } else {
       window.location.replace('./' + (window.location.hash || ''));
     }
