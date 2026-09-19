@@ -252,6 +252,63 @@ describe('Layer Stack Coordinator (src/ui/layers.js)', () => {
     assert.equal(document.activeElement, triggerBtn, "Should restore focus to trigger element");
   });
 
+  it('dismisses layer on layer-close and browse-sheet-close custom events', () => {
+    let closedCount = 0;
+    let childEl;
+    controller.register('event-layer', () => {
+      childEl = document.createElement('div');
+      return {
+        element: childEl,
+        onOpen: () => {},
+        onClose: () => { closedCount++; }
+      };
+    });
+
+    controller.open('event-layer');
+    assert.equal(controller.top, 'event-layer');
+
+    // Child dispatches layer-close event
+    childEl.dispatchEvent(new CustomEvent('layer-close', { bubbles: true }));
+    assert.equal(closedCount, 1);
+    assert.equal(controller.top, null, 'layer should be dismissed on layer-close event');
+
+    // Reopen and test browse-sheet-close
+    controller.open('event-layer');
+    assert.equal(controller.top, 'event-layer');
+    childEl.dispatchEvent(new CustomEvent('browse-sheet-close', { bubbles: true }));
+    assert.equal(closedCount, 2);
+    assert.equal(controller.top, null, 'layer should be dismissed on browse-sheet-close event');
+  });
+
+  it('prevents recursive re-entrancy when onClose callback invokes controller.close()', () => {
+    let closeCallCount = 0;
+    controller.register('bottom-layer', () => ({
+      element: document.createElement('div'),
+      onOpen: () => {},
+      onClose: () => {}
+    }));
+
+    controller.register('top-layer', () => ({
+      element: document.createElement('div'),
+      onOpen: () => {},
+      onClose: () => {
+        closeCallCount++;
+        // Child triggers controller.close() during its own onClose execution
+        controller.close();
+      }
+    }));
+
+    controller.open('bottom-layer');
+    controller.open('top-layer');
+    assert.equal(controller.top, 'top-layer');
+
+    // Dismiss top-layer
+    controller.close();
+    assert.equal(closeCallCount, 1);
+    // bottom-layer must NOT be popped by re-entrant call!
+    assert.equal(controller.top, 'bottom-layer', 're-entrant close() call must not pop the underlying layer');
+  });
+
   it('exports singleton layers instance', () => {
     assert.ok(layers instanceof LayerController);
   });

@@ -476,4 +476,25 @@ describe('Overflow Menu Component (L2)', () => {
     assert.equal(document.activeElement, last);
     assert.equal(shiftTabEvent.defaultPrevented, true);
   });
+
+  it('clicking close button invokes onClose and dispatches layer-close event', async () => {
+    let closed = false;
+    let eventFired = false;
+    const menu = createOverflowMenu({
+      onClose: () => { closed = true; },
+      onToast: () => {}
+    });
+    menu.element.addEventListener('layer-close', () => {
+      eventFired = true;
+    });
+    container.appendChild(menu.element);
+    menu.onOpen();
+
+    const closeBtn = menu.element.querySelector('.overflow-close-btn');
+    assert.ok(closeBtn, 'must have .overflow-close-btn');
+    closeBtn.click();
+
+    assert.equal(closed, true, 'clicking close button must invoke onClose');
+    assert.equal(eventFired, true, 'clicking close button must dispatch layer-close event');
+  });
 });

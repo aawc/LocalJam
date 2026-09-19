@@ -382,7 +382,8 @@ export async function initApp() {
         audioEngine.playRadio(station);
       },
       onPickFolder: async () => pickFolder(),
-      onToast: (msg) => showToast(msg)
+      onToast: (msg) => showToast(msg),
+      onClose: () => layers.close()
     }));
 
     let stageInstance = null;
@@ -403,7 +404,8 @@ export async function initApp() {
           showToast(`[VIZ ${!isViz ? 'ON' : 'OFF'}]`);
         }
       },
-      onToast: (msg) => showToast(msg)
+      onToast: (msg) => showToast(msg),
+      onClose: () => layers.close()
     }));
 
     // 5. Create and Mount Stage Viewport into #stage-root

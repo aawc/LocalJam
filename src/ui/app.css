@@ -706,12 +706,20 @@ body {
   border-radius: var(--radius-sm);
   line-height: 1;
   flex-shrink: 0;
+  pointer-events: auto;
+  z-index: 10;
   transition: color 0.15s ease;
 }
 
 .browse-close-btn:hover,
 .browse-btn-close:hover {
   color: var(--text-primary);
+}
+
+.browse-close-btn:focus-visible,
+.browse-btn-close:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
 }
 
 .browse-header-row2,
@@ -920,14 +928,16 @@ body {
   position: absolute;
   top: 12px;
   right: 14px;
+  z-index: 10;
   background: transparent;
   border: none;
   color: var(--text-muted, #94a3b8);
   font-size: 16px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm, 4px);
   line-height: 1;
+  pointer-events: auto;
   transition: color 0.15s ease;
 }
 

@@ -16,6 +16,7 @@ export class LayerController {
     this._currentHash = typeof window !== 'undefined' && window.location ? (window.location.hash || '#/') : '#/';
     this._boundOnHashChange = null;
     this._boundOnKeyDown = null;
+    this._isClosing = false;
   }
 
   /**
@@ -160,6 +161,18 @@ export class LayerController {
       }
     });
 
+    // Custom dismissal events from child components
+    wrapper.addEventListener('browse-sheet-close', () => {
+      if (this.top === name) {
+        this.close();
+      }
+    });
+    wrapper.addEventListener('layer-close', () => {
+      if (this.top === name) {
+        this.close();
+      }
+    });
+
     let instance;
     try {
       instance = factory(props);
@@ -205,40 +218,46 @@ export class LayerController {
    * @returns {object|null} The closed stack entry, or null if already empty
    */
   close() {
+    if (this._isClosing) return null;
     if (this._stack.length === 0) return null;
 
-    const entry = this._stack.pop();
+    this._isClosing = true;
+    try {
+      const entry = this._stack.pop();
 
-    if (typeof entry.instance?.onClose === 'function') {
-      entry.instance.onClose();
-    }
-    if (typeof entry.instance?.destroy === 'function') {
-      entry.instance.destroy();
-    }
-
-    if (entry.wrapper && entry.wrapper.parentElement) {
-      entry.wrapper.parentElement.removeChild(entry.wrapper);
-    }
-
-    // If browse was closed, reset hash to #/
-    if (entry.name === 'browse') {
-      this._syncHashOnClose();
-    }
-
-    // Focus restoration
-    if (this._stack.length > 0) {
-      const nextTop = this._stack[this._stack.length - 1];
-      if (typeof nextTop.instance?.focusFirst === 'function') {
-        nextTop.instance.focusFirst();
+      if (typeof entry.instance?.onClose === 'function') {
+        entry.instance.onClose();
       }
-    } else if (this._previousFocus) {
-      try {
-        this._previousFocus.focus?.();
-      } catch (_) {}
-      this._previousFocus = null;
-    }
+      if (typeof entry.instance?.destroy === 'function') {
+        entry.instance.destroy();
+      }
 
-    return entry;
+      if (entry.wrapper && entry.wrapper.parentElement) {
+        entry.wrapper.parentElement.removeChild(entry.wrapper);
+      }
+
+      // If browse was closed, reset hash to #/
+      if (entry.name === 'browse') {
+        this._syncHashOnClose();
+      }
+
+      // Focus restoration
+      if (this._stack.length > 0) {
+        const nextTop = this._stack[this._stack.length - 1];
+        if (typeof nextTop.instance?.focusFirst === 'function') {
+          nextTop.instance.focusFirst();
+        }
+      } else if (this._previousFocus) {
+        try {
+          this._previousFocus.focus?.();
+        } catch (_) {}
+        this._previousFocus = null;
+      }
+
+      return entry;
+    } finally {
+      this._isClosing = false;
+    }
   }
 
   /**

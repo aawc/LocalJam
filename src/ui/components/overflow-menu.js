@@ -448,6 +448,7 @@ export function createOverflowMenu(deps = {}) {
     if (typeof onClose === 'function') {
       onClose();
     }
+    sheetEl.dispatchEvent(new CustomEvent('layer-close', { bubbles: true }));
   }
 
   // Backdrops, close button, and drag handle gesture

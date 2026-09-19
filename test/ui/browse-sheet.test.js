@@ -838,4 +838,23 @@ describe('Browse Sheet Component (L1)', () => {
     parent.innerHTML = '<p>Cleared</p>';
     assert.equal(globalThis.document.activeElement, globalThis.document.body);
   });
+
+  it('clicking close button dispatches layer-close custom event for layer coordinator dismissal', async () => {
+    let eventFired = false;
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    sheet.element.addEventListener('layer-close', () => {
+      eventFired = true;
+    });
+    await sheet.onOpen();
+
+    const closeBtn = sheet.element.querySelector('[data-action="close"]');
+    assert.ok(closeBtn);
+    closeBtn.click();
+
+    assert.equal(eventFired, true, 'clicking close button must dispatch layer-close event');
+  });
 });

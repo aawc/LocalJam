@@ -114,6 +114,7 @@ export function createBrowseSheet(deps = {}) {
       onParentClose();
     }
     sheetEl.dispatchEvent(new CustomEvent('browse-sheet-close', { bubbles: true }));
+    sheetEl.dispatchEvent(new CustomEvent('layer-close', { bubbles: true }));
   }
 
   function focusFirst() {
