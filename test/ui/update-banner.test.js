@@ -459,5 +459,46 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
       }
     }
   });
+
+  await t.test("createUpdateBanner suppresses showing the prompt if the version was applied within the debounce window", () => {
+    const prevDoc = globalThis.document;
+    const prevSession = globalThis.sessionStorage;
+    try {
+      const store = {
+        localjam_applied_update: JSON.stringify({
+          version: "v2026.09.050",
+          timestamp: Date.now() - 5000 // 5s ago < 30s
+        })
+      };
+      globalThis.sessionStorage = {
+        getItem: (k) => store[k] || null,
+        setItem: (k, v) => { store[k] = v; }
+      };
+      globalThis.document = {
+        createElement: () => ({
+          id: "",
+          className: "",
+          style: { display: "none" },
+          innerHTML: "",
+          querySelector: (sel) => {
+            if (sel === "#update-banner-message") return { textContent: "" };
+            return { addEventListener: () => {} };
+          },
+          setAttribute: () => {}
+        })
+      };
+
+      const banner = createUpdateBanner();
+      banner.show("v2026.09.050");
+      assert.equal(banner.element.style.display, "none", "must suppress prompt for recently applied version");
+
+      // Showing a different version must NOT be suppressed
+      banner.show("v2026.09.051");
+      assert.equal(banner.element.style.display, "block", "must allow prompt for newer, different version");
+    } finally {
+      globalThis.document = prevDoc;
+      globalThis.sessionStorage = prevSession;
+    }
+  });
 });
 

@@ -53,6 +53,17 @@ export function createUpdateBanner() {
       if (dismissed === newVersion) {
         return;
       }
+      const applied = sessionStorage.getItem("localjam_applied_update");
+      if (applied) {
+        try {
+          const { version, timestamp } = JSON.parse(applied);
+          // If this version was applied within the last 30 seconds, suppress re-prompting
+          // to give the browser Service Worker and cache time to settle
+          if (version === newVersion && Date.now() - timestamp < 30000) {
+            return;
+          }
+        } catch (_) {}
+      }
     }
 
     if (msgEl) {
@@ -72,6 +83,15 @@ export function createUpdateBanner() {
     if (applyBtn) {
       applyBtn.disabled = true;
       applyBtn.textContent = "Updating...";
+    }
+
+    if (typeof sessionStorage !== "undefined" && currentBannerVersion) {
+      try {
+        sessionStorage.setItem("localjam_applied_update", JSON.stringify({
+          version: currentBannerVersion,
+          timestamp: Date.now()
+        }));
+      } catch (_) {}
     }
 
     const doReload = () => {
@@ -163,7 +183,7 @@ export function createUpdateBanner() {
     // Fallback safety timeout if controllerchange does not fire
     setTimeout(() => {
       triggerReloadOnce();
-    }, 800);
+    }, 2500);
   }
 
   if (applyBtn) {

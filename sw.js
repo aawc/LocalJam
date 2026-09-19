@@ -87,8 +87,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Network-First strategy for version.json and sw.js to ensure immediate update detection
-  if (url.pathname.endsWith('version.json') || url.pathname.endsWith('sw.js')) {
+  // 2. Network-First strategy for version metadata, version.js, and sw.js to ensure immediate update detection
+  if (
+    url.pathname.endsWith('version.json') ||
+    url.pathname.endsWith('version.js') ||
+    url.pathname.endsWith('sw.js')
+  ) {
     event.respondWith(
       fetch(request, { cache: 'no-cache' }).catch(() => caches.match(request))
     );
