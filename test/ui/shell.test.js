@@ -285,6 +285,57 @@ test('Shell Source Switching - togglePlaybackSource switches radio to local trac
   assert.ok(toasts.includes('[SOURCE: LOCAL]'), 'Toast announcing [SOURCE: LOCAL] must be shown');
 });
 
+test('Shell Source Switching - togglePlaybackSource opens browse sheet and prompts user to choose when no prior track was selected', async () => {
+  let openedTab = null;
+  let playedTrack = null;
+  let paused = false;
+  const toasts = [];
+
+  const mockAudioEngine = {
+    isRadio: true,
+    currentTrack: null,
+    currentStation: { id: 'st-ambient', name: 'Ambient Radio' },
+    pause() {
+      paused = true;
+    },
+    async playTrack(t) {
+      playedTrack = t;
+      this.isRadio = false;
+    }
+  };
+
+  const mockDb = {
+    async getAllTracks() {
+      return [
+        { id: 'trk-1', title: 'First Song', isMissing: false },
+        { id: 'trk-2', title: 'Second Song', isMissing: false }
+      ];
+    }
+  };
+
+  const mockQueueManager = {
+    getCurrent() { return null; },
+    setQueue() {}
+  };
+
+  await togglePlaybackSource({
+    audioEngine: mockAudioEngine,
+    queueManager: mockQueueManager,
+    db: mockDb,
+    lastTrack: null,
+    onOpenBrowse: (tab) => {
+      openedTab = tab;
+    },
+    onToast: (msg) => toasts.push(msg)
+  });
+
+  assert.equal(playedTrack, null, 'Must NOT auto-play unchosen track');
+  assert.equal(paused, true, 'Radio must be paused');
+  assert.equal(mockAudioEngine.isRadio, false, 'Source must switch to local');
+  assert.equal(openedTab, 'library', 'Must open library browse sheet');
+  assert.ok(toasts.includes('[CHOOSE A TRACK]'), 'Must toast [CHOOSE A TRACK]');
+});
+
 test('Shell Source Switching - togglePlaybackSource prompts pickFolder when switching from radio with no local tracks', async () => {
   let pickFolderCalled = false;
   let playedTrack = null;

@@ -911,4 +911,32 @@ describe('Browse Sheet Component (L1)', () => {
 
     assert.equal(feedbackOpened, true, 'Clicking feedback button must invoke onOpenFeedback callback');
   });
+
+  it('passes clicked track, all visible tracks, and index to onPlayTrack callback', async () => {
+    let playedTrack = null;
+    let playedTracks = null;
+    let playedIndex = -1;
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      onPlayTrack: (track, tracks, idx) => {
+        playedTrack = track;
+        playedTracks = tracks;
+        playedIndex = idx;
+      }
+    });
+    await sheet.onOpen({ tab: 'library' });
+
+    const rows = sheet.element.querySelectorAll('.browse-row');
+    assert.ok(rows.length > 1, 'multiple rows must exist');
+
+    // Click second row (index 1)
+    rows[1].click();
+
+    assert.equal(playedTrack?.id, sampleTracks[1].id, 'Clicked track must match index 1');
+    assert.ok(Array.isArray(playedTracks), 'Tracks must be an array');
+    assert.equal(playedIndex, 1, 'Index must be 1');
+  });
 });

@@ -214,16 +214,18 @@ export async function togglePlaybackSource(deps = {}) {
     }
     // Switch from Radio to Local Track
     let track = engine.currentTrack || (deps.lastTrack !== undefined ? deps.lastTrack : lastTrack) || queue?.getCurrent?.()?.track;
+    let hasLocalTracks = false;
     if (database && typeof database.getAllTracks === 'function') {
       try {
         const allTracks = (await database.getAllTracks()) || [];
         const available = allTracks.filter((t) => !t.isMissing);
         if (available.length > 0) {
+          hasLocalTracks = true;
           if (!track || !available.some((t) => t.id === track.id)) {
-            track = available[0];
+            track = null;
           }
           if (queue && typeof queue.setQueue === 'function') {
-            queue.setQueue(available, Math.max(0, available.findIndex((t) => t.id === track.id)));
+            queue.setQueue(available, track ? Math.max(0, available.findIndex((t) => t.id === track.id)) : 0);
           }
         } else {
           track = null;
@@ -237,6 +239,18 @@ export async function togglePlaybackSource(deps = {}) {
       lastTrack = track;
       await engine.playTrack(track);
       toast('[SOURCE: LOCAL]');
+    } else if (hasLocalTracks) {
+      // Local tracks exist in library, but none was chosen yet:
+      // pause radio, switch source, and open library browse sheet to let user choose
+      if (typeof engine.pause === 'function') {
+        engine.pause();
+      }
+      engine.isRadio = false;
+      const openBrowse = deps.onOpenBrowse || ((tab) => layers?.open?.('browse', { tab }));
+      if (typeof openBrowse === 'function') {
+        openBrowse('library');
+      }
+      toast('[CHOOSE A TRACK]');
     } else {
       // Prompt user to pick a folder instead of merely showing [NO LOCAL TRACKS]
       const picker = deps.onPickFolder || pickFolder;
@@ -387,7 +401,7 @@ export async function initApp() {
     }));
 
     layers.register('browse', () => createBrowseSheet({
-      onPlayTrack: (track, index, tracks) => {
+      onPlayTrack: (track, tracks, index) => {
         audioEngine.isRadio = false;
         lastTrack = track;
         queueManager.setQueue(tracks, index);
@@ -436,7 +450,7 @@ export async function initApp() {
         onOpenOverflow: () => layers.open('overflow'),
         onOpenFeedback: () => layers.open('feedback'),
         onPickFolder: async () => pickFolder(),
-        onToggleSource: async () => togglePlaybackSource(),
+        onToggleSource: async () => togglePlaybackSource({ onOpenBrowse: (tab) => layers.open('browse', { tab }) }),
         onToast: (msg) => showToast(msg)
       });
       stageRoot.appendChild(stageInstance.element);
@@ -448,7 +462,7 @@ export async function initApp() {
       queueManager,
       layers,
       onToast: (msg) => showToast(msg),
-      onToggleSource: () => togglePlaybackSource(),
+      onToggleSource: () => togglePlaybackSource({ onOpenBrowse: (tab) => layers.open('browse', { tab }) }),
       onToggleVisualizer: () => {
         if (stageInstance) {
           const isViz = typeof stageInstance.isVisualizerEnabled === 'function'
