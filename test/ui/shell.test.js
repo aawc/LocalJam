@@ -4,7 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { hydratePlaybackState, togglePlaybackSource, savePlaybackState } from '../../src/main.js';
+import { hydratePlaybackState, togglePlaybackSource, savePlaybackState, initApp } from '../../src/main.js';
+import { setupMockDom, teardownMockDom } from '../helpers/mock-dom.js';
+import { db } from '../../src/storage/db.js';
+import { layers } from '../../src/ui/layers.js';
+import { getDiagnosticErrors, clearDiagnosticErrors } from '../../src/utils/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -609,4 +613,90 @@ test('Shell Hydration - automatically migrates saved bbc_radio_6 to nts_radio_1'
   assert.equal(mockAudioEngine.currentStation.id, 'nts_radio_1');
   assert.equal(mockAudioEngine.isRadio, true);
   assert.equal(savedRecord?.stationId, 'nts_radio_1', 'Must persist migrated stationId to DB');
+});
+
+test('Shell Module - src/main.js explicitly imports equalizer from ./player/equalizer.js', () => {
+  const mainJsPath = path.join(ROOT_DIR, 'src/main.js');
+  const code = fs.readFileSync(mainJsPath, 'utf8');
+
+  const hasEqualizerImport = /import\s*\{\s*[^}]*\bequalizer\b[^}]*\}\s*from\s*['"]\.\/player\/equalizer\.js['"]/.test(code);
+  assert.ok(
+    hasEqualizerImport,
+    'src/main.js must import { equalizer } from "./player/equalizer.js" to prevent ReferenceError at runtime'
+  );
+});
+
+test('Shell Bootstrap - initApp initializes modals and mounts stage without ReferenceError on equalizer', async () => {
+  setupMockDom();
+  clearDiagnosticErrors();
+
+  const originalDbInit = db.init;
+  const originalGetPlaybackState = db.getPlaybackState;
+  const originalGetAllTracks = db.getAllTracks;
+  const originalGetStations = db.getStations;
+  const originalSetInterval = globalThis.setInterval;
+  const originalSetTimeout = globalThis.setTimeout;
+
+  const timerIds = [];
+  globalThis.setInterval = (...args) => {
+    const timer = originalSetInterval(...args);
+    if (typeof timer?.unref === 'function') timer.unref();
+    timerIds.push({ type: 'interval', timer });
+    return timer;
+  };
+  globalThis.setTimeout = (...args) => {
+    const timer = originalSetTimeout(...args);
+    if (typeof timer?.unref === 'function') timer.unref();
+    timerIds.push({ type: 'timeout', timer });
+    return timer;
+  };
+
+  db.init = async () => {};
+  db.getPlaybackState = async () => null;
+  db.getAllTracks = async () => [];
+  db.getStations = async () => [];
+
+  // Setup DOM roots required by index.html / initApp
+  document.body.innerHTML = `
+    <div id="stage-root"></div>
+    <div id="layer-root"></div>
+    <div id="toast-root"></div>
+    <div id="aria-live-region"></div>
+  `;
+
+  try {
+    await initApp();
+
+    const diagnosticErrors = getDiagnosticErrors().filter(
+      (err) => err.context === 'App bootstrap failure'
+    );
+    assert.equal(
+      diagnosticErrors.length,
+      0,
+      `App bootstrap must not encounter errors. Found: ${diagnosticErrors.map((e) => e.message).join(', ')}`
+    );
+
+    const stageRoot = document.getElementById('stage-root');
+    assert.ok(stageRoot.children.length > 0, 'Stage must be mounted into stage-root on successful bootstrap');
+
+    assert.ok(layers._factories.has('feedback'), 'Feedback layer must be registered');
+    const feedbackLayer = layers._factories.get('feedback')();
+    assert.ok(feedbackLayer.element, 'Feedback layer element must exist');
+  } finally {
+    for (const t of timerIds) {
+      if (t.type === 'interval') {
+        clearInterval(t.timer);
+      } else {
+        clearTimeout(t.timer);
+      }
+    }
+    globalThis.setInterval = originalSetInterval;
+    globalThis.setTimeout = originalSetTimeout;
+    db.init = originalDbInit;
+    db.getPlaybackState = originalGetPlaybackState;
+    db.getAllTracks = originalGetAllTracks;
+    db.getStations = originalGetStations;
+    layers.destroy();
+    teardownMockDom();
+  }
 });

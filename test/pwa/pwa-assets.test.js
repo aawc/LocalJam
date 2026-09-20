@@ -40,7 +40,7 @@ test('PWA - sw.js caches all declared app shell assets and excludes audio stream
   const content = fs.readFileSync(swPath, 'utf8');
 
   // Verify cache name and assets array
-  assert.ok(content.includes("const CACHE_NAME = 'localjam-"), 'Cache version must be declared');
+  assert.ok(content.includes("const CACHE_NAME = 'localjam-v2026.09.049';"), 'Cache version must be localjam-v2026.09.049');
   assert.ok(content.includes('APP_SHELL_ASSETS = ['), 'App shell assets array must be declared');
 
   // Verify all files in APP_SHELL_ASSETS actually exist on disk
@@ -104,3 +104,88 @@ test('PWA - 404.html exists and preserves v2 routing', () => {
   assert.ok(html.includes('/v2'), 'Must preserve /v2 route on deep link fallback');
 });
 
+test('PWA - sw.js sanitizes Permissions-Policy header for navigation responses', async () => {
+  const swPath = path.join(ROOT_DIR, 'sw.js');
+  const content = fs.readFileSync(swPath, 'utf8');
+
+  // 1. Verify sw.js declares the clean standard permissions policy constant and helper
+  const expectedPolicy = 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
+  assert.ok(content.includes(expectedPolicy), 'Must define standard clean permissions policy');
+  assert.ok(content.includes('function sanitizeNavigationResponse'), 'Must define sanitizeNavigationResponse helper');
+  assert.ok(content.includes("request.mode === 'navigate'"), 'Must check request.mode === "navigate"');
+  assert.ok(content.includes('sanitizeNavigationResponse(cachedResponse)'), 'Must sanitize cached navigation responses');
+  assert.ok(content.includes('sanitizeNavigationResponse(networkResponse)'), 'Must sanitize network navigation responses');
+
+  // 2. Extract and evaluate the sanitizeNavigationResponse function from sw.js
+  const helperMatch = content.match(/(function sanitizeNavigationResponse[\s\S]*?^})/m);
+  assert.ok(helperMatch, 'Must find sanitizeNavigationResponse definition');
+
+  const sanitizeFn = new Function(
+    'PERMISSIONS_POLICY',
+    `
+    ${helperMatch[1]}
+    return sanitizeNavigationResponse;
+    `
+  )(expectedPolicy);
+
+  // Test 2a: Null response pass-through
+  assert.equal(sanitizeFn(null), null, 'Null response must pass through');
+
+  // Test 2b: Sanitize GitHub Pages edge-injected Permissions-Policy header
+  const githubEdgePolicy =
+    'interest-cohort=(), browsing-topics=(), run-ad-auction=(), join-ad-interest-group=(), private-state-token-redemption=(), private-state-token-issuance=(), private-aggregation=(), attribution-reporting=()';
+  const initialHeaders = new Headers({
+    'Content-Type': 'text/html; charset=utf-8',
+    'Permissions-Policy': githubEdgePolicy,
+    'X-Custom-Header': 'preserve-me'
+  });
+  const mockOriginalResponse = new Response('<!DOCTYPE html><html><head><title>LocalJam</title></head></html>', {
+    status: 200,
+    statusText: 'OK',
+    headers: initialHeaders
+  });
+
+  const sanitized = sanitizeFn(mockOriginalResponse);
+  assert.equal(sanitized.status, 200);
+  assert.equal(sanitized.statusText, 'OK');
+  assert.equal(sanitized.headers.get('content-type'), 'text/html; charset=utf-8');
+  assert.equal(sanitized.headers.get('x-custom-header'), 'preserve-me');
+  assert.equal(sanitized.headers.get('permissions-policy'), expectedPolicy);
+
+  // Verify none of the unrecognized features exist in the sanitized header
+  const unrecognizedFeatures = [
+    'browsing-topics',
+    'run-ad-auction',
+    'join-ad-interest-group',
+    'private-state-token-redemption',
+    'private-state-token-issuance',
+    'private-aggregation',
+    'attribution-reporting',
+    'interest-cohort'
+  ];
+  const resultingPolicy = sanitized.headers.get('permissions-policy');
+  for (const feature of unrecognizedFeatures) {
+    assert.ok(!resultingPolicy.includes(feature), `Policy must not include unrecognized feature: ${feature}`);
+  }
+
+  // Verify response body is intact
+  const text = await sanitized.text();
+  assert.equal(text, '<!DOCTYPE html><html><head><title>LocalJam</title></head></html>');
+
+  // Test 2c: Verify null-body status codes (204, 304) and out-of-range pass-through
+  const res204 = new Response(null, { status: 204, statusText: 'No Content' });
+  const sanitized204 = sanitizeFn(res204);
+  assert.equal(sanitized204.status, 204);
+  assert.equal(sanitized204.body, null);
+  assert.equal(sanitized204.headers.get('permissions-policy'), expectedPolicy);
+
+  const res304 = new Response(null, { status: 304, statusText: 'Not Modified' });
+  const sanitized304 = sanitizeFn(res304);
+  assert.equal(sanitized304.status, 304);
+  assert.equal(sanitized304.body, null);
+  assert.equal(sanitized304.headers.get('permissions-policy'), expectedPolicy);
+
+  // Out-of-range (e.g., opaque status 0 or network error) passes through untouched
+  const mockOpaque = { status: 0, statusText: '', headers: new Headers() };
+  assert.equal(sanitizeFn(mockOpaque), mockOpaque, 'Out-of-range status must pass through untouched');
+});

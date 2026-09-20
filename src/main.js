@@ -5,6 +5,7 @@
 import { db } from './storage/db.js';
 import { audioEngine } from './player/audio-engine.js';
 import { queueManager } from './player/queue.js';
+import { equalizer } from './player/equalizer.js';
 import { keyboardManager } from './ui/keyboard.js';
 import { createStage } from './ui/stage.js';
 import { layers } from './ui/layers.js';

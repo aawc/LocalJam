@@ -1381,7 +1381,6 @@ body {
 .eq-slider {
   writing-mode: vertical-lr;
   direction: rtl;
-  -webkit-appearance: slider-vertical;
   width: 24px;
   height: 120px;
   accent-color: var(--accent-cyan);

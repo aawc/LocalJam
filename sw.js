@@ -3,7 +3,34 @@
  * Cache-First App Shell Strategy with explicit audio stream bypass.
  */
 
-const CACHE_NAME = 'localjam-v2026.09.048';
+const CACHE_NAME = 'localjam-v2026.09.049';
+
+const PERMISSIONS_POLICY =
+  'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
+
+/**
+ * Sanitizes response headers for navigation requests by replacing unrecognized
+ * Permissions-Policy directives injected by edge proxies (e.g., GitHub Pages)
+ * with the clean, standardized permissions policy.
+ * @param {Response|null} response
+ * @returns {Response|null}
+ */
+function sanitizeNavigationResponse(response) {
+  if (!response) {
+    return response;
+  }
+  if (response.status < 200 || response.status > 599) {
+    return response;
+  }
+  const headers = new Headers(response.headers);
+  headers.set('permissions-policy', PERMISSIONS_POLICY);
+  const isNullBodyStatus = [204, 205, 304].includes(response.status);
+  return new Response(isNullBodyStatus ? null : response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
 
 const APP_SHELL_ASSETS = [
   './',
@@ -128,12 +155,16 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        return cachedResponse;
+        return request.mode === 'navigate'
+          ? sanitizeNavigationResponse(cachedResponse)
+          : cachedResponse;
       }
 
       return fetch(request).then((networkResponse) => {
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+          return request.mode === 'navigate'
+            ? sanitizeNavigationResponse(networkResponse)
+            : networkResponse;
         }
 
         const responseToCache = networkResponse.clone();
@@ -141,16 +172,24 @@ self.addEventListener('fetch', (event) => {
           cache.put(request, responseToCache);
         });
 
-        return networkResponse;
+        return request.mode === 'navigate'
+          ? sanitizeNavigationResponse(networkResponse)
+          : networkResponse;
       }).catch(() => {
         // Fallback to app shell for navigation requests when offline
         if (request.mode === 'navigate') {
-          if (url.pathname.includes('/v2')) {
-            return caches.match('./v2/index.html');
-          }
-          return caches.match('./index.html');
+          const fallbackPath = url.pathname.includes('/v2') ? './v2/index.html' : './index.html';
+          return caches.match(fallbackPath).then((fallback) => sanitizeNavigationResponse(fallback));
         }
       });
     })
   );
 });
+
+// Expose on global scope if running in ServiceWorker or test environment
+if (typeof self !== 'undefined') {
+  self.sanitizeNavigationResponse = sanitizeNavigationResponse;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.sanitizeNavigationResponse = sanitizeNavigationResponse;
+}
