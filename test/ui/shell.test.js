@@ -700,3 +700,206 @@ test('Shell Bootstrap - initApp initializes modals and mounts stage without Refe
     teardownMockDom();
   }
 });
+
+test('Shell Bootstrap - initApp registers ServiceWorker immediately when document.readyState is complete', async () => {
+  setupMockDom({ readyState: 'complete' });
+  clearDiagnosticErrors();
+
+  const originalDbInit = db.init;
+  const originalGetPlaybackState = db.getPlaybackState;
+  const originalGetAllTracks = db.getAllTracks;
+  const originalGetStations = db.getStations;
+  const originalFetch = globalThis.fetch;
+  const originalSetInterval = globalThis.setInterval;
+  const originalSetTimeout = globalThis.setTimeout;
+  const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+
+  const timerIds = [];
+  globalThis.setInterval = (...args) => {
+    const timer = originalSetInterval(...args);
+    if (typeof timer?.unref === 'function') timer.unref();
+    timerIds.push({ type: 'interval', timer });
+    return timer;
+  };
+  globalThis.setTimeout = (...args) => {
+    const timer = originalSetTimeout(...args);
+    if (typeof timer?.unref === 'function') timer.unref();
+    timerIds.push({ type: 'timeout', timer });
+    return timer;
+  };
+
+  let registeredPath = null;
+  let registeredOptions = null;
+  let controllerChangeListeners = [];
+
+  const mockRegistration = {
+    scope: 'http://localhost:3000/',
+    update: async () => {},
+    addEventListener: () => {}
+  };
+
+  Object.defineProperty(globalThis, 'navigator', {
+    value: {
+      userAgent: 'MockBrowser/1.0',
+      serviceWorker: {
+        addEventListener: (evt, fn) => {
+          if (evt === 'controllerchange') controllerChangeListeners.push(fn);
+        },
+        register: async (scriptPath, options) => {
+          registeredPath = scriptPath;
+          registeredOptions = options;
+          return mockRegistration;
+        },
+        getRegistration: async () => mockRegistration
+      }
+    },
+    configurable: true,
+    writable: true
+  });
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({ version: 'v2026.09.040' })
+  });
+
+  db.init = async () => {};
+  db.getPlaybackState = async () => null;
+  db.getAllTracks = async () => [];
+  db.getStations = async () => [];
+
+  document.body.innerHTML = `
+    <div id="stage-root"></div>
+    <div id="layer-root"></div>
+    <div id="toast-root"></div>
+    <div id="aria-live-region"></div>
+  `;
+
+  try {
+    await initApp();
+
+    // Assert that navigator.serviceWorker.register was called without relying on a window 'load' event
+    assert.ok(
+      registeredPath !== null,
+      'navigator.serviceWorker.register must be called when document.readyState is complete'
+    );
+    assert.equal(registeredPath, './sw.js');
+    assert.deepEqual(registeredOptions, { scope: './' });
+  } finally {
+    for (const t of timerIds) {
+      if (t.type === 'interval') clearInterval(t.timer);
+      else clearTimeout(t.timer);
+    }
+    globalThis.setInterval = originalSetInterval;
+    globalThis.setTimeout = originalSetTimeout;
+    if (prevNavDescriptor) {
+      Object.defineProperty(globalThis, 'navigator', prevNavDescriptor);
+    }
+    globalThis.fetch = originalFetch;
+    db.init = originalDbInit;
+    db.getPlaybackState = originalGetPlaybackState;
+    db.getAllTracks = originalGetAllTracks;
+    db.getStations = originalGetStations;
+    layers.destroy();
+    teardownMockDom();
+  }
+});
+
+test('Shell Bootstrap - initApp registers ServiceWorker when document.readyState is loading on load event', async () => {
+  setupMockDom({ readyState: 'loading' });
+  clearDiagnosticErrors();
+
+  const originalDbInit = db.init;
+  const originalGetPlaybackState = db.getPlaybackState;
+  const originalGetAllTracks = db.getAllTracks;
+  const originalGetStations = db.getStations;
+  const originalFetch = globalThis.fetch;
+  const originalSetInterval = globalThis.setInterval;
+  const originalSetTimeout = globalThis.setTimeout;
+  const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+
+  const timerIds = [];
+  globalThis.setInterval = (...args) => {
+    const timer = originalSetInterval(...args);
+    if (typeof timer?.unref === 'function') timer.unref();
+    timerIds.push({ type: 'interval', timer });
+    return timer;
+  };
+  globalThis.setTimeout = (...args) => {
+    const timer = originalSetTimeout(...args);
+    if (typeof timer?.unref === 'function') timer.unref();
+    timerIds.push({ type: 'timeout', timer });
+    return timer;
+  };
+
+  let registeredPath = null;
+  const mockRegistration = {
+    scope: 'http://localhost:3000/',
+    update: async () => {},
+    addEventListener: () => {}
+  };
+
+  Object.defineProperty(globalThis, 'navigator', {
+    value: {
+      userAgent: 'MockBrowser/1.0',
+      serviceWorker: {
+        addEventListener: () => {},
+        register: async (scriptPath) => {
+          registeredPath = scriptPath;
+          return mockRegistration;
+        },
+        getRegistration: async () => mockRegistration
+      }
+    },
+    configurable: true,
+    writable: true
+  });
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({ version: 'v2026.09.040' })
+  });
+
+  db.init = async () => {};
+  db.getPlaybackState = async () => null;
+  db.getAllTracks = async () => [];
+  db.getStations = async () => [];
+
+  document.body.innerHTML = `
+    <div id="stage-root"></div>
+    <div id="layer-root"></div>
+    <div id="toast-root"></div>
+    <div id="aria-live-region"></div>
+  `;
+
+  try {
+    await initApp();
+
+    // Before load event, registeredPath is null (waiting for load or fallback timeout)
+    assert.equal(registeredPath, null, 'Should not register immediately when readyState is loading');
+
+    // Dispatch load event
+    globalThis.window.dispatchEvent(new Event('load'));
+
+    // Now registeredPath must be set
+    assert.equal(registeredPath, './sw.js');
+  } finally {
+    for (const t of timerIds) {
+      if (t.type === 'interval') clearInterval(t.timer);
+      else clearTimeout(t.timer);
+    }
+    globalThis.setInterval = originalSetInterval;
+    globalThis.setTimeout = originalSetTimeout;
+    if (prevNavDescriptor) {
+      Object.defineProperty(globalThis, 'navigator', prevNavDescriptor);
+    }
+    globalThis.fetch = originalFetch;
+    db.init = originalDbInit;
+    db.getPlaybackState = originalGetPlaybackState;
+    db.getAllTracks = originalGetAllTracks;
+    db.getStations = originalGetStations;
+    layers.destroy();
+    teardownMockDom();
+  }
+});
+
+

@@ -522,10 +522,15 @@ export async function initApp() {
     const updateBanner = createUpdateBanner();
     document.body.appendChild(updateBanner.element);
 
-    let updateCheckerInstance = null;
     const handleUpdateReady = (newVersion, worker) => {
       updateBanner.show(newVersion, worker);
     };
+
+    // Initialize update checker immediately so version polling and visibility listeners start without delay
+    const updateCheckerInstance = initUpdateChecker({
+      currentVersion: APP_VERSION,
+      onUpdateReady: handleUpdateReady
+    });
 
     if (typeof fetch === 'function') {
       fetch(`./version.json?_t=${Date.now()}`, { cache: 'no-cache' })
@@ -557,7 +562,11 @@ export async function initApp() {
         });
     }
 
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    if (
+      typeof window !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      window.location?.protocol?.startsWith('http')
+    ) {
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (refreshing) return;
@@ -573,33 +582,38 @@ export async function initApp() {
         }
       });
 
-      window.addEventListener('load', () => {
+      let swRegistered = false;
+      let fallbackTimer = null;
+      const registerServiceWorker = () => {
+        if (swRegistered) return;
+        swRegistered = true;
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
         navigator.serviceWorker
-          .register('./sw.js')
+          .register('./sw.js', { scope: './' })
           .then((reg) => {
             console.log('[SW] ServiceWorker registered with scope:', reg.scope);
             if (typeof reg.update === 'function') {
               reg.update().catch(() => {});
             }
-            updateCheckerInstance = initUpdateChecker({
-              registration: reg,
-              currentVersion: APP_VERSION,
-              onUpdateReady: handleUpdateReady
-            });
+            if (updateCheckerInstance && typeof updateCheckerInstance.setRegistration === 'function') {
+              updateCheckerInstance.setRegistration(reg);
+            }
           })
           .catch((err) => {
             console.warn('[SW] ServiceWorker registration failed:', err);
-            updateCheckerInstance = initUpdateChecker({
-              currentVersion: APP_VERSION,
-              onUpdateReady: handleUpdateReady
-            });
           });
-      });
-    } else {
-      updateCheckerInstance = initUpdateChecker({
-        currentVersion: APP_VERSION,
-        onUpdateReady: handleUpdateReady
-      });
+      };
+
+      if (document.readyState === 'complete') {
+        registerServiceWorker();
+      } else {
+        window.addEventListener('load', registerServiceWorker, { once: true });
+        // Fallback safety timer: if load event already fired or is delayed, register anyway
+        fallbackTimer = setTimeout(registerServiceWorker, 2000);
+      }
     }
   } catch (err) {
     console.error('[LocalJam] Initialization failure:', err);

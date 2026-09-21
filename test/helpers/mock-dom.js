@@ -588,6 +588,7 @@ export function setupMockDom(options = {}) {
   const doc = {
     body,
     activeElement: null,
+    readyState: options.readyState || 'complete',
     createElement: (tag) => new MockElement(tag),
     getElementById: (id) => {
       if (id === 'aria-live-region') return liveRegion;
@@ -616,6 +617,9 @@ export function setupMockDom(options = {}) {
   const win = {
     document: doc,
     location: {
+      protocol: 'http:',
+      origin: 'http://localhost:3000',
+      pathname: '/',
       hash: '#/',
       href: 'http://localhost:3000/#/'
     },
