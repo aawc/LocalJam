@@ -252,3 +252,8 @@ This checklist tracks resolution of reported issues and feature requests. Each c
     5. *Documentation Synchronization:* Update `README.md`, `GEMINI.md`, and `PROMPT.md` to reflect the streamlined layout.
   - *Associated Commits:* `269ad54`, `a035fff`
 
+- [x] **FR 33: Fix Service Worker Registration Lifecycle and Origin Cache Scoping** `[DONE]`
+  - *Description:* Resolve silent service worker registration drop and inactive update checker on cold boot. In `src/main.js`, replace fragile `window.addEventListener('load')` wrapper with `document.readyState === 'complete'` immediate registration, load event listener, and 2000ms safety timeout fallback, ensuring registration executes reliably even when document parsing finishes before service worker registration is invoked. Initialize `initUpdateChecker` immediately during application bootstrap with dynamic `setRegistration(reg)` binding so periodic version polling and focus/visibility listeners start right away. In `sw.js` and `src/ui/components/update-banner.js`, scope cache purging strictly to `localjam-` prefixed caches (`name.startsWith('localjam-')`), preventing LocalJam from wiping unrelated caches (e.g. `cricket-scorecard-v2026.09.001`) hosted on shared origins. Bump Service Worker cache to `localjam-v2026.09.051`.
+  - *Associated Commits:* `c5931c3`, `debb7df`
+
+

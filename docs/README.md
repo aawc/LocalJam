@@ -29,7 +29,7 @@ docs/
 ## Sections
 
 ### 1. Task Execution & History
-- [CHECKLIST.md](./CHECKLIST.md): Complete chronological record of resolved issues, feature requests (FR 1 through FR 32), and their associated atomic commit hashes.
+- [CHECKLIST.md](./CHECKLIST.md): Complete chronological record of resolved issues, feature requests (FR 1 through FR 33), and their associated atomic commit hashes.
 
 ### 2. Design & Architecture Specifications
 - [One-Screen Minimalist Player Redesign (v2)](./design/2026-09-15-minimalist-player-redesign.md): Comprehensive architectural specification defining the unified 6-row Stage viewport, Dual-Source Handle Bar, layered modal hierarchy (L1/L2), gesture/keyboard maps, and state hydration models.
