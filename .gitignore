@@ -1,0 +1,5 @@
+# Agent workspaces
+.agents/
+
+# Scratch directory
+scratch/
