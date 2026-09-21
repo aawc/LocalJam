@@ -46,11 +46,14 @@ export function createUpdateBanner() {
 
   function show(newVersion, worker = null) {
     if (worker) waitingWorker = worker;
-    currentBannerVersion = newVersion;
+    // Retain concrete semantic version if already known; do not overwrite with generic placeholder
+    if (newVersion !== "New Release" || !currentBannerVersion) {
+      currentBannerVersion = newVersion;
+    }
 
     if (typeof sessionStorage !== "undefined") {
       const dismissed = sessionStorage.getItem("localjam_dismissed_version");
-      if (dismissed === newVersion) {
+      if (dismissed === currentBannerVersion) {
         return;
       }
       const applied = sessionStorage.getItem("localjam_applied_update");
@@ -59,7 +62,7 @@ export function createUpdateBanner() {
           const { version, timestamp } = JSON.parse(applied);
           // If this version was applied within the last 30 seconds, suppress re-prompting
           // to give the browser Service Worker and cache time to settle
-          if (version === newVersion && Date.now() - timestamp < 30000) {
+          if (version === currentBannerVersion && Date.now() - timestamp < 30000) {
             return;
           }
         } catch (_) {}
@@ -67,7 +70,10 @@ export function createUpdateBanner() {
     }
 
     if (msgEl) {
-      msgEl.textContent = `A new version of LocalJam (${newVersion}) is ready.`;
+      const isNamed = currentBannerVersion && currentBannerVersion !== "New Release";
+      msgEl.textContent = isNamed
+        ? `A new version of LocalJam (${currentBannerVersion}) is ready.`
+        : `A new version of LocalJam is ready.`;
     }
     container.style.display = "block";
   }
@@ -116,7 +122,7 @@ export function createUpdateBanner() {
         const keys = await caches.keys();
         await Promise.all(
           keys
-            .filter((k) => (targetCache ? k !== targetCache : true))
+            .filter((k) => k.startsWith("localjam-") && (targetCache ? k !== targetCache : true))
             .map((k) => caches.delete(k))
         );
       } catch (err) {
@@ -246,36 +252,48 @@ export async function checkRemoteVersion(currentVersion = APP_VERSION, versionEn
  * @param {string} [options.currentVersion=APP_VERSION]
  */
 export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs = 30000, currentVersion = APP_VERSION } = {}) {
+  let isDestroyed = false;
   let notifiedVersion = null;
   let notifiedWorker = null;
   let activeVersion = currentVersion;
   let intervalId = null;
   let initialTimeoutId = null;
+  let activeRegistration = registration || null;
 
   const notifyUpdate = (newVersion, worker = null) => {
-    if (notifiedVersion && notifiedVersion === newVersion && notifiedWorker && !worker) {
+    if (isDestroyed) return;
+    const effectiveVersion =
+      newVersion === "New Release" && notifiedVersion && notifiedVersion !== "New Release"
+        ? notifiedVersion
+        : newVersion;
+
+    if (notifiedVersion && notifiedVersion === effectiveVersion && notifiedWorker && !worker) {
       return;
     }
-    if (notifiedVersion && notifiedVersion === newVersion && notifiedWorker === worker) {
+    if (notifiedVersion && notifiedVersion === effectiveVersion && notifiedWorker === worker) {
       return;
     }
-    notifiedVersion = newVersion;
+    notifiedVersion = effectiveVersion;
     if (worker) {
       notifiedWorker = worker;
     }
     if (typeof onUpdateReady === "function") {
-      onUpdateReady(newVersion, notifiedWorker || worker);
+      onUpdateReady(effectiveVersion, notifiedWorker || worker);
     }
   };
 
-  // 1. Service Worker updatefound and waiting listener
-  if (registration) {
-    if (registration.waiting) {
-      notifyUpdate("New Release", registration.waiting);
+  // 1. Service Worker updatefound, installing, and waiting listeners
+  const bindRegistration = (reg) => {
+    if (!reg || isDestroyed) return;
+    activeRegistration = reg;
+
+    if (reg.waiting) {
+      notifyUpdate("New Release", reg.waiting);
     }
-    if (registration.installing) {
-      const currentInstalling = registration.installing;
+    if (reg.installing) {
+      const currentInstalling = reg.installing;
       currentInstalling.addEventListener("statechange", () => {
+        if (isDestroyed) return;
         const hasController = typeof navigator !== "undefined" && navigator.serviceWorker ? navigator.serviceWorker.controller : true;
         if (currentInstalling.state === "installed" && hasController) {
           notifyUpdate("New Release", currentInstalling);
@@ -283,33 +301,44 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
       });
     }
 
-    registration.addEventListener("updatefound", () => {
-      const installing = registration.installing;
-      if (!installing) return;
+    if (typeof reg.addEventListener === "function") {
+      reg.addEventListener("updatefound", () => {
+        if (isDestroyed) return;
+        const installing = reg.installing;
+        if (!installing) return;
 
-      installing.addEventListener("statechange", () => {
-        const hasController = typeof navigator !== "undefined" && navigator.serviceWorker ? navigator.serviceWorker.controller : true;
-        if (installing.state === "installed" && hasController) {
-          notifyUpdate("New Release", installing);
-        }
+        installing.addEventListener("statechange", () => {
+          if (isDestroyed) return;
+          const hasController = typeof navigator !== "undefined" && navigator.serviceWorker ? navigator.serviceWorker.controller : true;
+          if (installing.state === "installed" && hasController) {
+            notifyUpdate("New Release", installing);
+          }
+        });
       });
-    });
+    }
+  };
+
+  if (registration) {
+    bindRegistration(registration);
   }
 
   // 2. Periodic, window focus, and visibility change remote version check
   const poll = async () => {
+    if (isDestroyed) return;
     // Actively prompt browser Service Worker update check if registration is available
-    if (registration && typeof registration.update === "function") {
+    const reg = activeRegistration || registration;
+    if (reg && typeof reg.update === "function") {
       try {
-        await registration.update();
+        await reg.update();
       } catch {
         // Ignore network / update errors
       }
     }
+    if (isDestroyed) return;
 
     const newVersion = await checkRemoteVersion(activeVersion);
-    if (newVersion) {
-      const worker = registration ? (registration.waiting || registration.installing) : null;
+    if (newVersion && !isDestroyed) {
+      const worker = reg ? (reg.waiting || reg.installing) : null;
       notifyUpdate(newVersion, worker);
     }
   };
@@ -347,6 +376,7 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
   };
 
   const destroy = () => {
+    isDestroyed = true;
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;
@@ -363,5 +393,5 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
     }
   };
 
-  return { poll, setActiveVersion, destroy };
+  return { poll, setActiveVersion, setRegistration: bindRegistration, destroy };
 }

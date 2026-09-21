@@ -3,7 +3,7 @@
  * Cache-First App Shell Strategy with explicit audio stream bypass.
  */
 
-const CACHE_NAME = 'localjam-v2026.09.050';
+const CACHE_NAME = 'localjam-v2026.09.051';
 
 const PERMISSIONS_POLICY =
   'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
@@ -87,7 +87,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
+          .filter((name) => name.startsWith('localjam-') && name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
     }).then(() => self.clients.claim())

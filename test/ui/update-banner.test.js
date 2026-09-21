@@ -500,5 +500,182 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
       globalThis.sessionStorage = prevSession;
     }
   });
+
+  await t.test("initUpdateChecker exposes setRegistration to dynamically bind registration and listeners", async () => {
+    let notifiedVer = null;
+    let notifiedWrk = null;
+
+    const mockWaiting = { state: "installed", postMessage: () => {} };
+    const mockReg = {
+      waiting: mockWaiting,
+      installing: null,
+      addEventListener: () => {}
+    };
+
+    // Initialize checker WITHOUT registration (e.g. at cold boot before SW finishes registering)
+    const checker = initUpdateChecker({
+      currentVersion: "v2026.09.040",
+      onUpdateReady: (ver, wrk) => {
+        notifiedVer = ver;
+        notifiedWrk = wrk;
+      },
+      pollIntervalMs: 0
+    });
+
+    assert.equal(typeof checker.setRegistration, "function", "checker must expose setRegistration function");
+    assert.equal(notifiedVer, null, "Should not notify before registration is bound");
+
+    // Later, when SW registration resolves, setRegistration is called
+    checker.setRegistration(mockReg);
+
+    assert.equal(notifiedVer, "New Release");
+    assert.equal(notifiedWrk, mockWaiting);
+
+    checker.destroy();
+  });
+
+  await t.test("createUpdateBanner only purges localjam- prefixed caches and preserves unrelated origin caches", async () => {
+    const prevDoc = globalThis.document;
+    const prevWin = globalThis.window;
+    const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const prevCaches = globalThis.caches;
+    try {
+      const deletedCaches = [];
+      const originCaches = [
+        "cricket-scorecard-v2026.09.001",
+        "localjam-v2026.09.040",
+        "localjam-v2026.09.045",
+        "another-app-cache"
+      ];
+
+      globalThis.caches = {
+        keys: async () => [...originCaches],
+        delete: async (name) => {
+          deletedCaches.push(name);
+          return true;
+        }
+      };
+
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          serviceWorker: {
+            addEventListener: () => {},
+            getRegistration: async () => null
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
+      const applyBtnMock = { disabled: false, textContent: "Refresh Now", addEventListener: () => {} };
+      globalThis.document = {
+        createElement: () => ({
+          id: "",
+          className: "",
+          style: { display: "none" },
+          innerHTML: "",
+          querySelector: (sel) => {
+            if (sel === "#update-banner-message") return { textContent: "" };
+            if (sel === "#btn-apply-update") return applyBtnMock;
+            return { addEventListener: () => {} };
+          },
+          setAttribute: () => {}
+        })
+      };
+
+      globalThis.window = {
+        location: {
+          href: "http://localhost:3000/",
+          replace: () => {},
+          reload: () => {}
+        }
+      };
+
+      const banner = createUpdateBanner();
+      banner.show("v2026.09.050", null);
+
+      await banner.apply();
+
+      // Verify old localjam caches were purged
+      assert.ok(deletedCaches.includes("localjam-v2026.09.040"), "Must delete old localjam-v2026.09.040 cache");
+      assert.ok(deletedCaches.includes("localjam-v2026.09.045"), "Must delete old localjam-v2026.09.045 cache");
+
+      // Verify non-localjam caches on the origin were strictly preserved
+      assert.equal(
+        deletedCaches.includes("cricket-scorecard-v2026.09.001"),
+        false,
+        "Must NOT delete cricket-scorecard-v2026.09.001 on the same origin"
+      );
+      assert.equal(
+        deletedCaches.includes("another-app-cache"),
+        false,
+        "Must NOT delete another-app-cache on the same origin"
+      );
+    } finally {
+      globalThis.document = prevDoc;
+      globalThis.window = prevWin;
+      if (prevNavDescriptor) {
+        Object.defineProperty(globalThis, "navigator", prevNavDescriptor);
+      }
+      globalThis.caches = prevCaches;
+    }
+  });
+
+  await t.test("createUpdateBanner preserves concrete semantic version tag against generic New Release overwrite", () => {
+    const prevDoc = globalThis.document;
+    try {
+      const msgMock = { textContent: "" };
+      globalThis.document = {
+        createElement: () => ({
+          id: "",
+          style: { display: "none" },
+          innerHTML: "",
+          querySelector: (sel) => {
+            if (sel === "#update-banner-message") return msgMock;
+            return { addEventListener: () => {} };
+          },
+          setAttribute: () => {}
+        })
+      };
+
+      const banner = createUpdateBanner();
+      // First show with concrete semantic version
+      banner.show("v2026.09.052");
+      assert.equal(msgMock.textContent, "A new version of LocalJam (v2026.09.052) is ready.");
+
+      // Subsequent call with generic "New Release" from service worker listener must NOT overwrite concrete tag
+      banner.show("New Release");
+      assert.equal(msgMock.textContent, "A new version of LocalJam (v2026.09.052) is ready.");
+    } finally {
+      globalThis.document = prevDoc;
+    }
+  });
+
+  await t.test("initUpdateChecker isDestroyed guard suppresses notifications after destruction", async () => {
+    let notifiedVer = null;
+    const mockWaiting = { state: "installed", postMessage: () => {} };
+    const mockReg = {
+      waiting: mockWaiting,
+      installing: null,
+      addEventListener: () => {}
+    };
+
+    const checker = initUpdateChecker({
+      currentVersion: "v2026.09.040",
+      onUpdateReady: (ver) => {
+        notifiedVer = ver;
+      },
+      pollIntervalMs: 0
+    });
+
+    // Destroy checker
+    checker.destroy();
+
+    // Invoking setRegistration after destruction must be ignored
+    checker.setRegistration(mockReg);
+    assert.equal(notifiedVer, null, "Must not trigger notification after checker is destroyed");
+  });
 });
+
+
 

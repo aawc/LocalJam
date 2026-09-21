@@ -40,7 +40,7 @@ test('PWA - sw.js caches all declared app shell assets and excludes audio stream
   const content = fs.readFileSync(swPath, 'utf8');
 
   // Verify cache name and assets array
-  assert.ok(content.includes("const CACHE_NAME = 'localjam-v2026.09.050';"), 'Cache version must be localjam-v2026.09.050');
+  assert.ok(content.includes("const CACHE_NAME = 'localjam-v2026.09.051';"), 'Cache version must be localjam-v2026.09.051');
   assert.ok(content.includes('APP_SHELL_ASSETS = ['), 'App shell assets array must be declared');
 
   // Verify all files in APP_SHELL_ASSETS actually exist on disk
@@ -66,6 +66,10 @@ test('PWA - sw.js caches all declared app shell assets and excludes audio stream
   assert.ok(!content.includes("then(() => self.skipWaiting())"), 'Must not automatically skipWaiting during install');
   assert.ok(content.includes("event.data.type === 'SKIP_WAITING'"), 'Must handle SKIP_WAITING message');
   assert.ok(content.includes("self.clients.claim()"), 'Must claim clients on activate');
+  assert.ok(
+    content.includes("name.startsWith('localjam-') && name !== CACHE_NAME"),
+    'Must scope cache deletion on activate strictly to localjam- caches to protect origin sharing'
+  );
 });
 
 test('PWA - index.html contains correct relative links and meta tags for GitHub Pages', () => {
