@@ -37,7 +37,7 @@
 
 6. **PWA & GitHub Pages Compatibility:**
    - Relative asset paths (`./`).
-   - Hash-based routing (`/#/`) and multi-channel deployment routing (`/v2/` application shell with `<base href="../" />`).
+   - Hash-based routing (`/#/`) with clean single-shell architecture (`index.html`).
    - Cache-first Service Worker (`sw.js`).
 
 7. **Release Automation & Dynamic Semantic Tagging:**

@@ -250,4 +250,5 @@ This checklist tracks resolution of reported issues and feature requests. Each c
     3. *Obsolete `404.html` Fallback Removal:* Remove `404.html` introduced solely for legacy `/v2` subpath redirection. LocalJam is a hash-routed SPA (`/#/`, `/#/browse`) that does not require server-side subpath rewrites.
     4. *Service Worker & Asset Streamlining:* In `sw.js`, remove `./404.html` and `./v2/index.html` from `APP_SHELL_ASSETS`, simplify offline navigation fallback to `./index.html`, and bump cache version to `localjam-v2026.09.050`. Update `test/pwa/pwa-assets.test.js` to assert single authoritative shell and absence of legacy artifacts.
     5. *Documentation Synchronization:* Update `README.md`, `GEMINI.md`, and `PROMPT.md` to reflect the streamlined layout.
+  - *Associated Commits:* `269ad54`, `a035fff`
 

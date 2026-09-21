@@ -150,6 +150,16 @@ LocalJam is configured with relative asset paths and hash-based routing (`/#/`),
 4. LocalJam will be live at `https://aawc.github.io/LocalJam/` (or your custom domain).
 
 
+## Documentation & Repository Layout
+
+Detailed technical specifications, implementation roadmaps, audit reports, and task tracking records are consolidated in the `docs/` directory:
+
+- 📖 **[Documentation Index](docs/README.md):** Overview of all repository specifications, plans, and reports.
+- 📋 **[Task Execution Checklist](docs/CHECKLIST.md):** Chronological log of resolved issues, feature requests, and associated commit hashes.
+- 📐 **[Minimalist Player Specification](docs/design/2026-09-15-minimalist-player-redesign.md):** Architectural specification for the unified Stage viewport and Dual-Source audio engine.
+- 🛡️ **[Security Audit Report](docs/reports/SECURITY_REPORT.md):** Security analysis, CSP policies, and response sanitization.
+- 📊 **[Audit & Investigation Reports](docs/reports/):** Deep-dive reports on PWA lifecycle, streaming UX, and Web Audio visualizers.
+
 ---
 
 ## License
