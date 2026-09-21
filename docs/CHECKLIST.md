@@ -242,3 +242,12 @@ This checklist tracks resolution of reported issues and feature requests. Each c
     2. *Non-Standard `slider-vertical` Deprecation:* In `src/ui/app.css`, remove `-webkit-appearance: slider-vertical;` from `.eq-slider` while preserving standardized `writing-mode: vertical-lr; direction: rtl;`, eliminating Chromium's deprecation console warning.
     3. *Permissions-Policy Header Warnings:* In `sw.js`, add `sanitizeNavigationResponse` to intercept document navigation requests and replace GitHub Pages' edge-injected unrecognized/deprecated Privacy Sandbox features (`browsing-topics`, `run-ad-auction`, `join-ad-interest-group`, `private-state-token-redemption`, `private-state-token-issuance`, `private-aggregation`, `attribution-reporting`) with the clean, standardized permissions policy (`accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()`). Bump Service Worker cache to `localjam-v2026.09.049`.
   - *Associated Commits:* `237b105`
+
+- [x] **FR 32: Repository Directory Structure Reorganization & Ruthless Simplification** `[DONE]`
+  - *Description:* Streamline repository root and eliminate legacy staging artifacts:
+    1. *Markdown Reorganization:* Consolidate 6 loose investigation, audit, and critique reports (`PWA_UPDATE_INVESTIGATION_REPORT.md`, `RADIO_MOBILE_UX_REPORT.md`, `SECURITY_REPORT.md`, `UX_CRITIQUE_REPORT.md`, `UX_REVIEW_REPORT.md`, `VISUALIZER_INVESTIGATION_REPORT.md`) into `docs/reports/` and move `CHECKLIST.md` to `docs/CHECKLIST.md`. Add `docs/README.md` navigation index and update `test/hygiene.test.js` to inspect `docs/CHECKLIST.md`.
+    2. *Obsolete `v2/` Application Shell Removal:* Delete redundant `v2/` directory (`v2/index.html`) created during earlier multi-branch transition. Root `index.html` is the sole, authoritative one-screen minimalist player shell.
+    3. *Obsolete `404.html` Fallback Removal:* Remove `404.html` introduced solely for legacy `/v2` subpath redirection. LocalJam is a hash-routed SPA (`/#/`, `/#/browse`) that does not require server-side subpath rewrites.
+    4. *Service Worker & Asset Streamlining:* In `sw.js`, remove `./404.html` and `./v2/index.html` from `APP_SHELL_ASSETS`, simplify offline navigation fallback to `./index.html`, and bump cache version to `localjam-v2026.09.050`. Update `test/pwa/pwa-assets.test.js` to assert single authoritative shell and absence of legacy artifacts.
+    5. *Documentation Synchronization:* Update `README.md`, `GEMINI.md`, and `PROMPT.md` to reflect the streamlined layout.
+

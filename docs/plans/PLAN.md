@@ -25,4 +25,5 @@
 
 - [x] **Task 4: Update Documentation and Checklists** `[DONE]`
   - *Context:* Synchronize `CHECKLIST.md` with Feature Request 31.
-  - *File to edit:* `CHECKLIST.md`.
+  - *File to edit:* `docs/CHECKLIST.md`.
+
