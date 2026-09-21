@@ -939,4 +939,193 @@ describe('Browse Sheet Component (L1)', () => {
     assert.ok(Array.isArray(playedTracks), 'Tracks must be an array');
     assert.equal(playedIndex, 1, 'Index must be 1');
   });
+
+  it('radio sort select includes popularity-desc and provider options (F10)', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    assert.ok(sortSelect, 'Sort select must exist on radio tab');
+
+    const options = Array.from(sortSelect.querySelectorAll('option'));
+    const optionMap = new Map(options.map((opt) => [opt.getAttribute('value'), opt.textContent.trim()]));
+
+    assert.ok(optionMap.has('popularity-desc'), 'Must include popularity-desc option');
+    assert.equal(optionMap.get('popularity-desc'), 'Popularity');
+
+    assert.ok(optionMap.has('provider'), 'Must include provider option');
+    assert.equal(optionMap.get('provider'), 'Provider');
+  });
+
+  it('renders accessible provider groups with role="group" and sticky section headers when provider sort is selected (F11)', async () => {
+    sampleStations = [
+      { id: 'st_soma_1', name: 'Groove Salad', genre: 'Ambient', country: 'USA', bitrate: '128 kbps', provider: 'SomaFM', popularity: 90 },
+      { id: 'st_soma_2', name: 'Secret Agent', genre: 'Spy', country: 'USA', bitrate: '128 kbps', provider: 'SomaFM', popularity: 80 },
+      { id: 'st_bbc_1', name: 'BBC Radio 1', genre: 'Pop', country: 'UK', bitrate: '128 kbps', provider: 'BBC', popularity: 95 },
+      { id: 'st_bbc_2', name: 'BBC Radio 6 Music', genre: 'Alternative', country: 'UK', bitrate: '128 kbps', provider: 'BBC', popularity: 92 },
+      { id: 'st_ind_1', name: 'Community Radio', genre: 'Variety', country: 'USA', bitrate: '64 kbps', provider: '', popularity: 10 }
+    ];
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    assert.ok(sortSelect);
+    sortSelect.value = 'provider';
+    sortSelect.dispatchEvent(new globalThis.Event('change'));
+
+    const providerGroups = sheet.element.querySelectorAll('.browse-provider-group');
+    assert.equal(providerGroups.length, 3, 'Must render 3 provider groups (BBC, Independent, SomaFM)');
+
+    // Group 1: BBC
+    const bbcGroup = providerGroups[0];
+    assert.equal(bbcGroup.getAttribute('role'), 'group', 'Group container must have role="group"');
+    assert.equal(bbcGroup.getAttribute('aria-label'), 'BBC (2 stations)', 'Group aria-label must include provider and station count');
+
+    const bbcHeader = bbcGroup.querySelector('.browse-section-header');
+    assert.ok(bbcHeader, 'Group must have section header');
+    assert.equal(bbcHeader.getAttribute('aria-hidden'), 'true', 'Section header must have aria-hidden="true" to prevent screen reader double-speaking');
+
+    const bbcTitle = bbcHeader.querySelector('.browse-section-title');
+    assert.ok(bbcTitle);
+    assert.equal(bbcTitle.textContent.trim(), 'BBC');
+
+    const bbcCount = bbcHeader.querySelector('.browse-section-count');
+    assert.ok(bbcCount);
+    assert.equal(bbcCount.textContent.trim(), '2');
+
+    const bbcRows = bbcGroup.querySelectorAll('.browse-row');
+    assert.equal(bbcRows.length, 2, 'BBC group must contain 2 station rows');
+
+    // Group 2: Independent (empty provider defaults to Independent)
+    const indGroup = providerGroups[1];
+    assert.equal(indGroup.getAttribute('role'), 'group');
+    assert.equal(indGroup.getAttribute('aria-label'), 'Independent (1 stations)');
+    assert.equal(indGroup.querySelectorAll('.browse-row').length, 1);
+
+    // Group 3: SomaFM
+    const somaGroup = providerGroups[2];
+    assert.equal(somaGroup.getAttribute('role'), 'group');
+    assert.equal(somaGroup.getAttribute('aria-label'), 'SomaFM (2 stations)');
+    assert.equal(somaGroup.querySelectorAll('.browse-row').length, 2);
+  });
+
+  it('renders dual-coded provider badge with brackets on radio station rows (F12)', async () => {
+    sampleStations = [
+      { id: 'st_soma_1', name: 'Groove Salad', genre: 'Ambient', country: 'USA', bitrate: '128 kbps', provider: 'SomaFM', popularity: 90 },
+      { id: 'st_ind_1', name: 'Community Radio', genre: 'Variety', country: 'USA', bitrate: '64 kbps', provider: '', popularity: 10 }
+    ];
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const rows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(rows.length, 2);
+
+    // Row 0: SomaFM
+    const badge0 = rows[0].querySelector('.browse-provider-badge');
+    assert.ok(badge0, 'Station row must contain .browse-provider-badge');
+    assert.equal(badge0.textContent.trim(), '[SomaFM]', 'Badge must contain bracketed provider name');
+
+    // Row 1: Empty provider falls back to Independent
+    const badge1 = rows[1].querySelector('.browse-provider-badge');
+    assert.ok(badge1, 'Station row with empty provider must contain .browse-provider-badge');
+    assert.equal(badge1.textContent.trim(), '[Independent]', 'Badge must contain bracketed Independent fallback');
+
+    // Verify library tracks do NOT render provider badge
+    await sheet.onOpen({ tab: 'library' });
+    const trackRows = sheet.element.querySelectorAll('.browse-row');
+    assert.ok(trackRows.length > 0);
+    const trackBadge = trackRows[0].querySelector('.browse-provider-badge');
+    assert.equal(trackBadge, null, 'Track row must NOT contain .browse-provider-badge');
+  });
+
+  it('navigates seamlessly across provider group boundaries with ArrowDown and ArrowUp without focus trapping (F13)', async () => {
+    sampleStations = [
+      { id: 'st_bbc_1', name: 'BBC Radio 1', genre: 'Pop', country: 'UK', bitrate: '128 kbps', provider: 'BBC' },
+      { id: 'st_bbc_2', name: 'BBC Radio 6 Music', genre: 'Alternative', country: 'UK', bitrate: '128 kbps', provider: 'BBC' },
+      { id: 'st_soma_1', name: 'Groove Salad', genre: 'Ambient', country: 'USA', bitrate: '128 kbps', provider: 'SomaFM' },
+      { id: 'st_soma_2', name: 'Secret Agent', genre: 'Spy', country: 'USA', bitrate: '128 kbps', provider: 'SomaFM' }
+    ];
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    sortSelect.value = 'provider';
+    sortSelect.dispatchEvent(new globalThis.Event('change'));
+
+    const allRows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(allRows.length, 4);
+
+    const bbcLastRow = allRows[1]; // BBC Radio 6 Music (last row of BBC group)
+    const somaFirstRow = allRows[2]; // Groove Salad (first row of SomaFM group)
+
+    // Focus last item of first group
+    bbcLastRow.focus();
+    assert.equal(globalThis.document.activeElement, bbcLastRow);
+
+    // Press ArrowDown on last row of first group -> should move focus to first row of second group
+    bbcLastRow.dispatchEvent(new globalThis.KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    assert.equal(globalThis.document.activeElement, somaFirstRow, 'ArrowDown must move focus across group boundary to next row');
+
+    // Press ArrowUp on first row of second group -> should move focus back to last row of first group
+    somaFirstRow.dispatchEvent(new globalThis.KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    assert.equal(globalThis.document.activeElement, bbcLastRow, 'ArrowUp must move focus across group boundary to previous row');
+  });
+
+  it('jumps to first and last rows on Home and End keys per WAI-ARIA APG Listbox pattern (F13)', async () => {
+    sampleStations = [
+      { id: 'st_1', name: 'Station 1', genre: 'Pop', provider: 'A' },
+      { id: 'st_2', name: 'Station 2', genre: 'Pop', provider: 'A' },
+      { id: 'st_3', name: 'Station 3', genre: 'Rock', provider: 'B' },
+      { id: 'st_4', name: 'Station 4', genre: 'Rock', provider: 'B' }
+    ];
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    sortSelect.value = 'provider';
+    sortSelect.dispatchEvent(new globalThis.Event('change'));
+
+    const allRows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(allRows.length, 4);
+
+    // Focus a middle row (index 2)
+    allRows[2].focus();
+    assert.equal(globalThis.document.activeElement, allRows[2]);
+
+    // Press Home -> jump to first row (index 0)
+    allRows[2].dispatchEvent(new globalThis.KeyboardEvent('keydown', { key: 'Home' }));
+    assert.equal(globalThis.document.activeElement, allRows[0], 'Home key must jump to first row');
+
+    // Press End -> jump to last row (index 3)
+    allRows[0].dispatchEvent(new globalThis.KeyboardEvent('keydown', { key: 'End' }));
+    assert.equal(globalThis.document.activeElement, allRows[3], 'End key must jump to last row');
+  });
 });

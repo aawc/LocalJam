@@ -57,7 +57,8 @@ export function createBrowseSheet(deps = {}) {
     onClose: onParentClose,
     db = defaultDb,
     audioEngine = defaultAudioEngine,
-    queueManager = defaultQueueManager
+    queueManager = defaultQueueManager,
+    loadStations: loadStationsFn = loadStations
   } = deps;
 
   let activeTab = 'library';
@@ -165,8 +166,8 @@ export function createBrowseSheet(deps = {}) {
     }
 
     try {
-      if (typeof loadStations === 'function') {
-        cachedStations = (await loadStations(db)) || [];
+      if (typeof loadStationsFn === 'function') {
+        cachedStations = (await loadStationsFn(db)) || [];
       } else if (typeof db.getStations === 'function') {
         cachedStations = (await db.getStations()) || [];
       }
@@ -259,6 +260,8 @@ export function createBrowseSheet(deps = {}) {
 
       const sortOptions = [
         { value: 'default', label: 'Default' },
+        { value: 'popularity-desc', label: 'Popularity' },
+        { value: 'provider', label: 'Provider' },
         { value: 'name-asc', label: 'Name (A-Z)' },
         { value: 'name-desc', label: 'Name (Z-A)' },
         { value: 'genre-asc', label: 'Genre' },
@@ -266,7 +269,7 @@ export function createBrowseSheet(deps = {}) {
       ]
         .map(
           (opt) => `
-        <option value="${opt.value}" ${radioSort === opt.value ? 'selected' : ''}>${opt.label}</option>
+        <option value="${opt.value}" ${radioSort === opt.value || (opt.value === 'popularity-desc' && radioSort === 'popularity') ? 'selected' : ''}>${opt.label}</option>
       `
         )
         .join('');
@@ -329,33 +332,73 @@ export function createBrowseSheet(deps = {}) {
     const currentStationId = audioEngine?.currentStation?.id;
     const isRadioPlaying = Boolean(audioEngine?.isRadio);
 
-    const rowsHtml = visibleRows
-      .map((row, idx) => {
-        const isPlaying =
-          row.kind === 'track'
-            ? !isRadioPlaying && currentTrackId && row.id === currentTrackId
-            : row.kind === 'station'
-            ? isRadioPlaying && currentStationId && row.id === currentStationId
-            : false;
+    function renderRowHtml(row, idx) {
+      const isPlaying =
+        row.kind === 'track'
+          ? !isRadioPlaying && currentTrackId && row.id === currentTrackId
+          : row.kind === 'station'
+          ? isRadioPlaying && currentStationId && row.id === currentStationId
+          : false;
 
-        const playingBar = isPlaying
-          ? `<span class="browse-playing-bar" aria-hidden="true"></span><span class="sr-only">[PLAYING] </span>`
+      const playingBar = isPlaying
+        ? `<span class="browse-playing-bar" aria-hidden="true"></span><span class="sr-only">[PLAYING] </span>`
+        : '';
+
+      const providerBadge =
+        row.kind === 'station'
+          ? `<span class="browse-provider-badge">[${escapeHtml(row.provider || 'Independent')}]</span>`
           : '';
 
-        return `
+      return `
         <div class="browse-row ${isPlaying ? 'is-playing' : ''}" role="option" aria-selected="${isPlaying ? 'true' : 'false'}" tabindex="0" data-index="${idx}" data-id="${escapeHtml(row.id)}" data-primary="${escapeHtml(row.primary)}" data-kind="${row.kind}">
           ${playingBar}
           <div class="browse-row-main">
             <span class="browse-row-primary">${escapeHtml(row.primary)}</span>
-            <span class="browse-row-secondary">${escapeHtml(row.secondary)}</span>
+            <span class="browse-row-secondary">${providerBadge ? `${providerBadge} ` : ''}${escapeHtml(row.secondary)}</span>
           </div>
           <span class="browse-row-trailing">${escapeHtml(row.trailing)}</span>
         </div>
       `;
-      })
-      .join('');
+    }
 
-    listEl.innerHTML = rowsHtml;
+    if (activeTab === 'radio' && radioSort === 'provider') {
+      const groupsMap = new Map();
+      for (let idx = 0; idx < visibleRows.length; idx++) {
+        const row = visibleRows[idx];
+        const provider = row.provider || 'Independent';
+        if (!groupsMap.has(provider)) {
+          groupsMap.set(provider, []);
+        }
+        groupsMap.get(provider).push({ row, idx });
+      }
+
+      const groupsHtml = Array.from(groupsMap.entries())
+        .map(([provider, items]) => {
+          const count = items.length;
+          const rowsInGroupHtml = items
+            .map(({ row, idx }) => renderRowHtml(row, idx))
+            .join('');
+
+          return `
+            <div class="browse-provider-group" role="group" aria-label="${escapeHtml(provider)} (${count} stations)">
+              <div class="browse-section-header" aria-hidden="true">
+                <span class="browse-section-title">${escapeHtml(provider)}</span>
+                <span class="browse-section-count">${count}</span>
+              </div>
+              ${rowsInGroupHtml}
+            </div>
+          `;
+        })
+        .join('');
+
+      listEl.innerHTML = groupsHtml;
+    } else {
+      const rowsHtml = visibleRows
+        .map((row, idx) => renderRowHtml(row, idx))
+        .join('');
+      listEl.innerHTML = rowsHtml;
+    }
+
     bindRowEvents();
   }
 
@@ -505,8 +548,8 @@ export function createBrowseSheet(deps = {}) {
         if (typeof toggleFavoriteStation === 'function') {
           isFav = await toggleFavoriteStation(station.id, db);
         }
-        if (typeof loadStations === 'function') {
-          cachedStations = (await loadStations(db)) || [];
+        if (typeof loadStationsFn === 'function') {
+          cachedStations = (await loadStationsFn(db)) || [];
         }
         const label = isFav ? `[STARRED] ${rowItem.primary}` : `[UNSTARRED] ${rowItem.primary}`;
         if (typeof onToast === 'function') {
@@ -627,12 +670,35 @@ export function createBrowseSheet(deps = {}) {
           starOnce();
         } else if (e.key === 'ArrowDown') {
           e.preventDefault();
-          const next = el.nextElementSibling;
-          if (next && typeof next.focus === 'function') next.focus();
+          const allRows = Array.from(sheetEl.querySelectorAll('.browse-row'));
+          const curIdx = allRows.indexOf(el);
+          if (curIdx >= 0 && curIdx < allRows.length - 1) {
+            const next = allRows[curIdx + 1];
+            if (next && typeof next.focus === 'function') next.focus();
+          }
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
-          const prev = el.previousElementSibling;
-          if (prev && typeof prev.focus === 'function') prev.focus();
+          const allRows = Array.from(sheetEl.querySelectorAll('.browse-row'));
+          const curIdx = allRows.indexOf(el);
+          if (curIdx > 0) {
+            const prev = allRows[curIdx - 1];
+            if (prev && typeof prev.focus === 'function') prev.focus();
+          }
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          const first = sheetEl.querySelector('.browse-row');
+          if (first && typeof first.focus === 'function') {
+            first.focus();
+          }
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          const allRows = sheetEl.querySelectorAll('.browse-row');
+          if (allRows.length > 0) {
+            const last = allRows[allRows.length - 1];
+            if (last && typeof last.focus === 'function') {
+              last.focus();
+            }
+          }
         }
       });
     }
