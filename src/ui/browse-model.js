@@ -13,6 +13,8 @@ import { getStationCategory } from '../radio/stations.js';
  *   primary: string,
  *   secondary: string,
  *   trailing: string,
+ *   provider?: string,
+ *   popularity?: number,
  *   payload: object
  * }} BrowseRow
  */
@@ -227,18 +229,29 @@ export function buildLibraryRows({
 }
 
 /**
+ * Resolves the effective provider for a station with fallback guarantees.
+ * Custom stations default to 'Custom', unbranded curated stations default to 'Independent'.
+ * @param {object} station
+ * @returns {string}
+ */
+export function getStationProvider(station) {
+  if (!station) return 'Independent';
+  return station.provider || (station.isCustom ? 'Custom' : 'Independent');
+}
+
+/**
  * Filters and sorts radio stations based on genre, search query, and sort order.
- * Predicate matching radio station name, genre, category, description, and country.
+ * Predicate matching radio station name, genre, category, description, country, and provider.
  * @param {Array<object>} stations
  * @param {{
  *   genre?: string,
  *   query?: string,
- *   sort?: 'default' | 'name-asc' | 'name-desc' | 'genre-asc' | 'bitrate-desc'
+ *   sort?: 'default' | 'name-asc' | 'name-desc' | 'genre-asc' | 'bitrate-desc' | 'provider' | 'popularity' | 'popularity-desc'
  * }} options
  * @returns {Array<object>}
  */
 export function filterStations(stations = [], { genre = 'All', query = '', sort = 'default' } = {}) {
-  let list = [...stations];
+  let list = [...(Array.isArray(stations) ? stations : [])];
 
   // 1. Genre filtering
   if (genre === 'Favorites') {
@@ -251,7 +264,7 @@ export function filterStations(stations = [], { genre = 'All', query = '', sort 
     });
   }
 
-  // 2. Search query filtering (name, genre, category, description, country)
+  // 2. Search query filtering (name, genre, category, description, country, provider)
   const q = (query || '').trim().toLowerCase();
   if (q) {
     list = list.filter((s) => {
@@ -260,7 +273,15 @@ export function filterStations(stations = [], { genre = 'All', query = '', sort 
       const cat = (getStationCategory(s) || '').toLowerCase();
       const desc = (s.description || '').toLowerCase();
       const country = (s.country || '').toLowerCase();
-      return name.includes(q) || stationGenre.includes(q) || cat.includes(q) || desc.includes(q) || country.includes(q);
+      const provider = getStationProvider(s).toLowerCase();
+      return (
+        name.includes(q) ||
+        stationGenre.includes(q) ||
+        cat.includes(q) ||
+        desc.includes(q) ||
+        country.includes(q) ||
+        provider.includes(q)
+      );
     });
   }
 
@@ -277,6 +298,21 @@ export function filterStations(stations = [], { genre = 'All', query = '', sort 
   } else if (sort === 'bitrate-desc') {
     const getNum = (str) => parseInt((str || '').match(/\d+/)?.[0] || '0', 10);
     list.sort((a, b) => getNum(b.bitrate) - getNum(a.bitrate) || (a.name || '').localeCompare(b.name || ''));
+  } else if (sort === 'provider') {
+    list.sort((a, b) => {
+      const provA = getStationProvider(a);
+      const provB = getStationProvider(b);
+      const cmp = provA.localeCompare(provB);
+      if (cmp !== 0) return cmp;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  } else if (sort === 'popularity-desc' || sort === 'popularity') {
+    list.sort((a, b) => {
+      const popA = Number.isFinite(a.popularity) ? a.popularity : (parseInt(a.popularity, 10) || 0);
+      const popB = Number.isFinite(b.popularity) ? b.popularity : (parseInt(b.popularity, 10) || 0);
+      if (popB !== popA) return popB - popA;
+      return (a.name || '').localeCompare(b.name || '');
+    });
   }
 
   return list;
@@ -289,14 +325,22 @@ export function filterStations(stations = [], { genre = 'All', query = '', sort 
  */
 export function buildStationRows(stations = []) {
   return stations.map((station) => {
-    const genreText = station.genre || '';
-    const countryText = station.country ? ` · ${station.country}` : '';
+    const s = station || {};
+    const secondary = [s.provider, s.genre, s.country]
+      .filter(Boolean)
+      .join(' · ');
+    const popularity = Number.isFinite(s.popularity)
+      ? s.popularity
+      : (parseInt(s.popularity, 10) || 0);
+
     return {
-      id: station.id,
+      id: s.id,
       kind: 'station',
-      primary: station.name || 'Unknown Station',
-      secondary: `${genreText}${countryText}`,
-      trailing: station.bitrate || '',
+      primary: s.name || 'Unknown Station',
+      secondary,
+      trailing: s.bitrate || '',
+      provider: getStationProvider(s),
+      popularity,
       payload: station
     };
   });
