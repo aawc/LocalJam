@@ -25,8 +25,8 @@ class MockRadioDB {
 }
 
 test('Internet Radio Stations Suite', async (t) => {
-  await t.test('Curated stations contain valid names, genres, and HTTPS stream URLs', () => {
-    assert.ok(CURATED_STATIONS.length >= 20, `Expected at least 20 curated stations, got ${CURATED_STATIONS.length}`);
+  await t.test('Curated stations contain valid names, genres, providers, popularity, and HTTPS stream URLs', () => {
+    assert.ok(CURATED_STATIONS.length >= 60, `Expected at least 60 curated stations, got ${CURATED_STATIONS.length}`);
 
     for (const station of CURATED_STATIONS) {
       assert.ok(station.id, 'Station must have an ID');
@@ -34,6 +34,11 @@ test('Internet Radio Stations Suite', async (t) => {
       assert.ok(station.streamUrl, 'Station must have a streamUrl');
       assert.ok(station.streamUrl.startsWith('https://'), `Stream URL must use HTTPS: ${station.streamUrl}`);
       assert.ok(station.genre, 'Station must have a genre');
+      assert.ok(station.provider && typeof station.provider === 'string', `Station ${station.name} must specify non-empty provider string`);
+      assert.ok(
+        typeof station.popularity === 'number' && station.popularity >= 0 && station.popularity <= 100,
+        `Station ${station.name} popularity must be a number between 0 and 100, got ${station.popularity}`
+      );
     }
   });
 
@@ -182,6 +187,86 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.equal(getStationCategory(nts), 'Rock', 'NTS Radio 1 must be classified under Rock');
   });
 
+  await t.test('Includes curated Washington DC stations with valid streams, providers, and popularity', () => {
+    const dcIds = ['wamu_dc', 'weta_dc', 'wtop_dc', 'wpfw_dc'];
+    for (const id of dcIds) {
+      const station = CURATED_STATIONS.find((s) => s.id === id);
+      assert.ok(station, `Curated catalog must include DC station ${id}`);
+      assert.ok(station.name, `DC station ${id} must have a name`);
+      assert.ok(station.streamUrl.startsWith('https://'), `DC station ${id} streamUrl must use HTTPS`);
+      assert.ok(station.provider, `DC station ${id} must specify provider`);
+      assert.ok(typeof station.popularity === 'number' && station.popularity > 0, `DC station ${id} must have positive popularity`);
+    }
+
+    const wamu = CURATED_STATIONS.find((s) => s.id === 'wamu_dc');
+    assert.equal(wamu.streamUrl, 'https://wamu.cdnstream1.com/wamu.mp3');
+    assert.equal(wamu.provider, 'American University / WAMU');
+    assert.equal(wamu.popularity, 87);
+    assert.equal(wamu.bitrate, '96 kbps');
+
+    const weta = CURATED_STATIONS.find((s) => s.id === 'weta_dc');
+    assert.equal(weta.streamUrl, 'https://weta.streamguys1.com/wetaclassical-icy');
+    assert.equal(weta.provider, 'WETA');
+    assert.equal(weta.popularity, 82);
+    assert.equal(weta.bitrate, '128 kbps AAC');
+
+    const wtop = CURATED_STATIONS.find((s) => s.id === 'wtop_dc');
+    assert.equal(wtop.streamUrl, 'https://playerservices.streamtheworld.com/api/livestream-redirect/WTOPFM.mp3');
+    assert.equal(wtop.provider, 'Hubbard Radio / WTOP');
+    assert.equal(wtop.popularity, 88);
+    assert.equal(wtop.bitrate, '96 kbps');
+
+    const wpfw = CURATED_STATIONS.find((s) => s.id === 'wpfw_dc');
+    assert.equal(wpfw.streamUrl, 'https://streams.pacifica.org:9000/wpfw_128');
+    assert.equal(wpfw.provider, 'Pacifica Radio / WPFW');
+    assert.equal(wpfw.popularity, 76);
+    assert.equal(wpfw.bitrate, '128 kbps');
+  });
+
+  await t.test('Includes curated Global / International stations with valid streams, providers, and popularity', () => {
+    const globalIds = ['fip_paris', 'worldwide_fm', 'triple_j', 'france_inter'];
+    for (const id of globalIds) {
+      const station = CURATED_STATIONS.find((s) => s.id === id);
+      assert.ok(station, `Curated catalog must include global station ${id}`);
+      assert.ok(station.name, `Global station ${id} must have a name`);
+      assert.ok(station.streamUrl.startsWith('https://'), `Global station ${id} streamUrl must use HTTPS`);
+      assert.ok(station.provider, `Global station ${id} must specify provider`);
+      assert.ok(typeof station.popularity === 'number' && station.popularity > 0, `Global station ${id} must have positive popularity`);
+    }
+
+    const fip = CURATED_STATIONS.find((s) => s.id === 'fip_paris');
+    assert.equal(fip.streamUrl, 'https://icecast.radiofrance.fr/fip-midfi.mp3');
+    assert.equal(fip.provider, 'Radio France');
+    assert.equal(fip.popularity, 90);
+
+    const worldwide = CURATED_STATIONS.find((s) => s.id === 'worldwide_fm');
+    assert.equal(worldwide.streamUrl, 'https://worldwide-fm.radiocult.fm/stream');
+    assert.equal(worldwide.provider, 'Worldwide FM');
+    assert.equal(worldwide.popularity, 83);
+    assert.equal(worldwide.bitrate, '320 kbps');
+
+    const tripleJ = CURATED_STATIONS.find((s) => s.id === 'triple_j');
+    assert.equal(tripleJ.streamUrl, 'https://abc.streamguys1.com/live/triplejnsw/icecast.audio');
+    assert.equal(tripleJ.provider, 'ABC Australia');
+    assert.equal(tripleJ.popularity, 86);
+    assert.equal(tripleJ.bitrate, '64 kbps AAC');
+
+    const franceInter = CURATED_STATIONS.find((s) => s.id === 'france_inter');
+    assert.equal(franceInter.streamUrl, 'https://icecast.radiofrance.fr/franceinter-midfi.mp3');
+    assert.equal(franceInter.provider, 'Radio France');
+    assert.equal(franceInter.popularity, 85);
+
+    const bbcWorld = CURATED_STATIONS.find((s) => s.id === 'bbc_world_service');
+    assert.equal(bbcWorld.provider, 'BBC');
+    assert.equal(bbcWorld.popularity, 96);
+
+    // Verify none of the curated stations use bbc_radio_6 or decommissioned URLs
+    for (const station of CURATED_STATIONS) {
+      assert.notEqual(station.id, 'bbc_radio_6', 'No station should have deprecated ID bbc_radio_6');
+      assert.ok(!station.streamUrl.includes('bbc_6music'), 'No station should use decommissioned bbc_6music URL');
+    }
+  });
+
   await t.test('getStationFallbackArtwork produces valid, accessible SVG data URIs for each genre', () => {
     const genres = [
       'Classical / Instrumental',
@@ -230,7 +315,62 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.equal(king.streamUrl, 'https://classicalking.streamguys1.com/king-fm-aac');
   });
 
-  await t.test('Adds custom radio stations and toggles favorites', async () => {
+  await t.test('loadStations reconciles provider and popularity on older database records while preserving favorites and history', async () => {
+    const db = new MockRadioDB();
+    // Simulate DB that has older records missing provider and popularity
+    await db.saveStations([
+      {
+        id: 'kexp_seattle',
+        name: 'KEXP 90.3 FM (Seattle)',
+        streamUrl: 'https://kexp.streamguys1.com/kexp160.aac',
+        genre: 'Alternative / Indie',
+        country: 'USA',
+        bitrate: '160 kbps AAC',
+        favicon: 'https://kexp.org/favicon.ico',
+        description: 'Where the music matters. Independent listener-powered radio.',
+        homepageUrl: 'https://kexp.org',
+        isCustom: false,
+        isFavorite: true,
+        lastPlayedAt: 1726000000000
+        // Missing provider and popularity
+      },
+      {
+        id: 'bbc_world_service',
+        name: 'BBC World Service',
+        streamUrl: 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service',
+        genre: 'News / English Talk',
+        country: 'UK',
+        bitrate: '128 kbps',
+        favicon: 'https://www.bbc.co.uk/favicon.ico',
+        description: 'International news, analysis, in-depth reports, and discussions from the BBC.',
+        homepageUrl: 'https://www.bbc.co.uk/worldserviceradio',
+        isCustom: false,
+        isFavorite: false,
+        lastPlayedAt: null,
+        provider: 'Old Provider',
+        popularity: 10
+      }
+    ]);
+
+    const loaded = await loadStations(db);
+    const kexp = loaded.find((s) => s.id === 'kexp_seattle');
+    assert.equal(kexp.provider, 'KEXP');
+    assert.equal(kexp.popularity, 98);
+    assert.equal(kexp.isFavorite, true, 'User favorite must be preserved');
+    assert.equal(kexp.lastPlayedAt, 1726000000000, 'User lastPlayedAt must be preserved');
+
+    const bbc = loaded.find((s) => s.id === 'bbc_world_service');
+    assert.equal(bbc.provider, 'BBC');
+    assert.equal(bbc.popularity, 96);
+
+    // Verify DB was updated
+    const savedKexp = db.stations.find((s) => s.id === 'kexp_seattle');
+    assert.equal(savedKexp.provider, 'KEXP');
+    assert.equal(savedKexp.popularity, 98);
+    assert.equal(savedKexp.isFavorite, true);
+  });
+
+  await t.test('Adds custom radio stations and toggles favorites with provider and popularity defaults', async () => {
     const db = new MockRadioDB();
     await loadStations(db);
 
@@ -246,6 +386,20 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.ok(custom.id.startsWith('custom_'));
     assert.equal(custom.name, 'My Ambient Station');
     assert.equal(custom.isCustom, true);
+    assert.equal(custom.provider, 'Custom');
+    assert.equal(custom.popularity, 0);
+
+    const customWithProvider = await addCustomStation(
+      {
+        name: 'Independent Campus Station',
+        streamUrl: 'https://stream.example.com/live2',
+        genre: 'College',
+        provider: 'Campus Radio Network'
+      },
+      db
+    );
+    assert.equal(customWithProvider.provider, 'Campus Radio Network');
+    assert.equal(customWithProvider.popularity, 0);
 
     const isFav = await toggleFavoriteStation(custom.id, db);
     assert.equal(isFav, true);
@@ -306,14 +460,17 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.ok(kidsStations.some((s) => s.id === 'radio_art_mozart'));
     assert.ok(kidsStations.some((s) => s.id === 'soma_covers'));
 
-    // Verify News & Talk stations are present
+    // Verify News & Talk stations are present (original 7 + wamu_dc, wtop_dc, france_inter = 10)
     const newsStations = loaded.filter((s) => getStationCategory(s) === 'News & Talk');
-    assert.equal(newsStations.length, 7); // wnyc_fm, bbc_world_service + npr_news, kqed_fm, wbez_chicago, rfi_english, wgbh_boston
+    assert.equal(newsStations.length, 10);
     assert.ok(newsStations.some((s) => s.id === 'npr_news'));
     assert.ok(newsStations.some((s) => s.id === 'kqed_fm'));
     assert.ok(newsStations.some((s) => s.id === 'wbez_chicago'));
     assert.ok(newsStations.some((s) => s.id === 'rfi_english'));
     assert.ok(newsStations.some((s) => s.id === 'wgbh_boston'));
+    assert.ok(newsStations.some((s) => s.id === 'wamu_dc'));
+    assert.ok(newsStations.some((s) => s.id === 'wtop_dc'));
+    assert.ok(newsStations.some((s) => s.id === 'france_inter'));
 
     // Verify custom user station is preserved intact
     const customInLoaded = loaded.find((s) => s.id === 'custom_user_stream_1');

@@ -17,7 +17,9 @@ export const CURATED_STATIONS = [
     bitrate: '320 kbps',
     favicon: 'https://radioparadise.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Radio Paradise',
+    popularity: 95
   },
   {
     id: 'rp_mellow',
@@ -30,7 +32,9 @@ export const CURATED_STATIONS = [
     bitrate: '320 kbps',
     favicon: 'https://radioparadise.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Radio Paradise',
+    popularity: 90
   },
   {
     id: 'rp_rock',
@@ -43,7 +47,9 @@ export const CURATED_STATIONS = [
     bitrate: '320 kbps',
     favicon: 'https://radioparadise.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Radio Paradise',
+    popularity: 83
   },
   {
     id: 'rp_world',
@@ -56,7 +62,9 @@ export const CURATED_STATIONS = [
     bitrate: '320 kbps',
     favicon: 'https://radioparadise.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Radio Paradise',
+    popularity: 80
   },
   {
     id: 'soma_groove_salad',
@@ -69,7 +77,9 @@ export const CURATED_STATIONS = [
     bitrate: '256 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 94
   },
   {
     id: 'soma_defcon',
@@ -82,7 +92,9 @@ export const CURATED_STATIONS = [
     bitrate: '256 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 81
   },
   {
     id: 'soma_secret_agent',
@@ -95,7 +107,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 76
   },
   {
     id: 'soma_drone_zone',
@@ -108,7 +122,9 @@ export const CURATED_STATIONS = [
     bitrate: '256 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 84
   },
   {
     id: 'kexp_seattle',
@@ -121,7 +137,9 @@ export const CURATED_STATIONS = [
     bitrate: '160 kbps AAC',
     favicon: 'https://kexp.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'KEXP',
+    popularity: 98
   },
   {
     id: 'nts_radio_1',
@@ -134,7 +152,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.nts.live/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'NTS Radio',
+    popularity: 91
   },
   {
     id: 'soma_lush',
@@ -147,7 +167,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 75
   },
   {
     id: 'soma_spacestation',
@@ -160,7 +182,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 74
   },
   {
     id: 'soma_deepspaceone',
@@ -173,7 +197,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 73
   },
   {
     id: 'soma_synphaera',
@@ -186,7 +212,9 @@ export const CURATED_STATIONS = [
     bitrate: '256 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 61
   },
   {
     id: 'soma_sonic_universe',
@@ -199,7 +227,9 @@ export const CURATED_STATIONS = [
     bitrate: '256 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 51
   },
   {
     id: 'soma_suburbs',
@@ -212,7 +242,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 59
   },
   {
     id: 'soma_illinois_street',
@@ -225,7 +257,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 52
   },
   {
     id: 'kusc_classical',
@@ -238,7 +272,9 @@ export const CURATED_STATIONS = [
     bitrate: '96 kbps AAC',
     favicon: 'https://www.kusc.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'KUSC',
+    popularity: 85
   },
   {
     id: 'king_classical',
@@ -251,7 +287,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps AAC',
     favicon: 'https://www.king.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Classical KING FM',
+    popularity: 82
   },
   {
     id: 'wqxr_classical',
@@ -264,7 +302,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.wqxr.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'WQXR',
+    popularity: 84
   },
   {
     id: 'jazz24',
@@ -277,7 +317,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.jazz24.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Jazz24 / KNKX',
+    popularity: 79
   },
   {
     id: 'knkx_jazz_npr',
@@ -290,7 +332,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.knkx.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'KNKX',
+    popularity: 78
   },
   {
     id: 'soma_poptron',
@@ -303,7 +347,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 72
   },
   {
     id: 'soma_indiepop',
@@ -316,7 +362,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 72
   },
   {
     id: 'soma_beatblender',
@@ -329,7 +377,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 57
   },
   {
     id: 'soma_7soul',
@@ -342,7 +392,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 60
   },
   {
     id: 'soma_seventies',
@@ -355,7 +407,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 73
   },
   {
     id: 'soma_folkfwd',
@@ -368,7 +422,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 56
   },
   {
     id: 'soma_bootliquor',
@@ -381,7 +437,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 55
   },
   {
     id: 'soma_thistle',
@@ -394,7 +452,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 54
   },
   {
     id: 'soma_fluid',
@@ -407,7 +467,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 53
   },
   {
     id: 'soma_sf1033',
@@ -420,7 +482,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 40
   },
   {
     id: 'wnyc_fm',
@@ -433,7 +497,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.wnyc.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'WNYC',
+    popularity: 92
   },
   {
     id: 'bbc_world_service',
@@ -446,7 +512,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.bbc.co.uk/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'BBC',
+    popularity: 96
   },
   {
     id: 'npr_news',
@@ -459,7 +527,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.npr.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'NPR',
+    popularity: 97
   },
   {
     id: 'kqed_fm',
@@ -472,7 +542,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.kqed.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'KQED',
+    popularity: 88
   },
   {
     id: 'wbez_chicago',
@@ -485,7 +557,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.wbez.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'WBEZ',
+    popularity: 85
   },
   {
     id: 'rfi_english',
@@ -498,7 +572,9 @@ export const CURATED_STATIONS = [
     bitrate: '64 kbps',
     favicon: 'https://www.rfi.fr/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'RFI',
+    popularity: 71
   },
   {
     id: 'wgbh_boston',
@@ -511,7 +587,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.wgbh.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'GBH',
+    popularity: 78
   },
   {
     id: 'fun_kids_uk',
@@ -524,7 +602,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.funkidslive.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Fun Kids',
+    popularity: 70
   },
   {
     id: 'fun_kids_junior',
@@ -537,7 +617,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.funkidslive.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Fun Kids',
+    popularity: 65
   },
   {
     id: 'radio_art_lullaby',
@@ -550,7 +632,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.radioart.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Radio Art',
+    popularity: 63
   },
   {
     id: 'radio_art_solo_piano',
@@ -563,7 +647,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.radioart.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Radio Art',
+    popularity: 62
   },
   {
     id: 'radio_art_mozart',
@@ -576,7 +662,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.radioart.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Radio Art',
+    popularity: 62
   },
   {
     id: 'soma_covers',
@@ -589,7 +677,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 58
   },
   {
     id: 'stanford_kzsu',
@@ -602,7 +692,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://kzsu.stanford.edu/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Stanford University',
+    popularity: 50
   },
   {
     id: 'ohlone_kohl',
@@ -615,7 +707,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.kohlradio.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Ohlone College',
+    popularity: 46
   },
   {
     id: 'berkeley_kalx',
@@ -628,7 +722,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.kalx.berkeley.edu/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'UC Berkeley',
+    popularity: 50
   },
   {
     id: 'scu_kscu',
@@ -641,7 +737,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps AAC',
     favicon: 'https://kscu.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Santa Clara University',
+    popularity: 47
   },
   {
     id: 'princeton_wprb',
@@ -654,7 +752,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps AAC',
     favicon: 'https://wprb.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Princeton University',
+    popularity: 49
   },
   {
     id: 'mit_wmbr',
@@ -667,7 +767,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://wmbr.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'MIT',
+    popularity: 48
   },
   {
     id: 'the_current_mpr',
@@ -680,7 +782,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://www.thecurrent.org/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Minnesota Public Radio',
+    popularity: 86
   },
   {
     id: 'soma_left_coast_70s',
@@ -693,7 +797,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://somafm.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'SomaFM',
+    popularity: 73
   },
   {
     id: 'dance_wave',
@@ -706,7 +812,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://dancewave.online/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Dance Wave!',
+    popularity: 68
   },
   {
     id: 'chillsky_lofi',
@@ -719,7 +827,9 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://chillsky.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Chillsky',
+    popularity: 67
   },
   {
     id: 'lofi_radio_chill',
@@ -732,7 +842,129 @@ export const CURATED_STATIONS = [
     bitrate: '128 kbps',
     favicon: 'https://lofiradio.com/favicon.ico',
     isCustom: false,
-    isFavorite: false
+    isFavorite: false,
+    provider: 'Lofi Radio',
+    popularity: 66
+  },
+  {
+    id: 'wamu_dc',
+    name: 'WAMU 88.5 FM (American University Radio)',
+    description: 'Washington DC public radio featuring in-depth local news, NPR national programs, and 1A.',
+    streamUrl: 'https://wamu.cdnstream1.com/wamu.mp3',
+    homepageUrl: 'https://wamu.org',
+    genre: 'News / Public Radio',
+    country: 'USA',
+    bitrate: '96 kbps',
+    favicon: 'https://wamu.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'American University / WAMU',
+    popularity: 87
+  },
+  {
+    id: 'weta_dc',
+    name: 'Classical WETA 90.9 FM (Washington DC)',
+    description: 'The premier classical music station for the Nation\'s Capital, broadcasting masterworks and performances.',
+    streamUrl: 'https://weta.streamguys1.com/wetaclassical-icy',
+    homepageUrl: 'https://weta.org/classical',
+    genre: 'Classical',
+    country: 'USA',
+    bitrate: '128 kbps AAC',
+    favicon: 'https://weta.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'WETA',
+    popularity: 82
+  },
+  {
+    id: 'wtop_dc',
+    name: 'WTOP 103.5 FM (Washington DC Top News)',
+    description: 'Washington DC\'s top news, traffic, and weather station with continuous non-stop live local reporting.',
+    streamUrl: 'https://playerservices.streamtheworld.com/api/livestream-redirect/WTOPFM.mp3',
+    homepageUrl: 'https://wtop.com',
+    genre: 'News / Talk',
+    country: 'USA',
+    bitrate: '96 kbps',
+    favicon: 'https://wtop.com/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Hubbard Radio / WTOP',
+    popularity: 88
+  },
+  {
+    id: 'wpfw_dc',
+    name: 'WPFW 89.3 FM (Jazz & Justice)',
+    description: 'Community-supported Pacifica radio from Washington DC broadcasting jazz, blues, world music, and progressive civic dialogue.',
+    streamUrl: 'https://streams.pacifica.org:9000/wpfw_128',
+    homepageUrl: 'https://wpfwdc.org',
+    genre: 'Jazz / Blues',
+    country: 'USA',
+    bitrate: '128 kbps',
+    favicon: 'https://wpfwdc.org/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Pacifica Radio / WPFW',
+    popularity: 76
+  },
+  {
+    id: 'fip_paris',
+    name: 'FIP (Radio France)',
+    description: 'Eclectic musical voyage curated live by Radio France, seamlessly blending jazz, funk, rock, and world sounds.',
+    streamUrl: 'https://icecast.radiofrance.fr/fip-midfi.mp3',
+    homepageUrl: 'https://www.radiofrance.fr/fip',
+    genre: 'Eclectic / Jazz / World',
+    country: 'France',
+    bitrate: '128 kbps',
+    favicon: 'https://www.radiofrance.fr/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Radio France',
+    popularity: 90
+  },
+  {
+    id: 'worldwide_fm',
+    name: 'Worldwide FM (London)',
+    description: 'Gilles Peterson\'s global music radio platform championing underground culture, global beats, and jazz.',
+    streamUrl: 'https://worldwide-fm.radiocult.fm/stream',
+    homepageUrl: 'https://worldwidefm.net',
+    genre: 'Eclectic / Global Beats',
+    country: 'UK',
+    bitrate: '320 kbps',
+    favicon: 'https://worldwidefm.net/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Worldwide FM',
+    popularity: 83
+  },
+  {
+    id: 'triple_j',
+    name: 'Triple J (ABC Australia)',
+    description: 'Australia\'s iconic national youth broadcaster discovering new Australian music, alternative rock, and indie artists.',
+    streamUrl: 'https://abc.streamguys1.com/live/triplejnsw/icecast.audio',
+    homepageUrl: 'https://www.abc.net.au/triplej',
+    genre: 'Alternative / Indie Rock',
+    country: 'Australia',
+    bitrate: '64 kbps AAC',
+    favicon: 'https://www.abc.net.au/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'ABC Australia',
+    popularity: 86
+  },
+  {
+    id: 'france_inter',
+    name: 'France Inter (Paris)',
+    description: 'France\'s major public generalist station offering French and world news, cultural interviews, and eclectic music.',
+    streamUrl: 'https://icecast.radiofrance.fr/franceinter-midfi.mp3',
+    homepageUrl: 'https://www.radiofrance.fr/franceinter',
+    genre: 'News & Talk / Culture',
+    country: 'France',
+    bitrate: '128 kbps',
+    favicon: 'https://www.radiofrance.fr/favicon.ico',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Radio France',
+    popularity: 85
   }
 ];
 
@@ -991,7 +1223,9 @@ export async function loadStations(db) {
           station.bitrate !== curated.bitrate ||
           station.description !== curated.description ||
           station.country !== curated.country ||
-          station.homepageUrl !== curated.homepageUrl
+          station.homepageUrl !== curated.homepageUrl ||
+          station.provider !== curated.provider ||
+          station.popularity !== curated.popularity
         ) {
           saved[i] = {
             ...curated,
@@ -1053,7 +1287,9 @@ export async function addCustomStation(station, db) {
     favicon,
     isCustom: true,
     isFavorite: false,
-    lastPlayedAt: null
+    lastPlayedAt: null,
+    provider: sanitizeText(station.provider, 50) || 'Custom',
+    popularity: 0
   };
 
   if (db) {
