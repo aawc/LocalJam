@@ -40,7 +40,7 @@ test('PWA - sw.js caches all declared app shell assets and excludes audio stream
   const content = fs.readFileSync(swPath, 'utf8');
 
   // Verify cache name and assets array
-  assert.ok(content.includes("const CACHE_NAME = 'localjam-v2026.09.049';"), 'Cache version must be localjam-v2026.09.049');
+  assert.ok(content.includes("const CACHE_NAME = 'localjam-v2026.09.050';"), 'Cache version must be localjam-v2026.09.050');
   assert.ok(content.includes('APP_SHELL_ASSETS = ['), 'App shell assets array must be declared');
 
   // Verify all files in APP_SHELL_ASSETS actually exist on disk
@@ -78,30 +78,29 @@ test('PWA - index.html contains correct relative links and meta tags for GitHub 
   assert.ok(html.includes('<script type="module" src="./src/main.js"></script>'), 'Relative main.js module script');
 });
 
-test('PWA - v2/index.html exists and renders the v2 player application shell', () => {
-  const v2Path = path.join(ROOT_DIR, 'v2', 'index.html');
-  assert.ok(fs.existsSync(v2Path), 'v2/index.html must exist on disk');
+test('PWA - index.html is the sole authoritative application shell and legacy artifacts are eliminated', () => {
+  const v2Path = path.join(ROOT_DIR, 'v2');
+  const notFoundPath = path.join(ROOT_DIR, '404.html');
 
-  const html = fs.readFileSync(v2Path, 'utf8');
-  assert.ok(!html.includes('window.location.replace'), 'Must not redirect away from v2');
-  assert.ok(!html.includes('http-equiv="refresh"'), 'Must not include meta http-equiv refresh redirect');
-  assert.ok(html.includes('<base href="../" />'), 'Must include base tag pointing to parent root');
+  assert.equal(fs.existsSync(v2Path), false, 'v2/ directory must not exist');
+  assert.equal(fs.existsSync(notFoundPath), false, '404.html must not exist');
+
+  const indexPath = path.join(ROOT_DIR, 'index.html');
+  const html = fs.readFileSync(indexPath, 'utf8');
   assert.ok(html.includes('id="stage-root"'), 'Must contain stage-root container');
   assert.ok(html.includes('id="layer-root"'), 'Must contain layer-root container');
   assert.ok(html.includes('id="toast-root"'), 'Must contain toast-root container');
   assert.ok(html.includes('id="aria-live-region"'), 'Must contain aria-live-region container');
   assert.ok(html.includes('<script type="module" src="./src/main.js"></script>'), 'Must mount main.js module script');
-  assert.ok(html.includes('Content-Security-Policy'), 'Must include CSP meta tag');
 });
 
-test('PWA - 404.html exists and preserves v2 routing', () => {
-  const notFoundPath = path.join(ROOT_DIR, '404.html');
-  assert.ok(fs.existsSync(notFoundPath), '404.html must exist on disk');
+test('PWA - sw.js provides clean single-shell offline navigation fallback', () => {
+  const swPath = path.join(ROOT_DIR, 'sw.js');
+  const content = fs.readFileSync(swPath, 'utf8');
 
-  const html = fs.readFileSync(notFoundPath, 'utf8');
-  assert.ok(html.includes('http-equiv="refresh"'), 'Must include meta http-equiv refresh');
-  assert.ok(html.includes('window.location.replace'), 'Must include fallback routing script');
-  assert.ok(html.includes('/v2'), 'Must preserve /v2 route on deep link fallback');
+  assert.ok(!content.includes('./v2/index.html'), 'Must not cache obsolete v2 shell');
+  assert.ok(!content.includes('./404.html'), 'Must not cache obsolete 404 page');
+  assert.ok(content.includes("caches.match('./index.html')"), 'Must fall back directly to ./index.html');
 });
 
 test('PWA - sw.js sanitizes Permissions-Policy header for navigation responses', async () => {

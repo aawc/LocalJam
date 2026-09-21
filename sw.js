@@ -3,7 +3,7 @@
  * Cache-First App Shell Strategy with explicit audio stream bypass.
  */
 
-const CACHE_NAME = 'localjam-v2026.09.049';
+const CACHE_NAME = 'localjam-v2026.09.050';
 
 const PERMISSIONS_POLICY =
   'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
@@ -35,8 +35,6 @@ function sanitizeNavigationResponse(response) {
 const APP_SHELL_ASSETS = [
   './',
   './index.html',
-  './404.html',
-  './v2/index.html',
   './version.json',
   './manifest.webmanifest',
   './favicon.svg',
@@ -178,8 +176,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => {
         // Fallback to app shell for navigation requests when offline
         if (request.mode === 'navigate') {
-          const fallbackPath = url.pathname.includes('/v2') ? './v2/index.html' : './index.html';
-          return caches.match(fallbackPath).then((fallback) => sanitizeNavigationResponse(fallback));
+          return caches.match('./index.html').then((fallback) => sanitizeNavigationResponse(fallback));
         }
       });
     })
