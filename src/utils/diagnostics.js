@@ -322,14 +322,20 @@ export function formatDiagnosticsMarkdown(diag, userNotes = '') {
     ? (diag.audio?.currentStation?.name ? `Radio: ${diag.audio.currentStation.name} [${diag.audio.currentStation.streamState}]` : 'Radio: None')
     : (diag.audio?.currentTrack?.title ? `Track: ${diag.audio.currentTrack.title} (${diag.audio.currentTrack.artist})` : 'Track: None');
 
+  const appVer = diag.app?.version || 'unknown';
+  const remoteVer = diag.app?.remoteVersion || 'synced';
+
   return `## LocalJam Diagnostic Report
 **Generated:** \`${diag.timestamp || new Date().toISOString()}\`  
-**App Version:** \`${diag.app?.version || 'unknown'}\` (Remote: \`${diag.app?.remoteVersion || 'synced'}\`)  
+**App Version (Local Bundle):** \`${appVer}\`  
+**Remote Version (Deployed Origin):** \`${remoteVer}\`  
 **Status:** \`[PASS]\` Diagnostics Captured  
 
 ${notesSection}### Summary Metrics
 | Dimension | Status / Telemetry |
 | :--- | :--- |
+| **App Version (Local Bundle)** | \`${appVer}\` |
+| **Remote Version (Deployed Origin)** | \`${remoteVer}\` |
 | **PWA Display Mode** | \`${diag.app?.displayMode || 'browser'}\` (Online: \`${diag.app?.online ? 'Yes' : 'No'}\`) |
 | **Storage Architecture** | \`${diag.storage?.tier || 'Tier 2'}\` |
 | **Storage Usage** | \`${storageStr}\` |

@@ -180,4 +180,23 @@ describe('PWA Diagnostics & State Collector Suite', () => {
     assert.ok(parsed.storage);
     assert.ok(parsed.audio);
   });
+
+  it('formatDiagnosticsMarkdown labels App Version as (Local Bundle) and Remote Version as (Deployed Origin)', async () => {
+    const diag = await captureDiagnostics({ db: null, audioEngine: null });
+    diag.app.version = 'v2026.09.111';
+    diag.app.remoteVersion = 'v2026.09.115';
+
+    const md = formatDiagnosticsMarkdown(diag);
+    assert.ok(md.includes('App Version (Local Bundle)'), 'header or metrics must label App Version (Local Bundle)');
+    assert.ok(md.includes('Remote Version (Deployed Origin)'), 'header or metrics must label Remote Version (Deployed Origin)');
+    assert.ok(md.includes('v2026.09.111'));
+    assert.ok(md.includes('v2026.09.115'));
+
+    // Check with null remoteVersion / synced
+    diag.app.remoteVersion = null;
+    const mdSynced = formatDiagnosticsMarkdown(diag);
+    assert.ok(mdSynced.includes('App Version (Local Bundle)'));
+    assert.ok(mdSynced.includes('Remote Version (Deployed Origin)'));
+    assert.ok(mdSynced.includes('synced'));
+  });
 });
