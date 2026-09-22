@@ -810,14 +810,31 @@ body {
   gap: 8px;
   align-items: center;
   overflow-x: auto;
-  scrollbar-width: none;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle, #334155) transparent;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 4px;
 }
 
 .browse-header-row2::-webkit-scrollbar,
-.browse-chips-bar::-webkit-scrollbar {
-  display: none;
+.browse-chips-bar::-webkit-scrollbar,
+.browse-sheet-chips::-webkit-scrollbar {
+  height: 4px;
+}
+
+.browse-header-row2::-webkit-scrollbar-track,
+.browse-chips-bar::-webkit-scrollbar-track,
+.browse-sheet-chips::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.browse-header-row2::-webkit-scrollbar-thumb,
+.browse-chips-bar::-webkit-scrollbar-thumb,
+.browse-sheet-chips::-webkit-scrollbar-thumb {
+  background: var(--border-subtle, #334155);
+  border-radius: var(--radius-full);
 }
 
 .chip,
