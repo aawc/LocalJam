@@ -232,7 +232,7 @@ export function createBrowseSheet(deps = {}) {
         const parentKindLabel = libraryDrill.kind === 'album' ? 'Albums' : 'Artists';
         const drillPrefix = libraryDrill.kind === 'album' ? 'Album' : 'Artist';
         chipsHtml = `
-          <button type="button" class="chip browse-back-chip" data-action="back">&larr; Back to ${parentKindLabel}</button>
+          <button type="button" class="chip browse-back-chip active" data-action="back" tabindex="0">&larr; Back to ${parentKindLabel}</button>
           <span class="browse-breadcrumb-tag">${drillPrefix}: ${escapeHtml(libraryDrill.name)}</span>
         `;
       } else {
@@ -245,17 +245,18 @@ export function createBrowseSheet(deps = {}) {
         ];
         chipsHtml = modes
           .map(
-            (m) => `
-          <button type="button" class="chip ${libraryMode === m.key ? 'active' : ''}" data-mode="${m.key}">${m.label}</button>
-        `
+            (m, idx) => {
+              const active = libraryMode === m.key || (!modes.some((x) => x.key === libraryMode) && idx === 0);
+              return `<button type="button" class="chip ${active ? 'active' : ''}" data-mode="${m.key}" aria-pressed="${active ? 'true' : 'false'}" tabindex="${active ? '0' : '-1'}">${m.label}</button>`;
+            }
           )
           .join('');
       }
     } else {
-      const favActive = radioGenre === 'Favorites' ? 'active' : '';
-      const genreChips = HIGH_LEVEL_GENRES.map((g) => {
-        const active = radioGenre === g ? 'active' : '';
-        return `<button type="button" class="chip ${active}" data-genre="${escapeHtml(g)}">${escapeHtml(g)}</button>`;
+      const favActive = radioGenre === 'Favorites';
+      const genreChips = HIGH_LEVEL_GENRES.map((g, idx) => {
+        const active = radioGenre === g || (!favActive && !HIGH_LEVEL_GENRES.includes(radioGenre) && idx === 0);
+        return `<button type="button" class="chip ${active ? 'active' : ''}" data-genre="${escapeHtml(g)}" aria-pressed="${active ? 'true' : 'false'}" tabindex="${active ? '0' : '-1'}">${escapeHtml(g)}</button>`;
       }).join('');
 
       const sortOptions = [
@@ -275,7 +276,7 @@ export function createBrowseSheet(deps = {}) {
         .join('');
 
       chipsHtml = `
-        <button type="button" class="chip ${favActive}" data-genre="Favorites" aria-label="Favorite stations">★</button>
+        <button type="button" class="chip ${favActive ? 'active' : ''}" data-genre="Favorites" aria-label="Favorite stations" aria-pressed="${favActive ? 'true' : 'false'}" tabindex="${favActive ? '0' : '-1'}">★</button>
         ${genreChips}
         <select class="browse-sort-select" aria-label="Sort stations">
           ${sortOptions}
@@ -407,11 +408,19 @@ export function createBrowseSheet(deps = {}) {
     renderListRows();
   }
 
+  function scrollActiveChipIntoView(behavior = 'auto') {
+    const activeChip = sheetEl.querySelector('.browse-chips-bar .chip.active');
+    if (activeChip && typeof activeChip.scrollIntoView === 'function') {
+      activeChip.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior });
+    }
+  }
+
   function renderAll() {
     updateRows();
     contentContainer.innerHTML = renderHeaderMarkup();
     renderListRows();
     bindHeaderEvents();
+    scrollActiveChipIntoView();
   }
 
   function bindHeaderEvents() {
@@ -478,15 +487,92 @@ export function createBrowseSheet(deps = {}) {
       });
     }
 
+    // Chips bar wheel and roving tabindex navigation
+    const chipsBar = sheetEl.querySelector('.browse-chips-bar');
+    if (chipsBar) {
+      chipsBar.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) {
+          return;
+        }
+        const maxScroll = chipsBar.scrollWidth - chipsBar.clientWidth;
+        if (maxScroll <= 0) {
+          return;
+        }
+        let delta = e.deltaY;
+        if (e.deltaMode === 1) {
+          delta *= 24;
+        } else if (e.deltaMode === 2) {
+          delta *= chipsBar.clientWidth;
+        }
+        if (delta > 0 && chipsBar.scrollLeft < maxScroll - 1) {
+          e.preventDefault();
+          chipsBar.scrollLeft = Math.min(maxScroll, chipsBar.scrollLeft + delta);
+        } else if (delta < 0 && chipsBar.scrollLeft > 1) {
+          e.preventDefault();
+          chipsBar.scrollLeft = Math.max(0, chipsBar.scrollLeft + delta);
+        }
+      }, { passive: false });
+
+      chipsBar.addEventListener('keydown', (e) => {
+        if (!e.target || !e.target.closest?.('.chip')) {
+          return;
+        }
+        const chips = Array.from(chipsBar.querySelectorAll('.chip'));
+        if (chips.length === 0) return;
+
+        let curIdx = chips.indexOf(document.activeElement);
+        if (curIdx === -1) {
+          curIdx = chips.findIndex((c) => c.getAttribute('tabindex') === '0');
+          if (curIdx === -1) curIdx = 0;
+        }
+
+        let targetIdx = -1;
+        if (e.key === 'ArrowRight') {
+          targetIdx = (curIdx + 1) % chips.length;
+        } else if (e.key === 'ArrowLeft') {
+          targetIdx = (curIdx - 1 + chips.length) % chips.length;
+        } else if (e.key === 'Home') {
+          targetIdx = 0;
+        } else if (e.key === 'End') {
+          targetIdx = chips.length - 1;
+        }
+
+        if (targetIdx !== -1) {
+          e.preventDefault();
+          e.stopPropagation();
+          const targetChip = chips[targetIdx];
+          for (const c of chips) {
+            c.setAttribute('tabindex', c === targetChip ? '0' : '-1');
+          }
+          if (typeof targetChip.focus === 'function') {
+            targetChip.focus();
+          }
+          if (typeof targetChip.scrollIntoView === 'function') {
+            targetChip.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+          }
+        }
+      });
+    }
+
     // Library chips
-    const modeChips = sheetEl.querySelectorAll('[data-mode]');
+    const modeChips = Array.from(sheetEl.querySelectorAll('.browse-chips-bar [data-mode]'));
     for (const chip of modeChips) {
       chip.addEventListener('click', () => {
         const m = chip.getAttribute('data-mode');
         if (m) {
           libraryMode = m;
           libraryDrill = null;
-          renderAll();
+          for (const c of modeChips) {
+            const isActive = c === chip;
+            c.classList.toggle('active', isActive);
+            c.setAttribute('tabindex', isActive ? '0' : '-1');
+            c.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          }
+          updateRows();
+          renderListRows();
+          if (typeof chip.scrollIntoView === 'function') {
+            chip.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+          }
         }
       });
     }
@@ -500,13 +586,23 @@ export function createBrowseSheet(deps = {}) {
     }
 
     // Radio genre chips
-    const genreChips = sheetEl.querySelectorAll('[data-genre]');
+    const genreChips = Array.from(sheetEl.querySelectorAll('.browse-chips-bar [data-genre]'));
     for (const chip of genreChips) {
       chip.addEventListener('click', () => {
         const g = chip.getAttribute('data-genre');
         if (g) {
           radioGenre = g;
-          renderAll();
+          for (const c of genreChips) {
+            const isActive = c === chip;
+            c.classList.toggle('active', isActive);
+            c.setAttribute('tabindex', isActive ? '0' : '-1');
+            c.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          }
+          updateRows();
+          renderListRows();
+          if (typeof chip.scrollIntoView === 'function') {
+            chip.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+          }
         }
       });
     }

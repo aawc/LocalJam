@@ -1128,4 +1128,255 @@ describe('Browse Sheet Component (L1)', () => {
     allRows[0].dispatchEvent(new globalThis.KeyboardEvent('keydown', { key: 'End' }));
     assert.equal(globalThis.document.activeElement, allRows[3], 'End key must jump to last row');
   });
+
+  it('wheel event translates vertical deltaY to horizontal scrollLeft when deltaY dominates and container has scroll room', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const chipsBar = sheet.element.querySelector('.browse-chips-bar');
+    assert.ok(chipsBar, 'chips bar must exist');
+    chipsBar.scrollWidth = 1000;
+    chipsBar.clientWidth = 300;
+    chipsBar.scrollLeft = 0;
+
+    const wheelEvt = new globalThis.WheelEvent('wheel', { deltaX: 0, deltaY: 50, cancelable: true });
+    chipsBar.dispatchEvent(wheelEvt);
+
+    assert.equal(chipsBar.scrollLeft, 50, 'scrollLeft should advance by deltaY');
+    assert.equal(wheelEvt.defaultPrevented, true, 'wheel event should be prevented when scrolled');
+  });
+
+  it('wheel event passes through without preventDefault when boundary reached or deltaX is dominant', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const chipsBar = sheet.element.querySelector('.browse-chips-bar');
+    chipsBar.scrollWidth = 1000;
+    chipsBar.clientWidth = 300;
+
+    // At right boundary
+    chipsBar.scrollLeft = 700;
+    const wheelRightBound = new globalThis.WheelEvent('wheel', { deltaX: 0, deltaY: 50, cancelable: true });
+    chipsBar.dispatchEvent(wheelRightBound);
+    assert.equal(wheelRightBound.defaultPrevented, false, 'must not preventDefault at right boundary');
+    assert.equal(chipsBar.scrollLeft, 700);
+
+    // At left boundary
+    chipsBar.scrollLeft = 0;
+    const wheelLeftBound = new globalThis.WheelEvent('wheel', { deltaX: 0, deltaY: -50, cancelable: true });
+    chipsBar.dispatchEvent(wheelLeftBound);
+    assert.equal(wheelLeftBound.defaultPrevented, false, 'must not preventDefault at left boundary');
+    assert.equal(chipsBar.scrollLeft, 0);
+
+    // deltaX is dominant (e.g. trackpad horizontal swipe)
+    chipsBar.scrollLeft = 100;
+    const wheelDeltaX = new globalThis.WheelEvent('wheel', { deltaX: 60, deltaY: 20, cancelable: true });
+    chipsBar.dispatchEvent(wheelDeltaX);
+    assert.equal(wheelDeltaX.defaultPrevented, false, 'must not preventDefault when deltaX dominates');
+    assert.equal(chipsBar.scrollLeft, 100, 'scrollLeft should not be changed when deltaX dominates');
+  });
+
+  it('wheel event normalizes deltaMode 1 (lines) and 2 (pages)', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const chipsBar = sheet.element.querySelector('.browse-chips-bar');
+    chipsBar.scrollWidth = 1000;
+    chipsBar.clientWidth = 300;
+    chipsBar.scrollLeft = 0;
+
+    // deltaMode 1 (DOM_DELTA_LINE) multiplies deltaY by 24
+    const lineWheel = new globalThis.WheelEvent('wheel', { deltaX: 0, deltaY: 2, deltaMode: 1, cancelable: true });
+    chipsBar.dispatchEvent(lineWheel);
+    assert.equal(chipsBar.scrollLeft, 48, 'deltaMode 1 should multiply deltaY by 24');
+    assert.equal(lineWheel.defaultPrevented, true);
+
+    // deltaMode 2 (DOM_DELTA_PAGE) multiplies deltaY by clientWidth
+    chipsBar.scrollLeft = 0;
+    const pageWheel = new globalThis.WheelEvent('wheel', { deltaX: 0, deltaY: 1, deltaMode: 2, cancelable: true });
+    chipsBar.dispatchEvent(pageWheel);
+    assert.equal(chipsBar.scrollLeft, 300, 'deltaMode 2 should multiply deltaY by clientWidth');
+    assert.equal(pageWheel.defaultPrevented, true);
+  });
+
+  it('wheel event respects subpixel thresholds at boundaries to prevent trapping on high-DPI displays', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const chipsBar = sheet.element.querySelector('.browse-chips-bar');
+    chipsBar.scrollWidth = 1000;
+    chipsBar.clientWidth = 300; // maxScroll = 700
+
+    // Within 1px of right boundary (699.5 >= 700 - 1)
+    chipsBar.scrollLeft = 699.5;
+    const rightSubpixel = new globalThis.WheelEvent('wheel', { deltaX: 0, deltaY: 50, cancelable: true });
+    chipsBar.dispatchEvent(rightSubpixel);
+    assert.equal(rightSubpixel.defaultPrevented, false, 'must not trap at right subpixel boundary');
+
+    // Within 1px of left boundary (0.5 <= 1)
+    chipsBar.scrollLeft = 0.5;
+    const leftSubpixel = new globalThis.WheelEvent('wheel', { deltaX: 0, deltaY: -50, cancelable: true });
+    chipsBar.dispatchEvent(leftSubpixel);
+    assert.equal(leftSubpixel.defaultPrevented, false, 'must not trap at left subpixel boundary');
+  });
+
+  it('clicking a radio genre chip updates active, tabindex, aria-pressed in-place and preserves scrollLeft', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const chipsBar = sheet.element.querySelector('.browse-chips-bar');
+    chipsBar.scrollWidth = 1000;
+    chipsBar.clientWidth = 300;
+    chipsBar.scrollLeft = 240;
+
+    const allGenreChip = chipsBar.querySelector('[data-genre="All"]');
+    assert.ok(allGenreChip.classList.contains('active'));
+    assert.equal(allGenreChip.getAttribute('tabindex'), '0');
+    assert.equal(allGenreChip.getAttribute('aria-pressed'), 'true');
+
+    const folkChip = chipsBar.querySelector('[data-genre="Folk & Roots"]');
+    assert.ok(folkChip);
+    assert.ok(!folkChip.classList.contains('active'));
+    assert.equal(folkChip.getAttribute('tabindex'), '-1');
+    assert.equal(folkChip.getAttribute('aria-pressed'), 'false');
+
+    folkChip.click();
+
+    // Verify chips bar was NOT replaced in DOM and scrollLeft was preserved
+    const chipsBarAfter = sheet.element.querySelector('.browse-chips-bar');
+    assert.equal(chipsBarAfter, chipsBar, 'chipsBar element identity must be preserved');
+    assert.equal(chipsBar.scrollLeft, 240, 'scrollLeft must be preserved on chip click');
+
+    // Verify classes and ARIA attributes updated in-place
+    assert.ok(folkChip.classList.contains('active'), 'clicked chip must have active class');
+    assert.equal(folkChip.getAttribute('tabindex'), '0', 'clicked chip must have tabindex="0"');
+    assert.equal(folkChip.getAttribute('aria-pressed'), 'true', 'clicked chip must have aria-pressed="true"');
+
+    assert.ok(!allGenreChip.classList.contains('active'), 'previous chip must lose active class');
+    assert.equal(allGenreChip.getAttribute('tabindex'), '-1', 'previous chip must have tabindex="-1"');
+    assert.equal(allGenreChip.getAttribute('aria-pressed'), 'false', 'previous chip must have aria-pressed="false"');
+
+    // Verify scrollIntoView was called on clicked chip
+    assert.equal(folkChip._scrolledIntoView, true, 'scrollIntoView must be called on selected chip');
+    assert.deepEqual(folkChip._lastScrollIntoViewOptions, { block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+
+    // Verify station list rows were updated
+    const html = sheet.element.innerHTML;
+    assert.ok(html.includes('Folk Alley'));
+    assert.ok(!html.includes('SomaFM: Groove Salad'));
+  });
+
+  it('roving tabindex keyboard navigation on chips bar with ArrowRight, ArrowLeft, Home, End', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const chipsBar = sheet.element.querySelector('.browse-chips-bar');
+    const chips = Array.from(chipsBar.querySelectorAll('.chip'));
+    assert.ok(chips.length > 2);
+
+    // Initial state: active chip has tabindex="0", others "-1"
+    const activeChip = chips.find((c) => c.getAttribute('tabindex') === '0');
+    assert.ok(activeChip);
+    const initialIdx = chips.indexOf(activeChip);
+
+    // Focus active chip
+    activeChip.focus();
+    assert.equal(globalThis.document.activeElement, activeChip);
+
+    // ArrowRight -> next chip
+    const rightEvt = new globalThis.KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+    activeChip.dispatchEvent(rightEvt);
+    const nextIdx = (initialIdx + 1) % chips.length;
+    assert.equal(globalThis.document.activeElement, chips[nextIdx], 'focus must move to next chip');
+    assert.equal(chips[nextIdx].getAttribute('tabindex'), '0', 'focused chip must have tabindex="0"');
+    assert.equal(activeChip.getAttribute('tabindex'), '-1', 'old chip must have tabindex="-1"');
+    assert.equal(chips[nextIdx]._scrolledIntoView, true, 'next chip scrollIntoView must be called');
+    assert.equal(rightEvt.defaultPrevented, true, 'ArrowRight should be defaultPrevented');
+
+    // End -> last chip
+    const endEvt = new globalThis.KeyboardEvent('keydown', { key: 'End', cancelable: true });
+    chips[nextIdx].dispatchEvent(endEvt);
+    const lastChip = chips[chips.length - 1];
+    assert.equal(globalThis.document.activeElement, lastChip, 'End must focus last chip');
+    assert.equal(lastChip.getAttribute('tabindex'), '0');
+
+    // Home -> first chip
+    const homeEvt = new globalThis.KeyboardEvent('keydown', { key: 'Home', cancelable: true });
+    lastChip.dispatchEvent(homeEvt);
+    assert.equal(globalThis.document.activeElement, chips[0], 'Home must focus first chip');
+    assert.equal(chips[0].getAttribute('tabindex'), '0');
+
+    // ArrowLeft on first chip wraps to last chip
+    const leftEvt = new globalThis.KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
+    chips[0].dispatchEvent(leftEvt);
+    assert.equal(globalThis.document.activeElement, lastChip, 'ArrowLeft at index 0 must wrap to last chip');
+  });
+
+  it('scrolls active chip into view on sheet open and tab switch', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+
+    // Opening on radio tab
+    await sheet.onOpen({ tab: 'radio' });
+    const activeRadioChip = sheet.element.querySelector('.browse-chips-bar .chip.active');
+    assert.ok(activeRadioChip);
+    assert.equal(activeRadioChip._scrolledIntoView, true, 'active chip must be scrolled into view on open');
+
+    // Switch to library tab
+    const libTabBtn = sheet.element.querySelector('[data-tab="library"]');
+    activeRadioChip._scrolledIntoView = false;
+    libTabBtn.click();
+    const activeLibChip = sheet.element.querySelector('.browse-chips-bar .chip.active');
+    assert.ok(activeLibChip);
+    assert.equal(activeLibChip._scrolledIntoView, true, 'active chip must be scrolled into view on tab switch');
+  });
+
+  it('does not intercept keyboard events on browse-sort-select inside chips bar', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    assert.ok(sortSelect, 'sort select must exist');
+    sortSelect.focus();
+    assert.equal(globalThis.document.activeElement, sortSelect);
+
+    const keys = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
+    for (const key of keys) {
+      const evt = new globalThis.KeyboardEvent('keydown', { key, cancelable: true });
+      sortSelect.dispatchEvent(evt);
+      assert.equal(evt.defaultPrevented, false, `${key} on select must not be defaultPrevented`);
+      assert.equal(globalThis.document.activeElement, sortSelect, `focus must stay on select after ${key}`);
+    }
+  });
 });

@@ -88,6 +88,12 @@ export class MockElement {
     this._innerHTML = '';
     this._disabled = false;
     this.classList = new MockClassList(this);
+    this.scrollLeft = 0;
+    this.scrollTop = 0;
+    this.scrollWidth = 0;
+    this.scrollHeight = 0;
+    this.clientWidth = 0;
+    this.clientHeight = 0;
   }
 
   get className() {
@@ -366,6 +372,44 @@ export class MockElement {
 
   querySelectorAll(selector) {
     return queryDescendants(this, selector, false);
+  }
+
+  scrollIntoView(options) {
+    this._scrolledIntoView = true;
+    this._lastScrollIntoViewOptions = options;
+  }
+
+  scrollBy(xOrOptions, y) {
+    let dx = 0;
+    let dy = 0;
+    if (typeof xOrOptions === 'number') {
+      dx = xOrOptions;
+      dy = typeof y === 'number' ? y : 0;
+    } else if (xOrOptions && typeof xOrOptions === 'object') {
+      dx = xOrOptions.left || 0;
+      dy = xOrOptions.top || 0;
+    }
+    this.scrollLeft = (this.scrollLeft || 0) + dx;
+    this.scrollTop = (this.scrollTop || 0) + dy;
+  }
+
+  scrollTo(xOrOptions, y) {
+    if (typeof xOrOptions === 'number') {
+      this.scrollLeft = xOrOptions;
+      this.scrollTop = typeof y === 'number' ? y : this.scrollTop;
+    } else if (xOrOptions && typeof xOrOptions === 'object') {
+      if (typeof xOrOptions.left === 'number') this.scrollLeft = xOrOptions.left;
+      if (typeof xOrOptions.top === 'number') this.scrollTop = xOrOptions.top;
+    }
+  }
+
+  closest(selector) {
+    let curr = this;
+    while (curr) {
+      if (matchesSingleSelector(curr, selector)) return curr;
+      curr = curr.parentElement;
+    }
+    return null;
   }
 }
 
@@ -666,7 +710,7 @@ export function setupMockDom(options = {}) {
 
   globalThis.KeyboardEvent = class KeyboardEvent extends globalThis.Event {
     constructor(type, options = {}) {
-      super(type, options);
+      super(type, { bubbles: true, cancelable: true, ...options });
       this.key = options.key || '';
       this.code = options.code || '';
       this.shiftKey = Boolean(options.shiftKey);
@@ -678,7 +722,7 @@ export function setupMockDom(options = {}) {
 
   globalThis.MouseEvent = class MouseEvent extends globalThis.Event {
     constructor(type, options = {}) {
-      super(type, options);
+      super(type, { bubbles: true, cancelable: true, ...options });
       this.clientX = options.clientX || 0;
       this.clientY = options.clientY || 0;
       this.button = options.button || 0;
@@ -687,7 +731,7 @@ export function setupMockDom(options = {}) {
 
   globalThis.PointerEvent = class PointerEvent extends globalThis.MouseEvent {
     constructor(type, options = {}) {
-      super(type, options);
+      super(type, { bubbles: true, cancelable: true, ...options });
       this.pointerId = options.pointerId || 1;
       this.pointerType = options.pointerType || 'mouse';
     }
@@ -695,7 +739,7 @@ export function setupMockDom(options = {}) {
 
   globalThis.WheelEvent = class WheelEvent extends globalThis.MouseEvent {
     constructor(type, options = {}) {
-      super(type, options);
+      super(type, { bubbles: true, cancelable: true, ...options });
       this.deltaX = options.deltaX || 0;
       this.deltaY = options.deltaY || 0;
       this.deltaZ = options.deltaZ || 0;
