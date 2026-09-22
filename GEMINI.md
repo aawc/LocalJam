@@ -83,6 +83,14 @@
 - **Subagent Review:** Every commit must be reviewed by an expert subagent prior to committing.
 - **Automated Verification:** Automated tests must run with concrete inputs, real assertions, and pass 100%.
 - **Remote Synchronization:** After each commit, the local branch changes must be pushed immediately to the `github-aawc` remote (`git push github-aawc <branch>`).
-
-
-
+- **Visual Change Verification & Artifact Capture (Before and After):**
+  - **Trigger Criteria:** Mandatory for any modification affecting UI layout, styling, typography, theme, modal sheets, controls, visualizer rendering, or animations. Purely non-visual changes (such as metadata parsers, storage engine algorithms, and non-UI utilities) are exempt.
+  - **Capture Discipline:** Prior to altering UI code, capture the baseline ("before") state of the target component or viewport in its active, idle, or relevant interaction state. After applying modifications, capture the corresponding modified ("after") state under identical viewport dimensions, theme, and data fixtures. Both states must be preserved to provide verifiable visual regression evidence.
+  - **Strict In-Repository Artifact Placement:** All screenshots and visual artifacts MUST reside directly within the repository structure under `./docs/artifacts/visual/<feature>/` (for example, `./docs/artifacts/visual/browse-sheet/`). External, temporary, or user directory paths outside the repository boundary (such as `/tmp`, `~/.gemini/jetski/brain/`, or `$HOME/`) are strictly prohibited.
+  - **Deterministic Naming Convention:** Artifact filenames must adhere strictly to the pattern:
+    - `<scope>-<state>-<viewport>-before.png`
+    - `<scope>-<state>-<viewport>-after.png`
+    - Segments: `<scope>` indicates the component in kebab-case (for example, `stage` or `browse-sheet-radio`), `<state>` indicates interaction condition (for example, `idle`, `playing-local`, or `buffering`), and `<viewport>` indicates form factor dimensions (for example, `desktop-1280x800` or `mobile-390x844`).
+  - **Red-Green Colorblind Accessibility:** Visual comparisons presented in documentation, pull requests, or task reports must employ explicit comparison blocks or structured tables with distinct textual headers (such as `[BEFORE]` vs `[AFTER]` formatted columns). Never rely on color differentiation alone; pair all state transitions with dual-coded status labels.
+  - **Pragmatic Headless Fallback:** In headless or non-interactive environments without a display server (e.g., CI runners, containerized sandboxes), visual capture must not fail silently or generate synthetic dummy files. Instead, record `[VISUAL CAPTURE: DEFERRED (HEADLESS ENVIRONMENT)]` in the task report and commit description, citing the specific runtime constraint, and substantiate visual correctness through automated DOM structure and layout test assertions.
+  - **Mandatory Commit Description Citation:** Any commit introducing or modifying visual UI elements must explicitly cite or link the before and after visual artifacts in the commit description using repository-relative paths (for example, `./docs/artifacts/visual/<feature>/<scope>-<state>-<viewport>-before.png` and `-after.png`). If visual capture was deferred due to a headless or non-interactive environment, the commit description must explicitly record `[VISUAL CAPTURE: DEFERRED (HEADLESS ENVIRONMENT)]` along with the specific technical rationale.

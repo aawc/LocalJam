@@ -10,6 +10,8 @@ Welcome to the LocalJam technical documentation directory. This directory contai
 docs/
 ├── README.md                          # Documentation index (this file)
 ├── CHECKLIST.md                       # Task execution log & completed feature registry
+├── artifacts/                         # Visual artifacts, before/after captures & audits
+│   └── visual/                        # Component-scoped UI capture artifacts
 ├── design/                            # Architectural & design specifications
 │   └── 2026-09-15-minimalist-player-redesign.md # One-Screen Minimalist Player specification
 ├── plans/                             # Structured implementation plans
@@ -45,3 +47,6 @@ docs/
 - [UX Critique & Usability Report](./reports/UX_CRITIQUE_REPORT.md): Critical analysis of player details bar, station list clearance, and File System Access API error states.
 - [UX Review Report](./reports/UX_REVIEW_REPORT.md): Product review of minimalist visual hierarchy, button weights, and glassmorphic surface elevations.
 - [Audio Visualizer Investigation Report](./reports/VISUALIZER_INVESTIGATION_REPORT.md): Technical analysis of Web Audio analyser routing, AudioContext resume lifecycle, high-DPI canvas transforms, and zero-dimension canvas resilience.
+
+### 5. Visual Artifacts & UI Verification
+- [docs/artifacts/visual/](./artifacts/visual/): Directory housing deterministic before/after UI screenshots (`<scope>-<state>-<viewport>-before.png` / `-after.png`) capturing visual regressions and design implementations, mandatorily cited in visual commit descriptions.

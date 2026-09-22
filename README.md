@@ -158,6 +158,7 @@ Detailed technical specifications, implementation roadmaps, audit reports, and t
 - 📋 **[Task Execution Checklist](docs/CHECKLIST.md):** Chronological log of resolved issues, feature requests, and associated commit hashes.
 - 📐 **[Minimalist Player Specification](docs/design/2026-09-15-minimalist-player-redesign.md):** Architectural specification for the unified Stage viewport and Dual-Source audio engine.
 - 🛡️ **[Security Audit Report](docs/reports/SECURITY_REPORT.md):** Security analysis, CSP policies, and response sanitization.
+- 🖼️ **[Visual Artifacts & Verification](docs/artifacts/visual/):** Directory housing deterministic before/after UI screenshots (`<scope>-<state>-<viewport>-before.png` / `-after.png`) capturing visual regressions and design implementations.
 - 📊 **[Audit & Investigation Reports](docs/reports/):** Deep-dive reports on PWA lifecycle, streaming UX, and Web Audio visualizers.
 
 ---
