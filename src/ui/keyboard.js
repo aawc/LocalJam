@@ -11,6 +11,29 @@ import { queueManager as defaultQueueManager } from '../player/queue.js';
 import { layers as defaultLayers } from './layers.js';
 import { showToast as defaultShowToast } from './components/toast.js';
 
+function isToolbarOrDialogButton(el) {
+  if (!el) return false;
+  if (typeof el.closest === 'function') {
+    if (el.closest('[role="toolbar"]')) return true;
+    const dialog = el.closest('[role="dialog"]') || el.closest('.browse-sheet');
+    if (dialog && (el.tagName === 'BUTTON' || el.getAttribute?.('role') === 'button' || el.classList?.contains?.('chip'))) {
+      return true;
+    }
+    return false;
+  }
+  let curr = el;
+  while (curr) {
+    if (curr.getAttribute?.('role') === 'toolbar') return true;
+    if (curr.getAttribute?.('role') === 'dialog' || curr.classList?.contains?.('browse-sheet')) {
+      if (el.tagName === 'BUTTON' || el.getAttribute?.('role') === 'button' || el.classList?.contains?.('chip')) {
+        return true;
+      }
+    }
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
 export class KeyboardManager {
   /**
    * @param {{
@@ -84,6 +107,7 @@ export class KeyboardManager {
         break;
 
       case 'ArrowLeft':
+        if (isToolbarOrDialogButton(activeEl)) return;
         event.preventDefault();
         if (event.shiftKey) {
           audioEngine?.previous?.();
@@ -93,6 +117,7 @@ export class KeyboardManager {
         break;
 
       case 'ArrowRight':
+        if (isToolbarOrDialogButton(activeEl)) return;
         event.preventDefault();
         if (event.shiftKey) {
           audioEngine?.next?.();

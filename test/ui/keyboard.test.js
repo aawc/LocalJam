@@ -419,4 +419,63 @@ describe('Keyboard Shortcut Manager (src/ui/keyboard.js)', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     assert.equal(mockAudioEngine.isPlaying, true, "Should not toggle after destroy");
   });
+
+  it('prevents transport seek when focus is inside a toolbar or button in a sheet/dialog', () => {
+    const km = new KeyboardManager({
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      layers: mockLayers
+    });
+
+    // Create a mock dialog with a toolbar containing a button
+    const dialog = globalThis.document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    const toolbar = globalThis.document.createElement('div');
+    toolbar.setAttribute('role', 'toolbar');
+    const chipBtn = globalThis.document.createElement('button');
+    chipBtn.className = 'chip';
+    toolbar.appendChild(chipBtn);
+    dialog.appendChild(toolbar);
+    globalThis.document.body.appendChild(dialog);
+
+    // Focus the chip button inside the toolbar
+    chipBtn.focus();
+    assert.equal(globalThis.document.activeElement, chipBtn);
+
+    const leftEvt = createMockEvent('ArrowLeft');
+    km.handleKeyDown(leftEvt);
+    assert.equal(mockAudioEngine.seekOffset, undefined, 'transport seek must not run when focus is inside toolbar');
+    assert.equal(leftEvt.isPrevented, false, 'ArrowLeft should not be defaultPrevented by keyboardManager');
+
+    const rightEvt = createMockEvent('ArrowRight');
+    km.handleKeyDown(rightEvt);
+    assert.equal(mockAudioEngine.seekOffset, undefined, 'transport seek must not run when focus is inside toolbar');
+    assert.equal(rightEvt.isPrevented, false, 'ArrowRight should not be defaultPrevented by keyboardManager');
+  });
+
+  it('allows transport seek when focus is on element outside toolbar/dialog, both with and without el.closest', () => {
+    const km = new KeyboardManager({
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      layers: mockLayers
+    });
+
+    const plainEl = globalThis.document.createElement('div');
+    globalThis.document.body.appendChild(plainEl);
+    plainEl.focus();
+
+    // With el.closest present (verifying early return false)
+    const leftEvt = createMockEvent('ArrowLeft');
+    km.handleKeyDown(leftEvt);
+    assert.equal(mockAudioEngine.seekOffset, -5, 'seek should occur when focused on plain element');
+
+    // With el.closest disabled (verifying fallback while loop)
+    mockAudioEngine.seekOffset = 0;
+    const originalClosest = plainEl.closest;
+    plainEl.closest = undefined;
+    const rightEvt = createMockEvent('ArrowRight');
+    km.handleKeyDown(rightEvt);
+    assert.equal(mockAudioEngine.seekOffset, 5, 'seek should occur via fallback while loop when closest is undefined');
+    plainEl.closest = originalClosest;
+  });
 });
