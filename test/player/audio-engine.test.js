@@ -452,4 +452,57 @@ test('Audio Engine State & Control Suite', async (t) => {
     assert.equal(engine.streamState, 'idle');
     assert.equal(engine.isUsingRadioFallback, false);
   });
+
+  await t.test('seekRelative(+15) and seekRelative(-15) adjust playback position with boundary clamping', () => {
+    const engine = new AudioEngine();
+    let notifiedState = null;
+    engine.subscribe((s) => { notifiedState = s; });
+
+    const mockAudio = {
+      currentTime: 30,
+      duration: 120
+    };
+    engine.activePlayer = 'A';
+    engine.audioA = mockAudio;
+
+    // Test getters
+    assert.equal(engine.currentTime, 30, 'engine.currentTime must reflect active audio currentTime');
+    assert.equal(engine.duration, 120, 'engine.duration must reflect active audio duration');
+
+    // Forward 15s
+    engine.seekRelative(15);
+    assert.equal(mockAudio.currentTime, 45, 'seekRelative(15) must advance currentTime by 15s');
+    assert.equal(notifiedState.currentTime, 45, 'notifyState must broadcast updated currentTime');
+
+    // Rewind 15s
+    engine.seekRelative(-15);
+    assert.equal(mockAudio.currentTime, 30, 'seekRelative(-15) must rewind currentTime by 15s');
+
+    // Rewind past 0 clamps to 0
+    engine.seekRelative(-40);
+    assert.equal(mockAudio.currentTime, 0, 'seekRelative beyond start must clamp to 0');
+
+    // Forward past duration clamps to duration
+    engine.seekRelative(200);
+    assert.equal(mockAudio.currentTime, 120, 'seekRelative beyond duration must clamp to duration');
+
+    // In radio mode, seekRelative is a no-op
+    engine.isRadio = true;
+    engine.seekRelative(15);
+    assert.equal(mockAudio.currentTime, 120, 'seekRelative in radio mode must not alter position');
+    assert.equal(engine.duration, 0, 'engine.duration in radio mode must be 0');
+
+    // Non-finite values safely no-op without mutating currentTime or throwing TypeError
+    engine.isRadio = false;
+    engine.seek(NaN);
+    assert.equal(mockAudio.currentTime, 120, 'seek(NaN) must not alter position');
+    engine.seek(Infinity);
+    assert.equal(mockAudio.currentTime, 120, 'seek(Infinity) must not alter position');
+    engine.seek(-Infinity);
+    assert.equal(mockAudio.currentTime, 120, 'seek(-Infinity) must not alter position');
+    engine.seekRelative(undefined);
+    assert.equal(mockAudio.currentTime, 120, 'seekRelative(undefined) must not alter position');
+    engine.seekRelative(NaN);
+    assert.equal(mockAudio.currentTime, 120, 'seekRelative(NaN) must not alter position');
+  });
 });

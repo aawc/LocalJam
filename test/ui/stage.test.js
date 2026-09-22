@@ -948,4 +948,252 @@ describe('Stage Viewport Component (L0)', () => {
 
     stage.destroy();
   });
+
+  it('renders forward and rewind buttons in local playing mode and moves +/-15 seconds on click', () => {
+    let seekRelativeArg = null;
+
+    const mockTrack = {
+      id: 'track-seek-15',
+      title: 'Time Travel',
+      artist: 'Retro Synth',
+      album: 'Chronos',
+      duration: 300
+    };
+
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: mockTrack,
+      currentStation: null,
+      currentTime: 60,
+      duration: 300,
+      volume: 0.8,
+      muted: false,
+      streamState: 'playing',
+      subscribe: (listener) => {
+        listener({
+          isRadio: false,
+          isPlaying: true,
+          currentTrack: mockTrack,
+          currentStation: null,
+          currentTime: 60,
+          duration: 300,
+          volume: 0.8,
+          muted: false,
+          streamState: 'playing'
+        });
+        return () => {};
+      },
+      seekRelative: (delta) => {
+        seekRelativeArg = delta;
+      },
+      seek: () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const rewindBtn = stage.element.querySelector('.btn-stage-rewind');
+    const forwardBtn = stage.element.querySelector('.btn-stage-forward');
+
+    assert.ok(rewindBtn, 'Rewind button must exist in local playing mode');
+    assert.ok(forwardBtn, 'Forward button must exist in local playing mode');
+    assert.ok(rewindBtn.classList.contains('stage-btn-rewind'), 'Rewind button must have stage-btn-rewind class');
+    assert.ok(forwardBtn.classList.contains('stage-btn-forward'), 'Forward button must have stage-btn-forward class');
+    assert.equal(rewindBtn.getAttribute('aria-label'), 'Rewind 15 seconds');
+    assert.equal(forwardBtn.getAttribute('aria-label'), 'Forward 15 seconds');
+    assert.equal(rewindBtn.disabled, false, 'Rewind button must be enabled when track is loaded');
+    assert.equal(forwardBtn.disabled, false, 'Forward button must be enabled when track is loaded');
+
+    // Test clicking rewind button -> moves -15s
+    rewindBtn.click();
+    assert.equal(seekRelativeArg, -15, 'Clicking rewind button must call seekRelative(-15)');
+
+    // Test clicking forward button -> moves +15s
+    forwardBtn.click();
+    assert.equal(seekRelativeArg, 15, 'Clicking forward button must call seekRelative(15)');
+
+    stage.destroy();
+  });
+
+  it('omits forward and rewind buttons when in radio mode', () => {
+    const mockStation = {
+      id: 'station-radio-seek',
+      name: 'Worldwide FM',
+      genre: 'World',
+      country: 'UK',
+      bitrate: '128'
+    };
+
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'playing',
+      subscribe: (listener) => {
+        listener({
+          isRadio: true,
+          isPlaying: true,
+          currentTrack: null,
+          currentStation: mockStation,
+          streamState: 'playing',
+          volume: 0.8
+        });
+        return () => {};
+      },
+      seekRelative: () => {},
+      seek: () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const rewindBtn = stage.element.querySelector('.btn-stage-rewind');
+    const forwardBtn = stage.element.querySelector('.btn-stage-forward');
+
+    assert.equal(rewindBtn, null, 'Rewind button must NOT exist in radio mode');
+    assert.equal(forwardBtn, null, 'Forward button must NOT exist in radio mode');
+
+    stage.destroy();
+  });
+
+  it('disables forward and rewind buttons in local mode when no track is loaded', () => {
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: false,
+      currentTrack: null,
+      currentStation: null,
+      currentTime: 0,
+      duration: 0,
+      subscribe: (listener) => {
+        listener({
+          isRadio: false,
+          isPlaying: false,
+          currentTrack: null,
+          currentStation: null
+        });
+        return () => {};
+      }
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const rewindBtn = stage.element.querySelector('.btn-stage-rewind');
+    const forwardBtn = stage.element.querySelector('.btn-stage-forward');
+
+    assert.ok(rewindBtn, 'Rewind button exists in local mode even without active track');
+    assert.ok(forwardBtn, 'Forward button exists in local mode even without active track');
+    assert.equal(rewindBtn.disabled, true, 'Rewind button must be disabled when no track is loaded');
+    assert.equal(forwardBtn.disabled, true, 'Forward button must be disabled when no track is loaded');
+    assert.equal(rewindBtn.getAttribute('aria-disabled'), 'true');
+    assert.equal(forwardBtn.getAttribute('aria-disabled'), 'true');
+
+    stage.destroy();
+  });
+
+  it('dynamically adds or removes forward and rewind buttons when transitioning between local and radio modes', () => {
+    let registeredListener = null;
+
+    const mockTrack = {
+      id: 'track-switch',
+      title: 'Switch Track',
+      artist: 'Artist',
+      duration: 180
+    };
+
+    const mockStation = {
+      id: 'station-switch',
+      name: 'Switch Station',
+      genre: 'Jazz'
+    };
+
+    const mockAudioEngine = {
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: mockTrack,
+      currentStation: null,
+      subscribe: (listener) => {
+        registeredListener = listener;
+        return () => {};
+      }
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    // Initially in local mode: rewind and forward buttons present
+    assert.ok(stage.element.querySelector('.btn-stage-rewind'), 'Rewind button present in local mode');
+    assert.ok(stage.element.querySelector('.btn-stage-forward'), 'Forward button present in local mode');
+
+    // Switch to radio mode
+    registeredListener({
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'playing'
+    });
+
+    assert.equal(stage.element.querySelector('.btn-stage-rewind'), null, 'Rewind button removed in radio mode');
+    assert.equal(stage.element.querySelector('.btn-stage-forward'), null, 'Forward button removed in radio mode');
+
+    // Switch back to local mode
+    registeredListener({
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: mockTrack,
+      currentStation: null,
+      streamState: 'playing'
+    });
+
+    const restoredRewind = stage.element.querySelector('.btn-stage-rewind');
+    const restoredForward = stage.element.querySelector('.btn-stage-forward');
+    assert.ok(restoredRewind, 'Rewind button restored in local mode');
+    assert.ok(restoredForward, 'Forward button restored in local mode');
+
+    // Verify ordering in Row 5: prev, rewind, play, forward, next
+    const row5 = stage.element.querySelector('.stage-row-5');
+    const childClasses = row5.children.map((c) => c.className);
+    assert.ok(childClasses[0].includes('btn-stage-prev'), '1st button is prev');
+    assert.ok(childClasses[1].includes('btn-stage-rewind'), '2nd button is rewind');
+    assert.ok(childClasses[2].includes('btn-stage-play'), '3rd button is play');
+    assert.ok(childClasses[3].includes('btn-stage-forward'), '4th button is forward');
+    assert.ok(childClasses[4].includes('btn-stage-next'), '5th button is next');
+
+    stage.destroy();
+  });
 });

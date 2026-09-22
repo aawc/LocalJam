@@ -45,7 +45,7 @@
    - Automatically pushes release tags to repository (`git push origin "${TAG_NAME}"`) and bundles standalone offline zip distributions.
 
 8. **One-Screen Minimalist Player & Layer Architecture:**
-   - Unified 6-row Stage (`src/ui/stage.js`) without persistent sidebars or footers: Status Chips, Artwork/Visualizer Canvas, Track & Station Metadata, Timeline Scrubber / Stream Telemetry, Transport Cluster, and Dual-Source Handle Bar (`[ Local ] · [ Radio ]`) with active-browse / inactive-toggle pill taps and semantic separator button.
+   - Unified 6-row Stage (`src/ui/stage.js`) without persistent sidebars or footers: Status Chips, Artwork/Visualizer Canvas, Track & Station Metadata, Timeline Scrubber / Stream Telemetry, Transport Cluster (Previous, Rewind 15s [Local], Play/Pause, Forward 15s [Local], Next), and Dual-Source Handle Bar (`[ Local ] · [ Radio ]`) with active-browse / inactive-toggle pill taps and semantic separator button.
    - L1 Browse Sheet (`src/ui/components/browse-sheet.js`) for library and radio queries with URL hash sync (`#/browse?tab=...`).
    - L2 Overflow Menu (`src/ui/components/overflow-menu.js`) for auxiliary controls with 8 verified stores wiped on reset (`RESET_STORE_NAMES`).
    - Layer Stack Coordinator (`src/ui/layers.js`) managing LIFO dialog stack with focus trapping and error boundary.

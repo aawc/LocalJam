@@ -75,7 +75,7 @@ User Filesystem (Authoritative Source)
 │  ├── Row 2: 280x280 Artwork / Real-Time Canvas Visualizer       │
 │  ├── Row 3: Track Title / Station Metadata                      │
 │  ├── Row 4: Timeline Scrubber / Live Stream Telemetry           │
-│  ├── Row 5: Transport Cluster (⏮   ▶ / ⏸   ⏭)                   │
+│  ├── Row 5: Transport Cluster (⏮  ↺15  ▶ / ⏸  ↻15  ⏭)           │
 │  └── Row 6: Dual-Source Handle Bar [ Local ] · [ Radio ]        │
 └─────────────────────────────────────────────────────────────────┘
 ```

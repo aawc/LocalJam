@@ -216,7 +216,21 @@ export function createStage(deps) {
   prevBtn.addEventListener('click', () => {
     if (typeof audioEngine.previous === 'function') audioEngine.previous();
   });
-  row5El.appendChild(prevBtn);
+
+  const rewindBtn = document.createElement('button');
+  rewindBtn.type = 'button';
+  rewindBtn.className = 'btn-stage-transport stage-btn-transport btn-stage-rewind stage-btn-rewind';
+  rewindBtn.setAttribute('aria-label', 'Rewind 15 seconds');
+  rewindBtn.setAttribute('title', 'Rewind 15 seconds');
+  rewindBtn.textContent = '↺15';
+  rewindBtn.addEventListener('click', () => {
+    if (typeof audioEngine.seekRelative === 'function') {
+      audioEngine.seekRelative(-15);
+    } else if (typeof audioEngine.seek === 'function') {
+      const current = audioEngine.currentTime || 0;
+      audioEngine.seek(Math.max(0, current - 15));
+    }
+  });
 
   const playBtn = document.createElement('button');
   playBtn.type = 'button';
@@ -226,7 +240,22 @@ export function createStage(deps) {
   playBtn.addEventListener('click', () => {
     if (typeof audioEngine.togglePlay === 'function') audioEngine.togglePlay();
   });
-  row5El.appendChild(playBtn);
+
+  const forwardBtn = document.createElement('button');
+  forwardBtn.type = 'button';
+  forwardBtn.className = 'btn-stage-transport stage-btn-transport btn-stage-forward stage-btn-forward';
+  forwardBtn.setAttribute('aria-label', 'Forward 15 seconds');
+  forwardBtn.setAttribute('title', 'Forward 15 seconds');
+  forwardBtn.textContent = '↻15';
+  forwardBtn.addEventListener('click', () => {
+    if (typeof audioEngine.seekRelative === 'function') {
+      audioEngine.seekRelative(15);
+    } else if (typeof audioEngine.seek === 'function') {
+      const current = audioEngine.currentTime || 0;
+      const dur = audioEngine.duration || Infinity;
+      audioEngine.seek(Math.min(dur, current + 15));
+    }
+  });
 
   const nextBtn = document.createElement('button');
   nextBtn.type = 'button';
@@ -236,7 +265,12 @@ export function createStage(deps) {
   nextBtn.addEventListener('click', () => {
     if (typeof audioEngine.next === 'function') audioEngine.next();
   });
-  row5El.appendChild(nextBtn);
+
+  if (audioEngine.isRadio) {
+    row5El.replaceChildren(prevBtn, playBtn, nextBtn);
+  } else {
+    row5El.replaceChildren(prevBtn, rewindBtn, playBtn, forwardBtn, nextBtn);
+  }
 
   // --- Row 6: Dual-Source Handle Bar ---
   const row6El = document.createElement('div');
@@ -600,6 +634,21 @@ export function createStage(deps) {
     playBtn.setAttribute('aria-disabled', String(!hasMedia));
     nextBtn.disabled = !hasMedia;
     nextBtn.setAttribute('aria-disabled', String(!hasMedia));
+    rewindBtn.disabled = !hasMedia;
+    rewindBtn.setAttribute('aria-disabled', String(!hasMedia));
+    forwardBtn.disabled = !hasMedia;
+    forwardBtn.setAttribute('aria-disabled', String(!hasMedia));
+
+    // Row 5: Transport controls layout (Radio vs Local)
+    if (isRadio) {
+      if (row5El.contains(rewindBtn) || row5El.contains(forwardBtn)) {
+        row5El.replaceChildren(prevBtn, playBtn, nextBtn);
+      }
+    } else {
+      if (!row5El.contains(rewindBtn) || !row5El.contains(forwardBtn)) {
+        row5El.replaceChildren(prevBtn, rewindBtn, playBtn, forwardBtn, nextBtn);
+      }
+    }
 
     // Update Visualizer running state
     if (visualizerEnabled && visualizer) {

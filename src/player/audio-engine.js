@@ -236,6 +236,17 @@ export class AudioEngine {
     return this.crossfadeSeconds;
   }
 
+  get currentTime() {
+    const audio = this.getActiveAudio();
+    return (audio && audio.currentTime) || 0;
+  }
+
+  get duration() {
+    if (this.isRadio) return 0;
+    const audio = this.getActiveAudio();
+    return (audio && audio.duration) || (this.currentTrack?.duration) || 0;
+  }
+
   notifyState() {
     const audio = this.getActiveAudio();
     const state = {
@@ -672,20 +683,29 @@ export class AudioEngine {
   }
 
   seek(seconds) {
-    if (this.isRadio) return;
+    if (this.isRadio || !Number.isFinite(seconds)) return;
     const audio = this.getActiveAudio();
-    if (audio && !isNaN(audio.duration)) {
-      audio.currentTime = Math.max(0, Math.min(seconds, audio.duration));
-      this.notifyState();
-      this.syncMediaSessionPosition();
+    if (audio) {
+      const dur = (!isNaN(audio.duration) && audio.duration > 0)
+        ? audio.duration
+        : (this.currentTrack?.duration || 0);
+      const maxSeconds = (Number.isFinite(dur) && dur > 0) ? dur : Infinity;
+      const target = Math.max(0, Number.isFinite(maxSeconds) ? Math.min(seconds, maxSeconds) : seconds);
+      if (Number.isFinite(target)) {
+        audio.currentTime = target;
+        this.notifyState();
+        this.syncMediaSessionPosition();
+      }
     }
   }
 
   seekRelative(deltaSeconds) {
     if (this.isRadio) return;
+    const delta = Number.isFinite(deltaSeconds) ? deltaSeconds : 0;
+    if (delta === 0) return;
     const audio = this.getActiveAudio();
     if (audio) {
-      this.seek((audio.currentTime || 0) + deltaSeconds);
+      this.seek((audio.currentTime || 0) + delta);
     }
   }
 
