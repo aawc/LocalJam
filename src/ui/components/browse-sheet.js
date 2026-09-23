@@ -65,7 +65,7 @@ export function createBrowseSheet(deps = {}) {
   let libraryMode = 'songs';
   let libraryDrill = null;
   let radioGenre = 'All';
-  let radioSort = 'default';
+  let radioSort = 'popularity-desc';
   let filterQuery = '';
 
   let cachedTracks = [];
@@ -260,7 +260,6 @@ export function createBrowseSheet(deps = {}) {
       }).join('');
 
       const sortOptions = [
-        { value: 'default', label: 'Default' },
         { value: 'popularity-desc', label: 'Popularity' },
         { value: 'provider', label: 'Provider' },
         { value: 'name-asc', label: 'Name (A-Z)' },

@@ -965,6 +965,51 @@ export const CURATED_STATIONS = [
     isFavorite: false,
     provider: 'Radio France',
     popularity: 85
+  },
+  {
+    id: 'mirchi_edge',
+    name: 'Radio Mirchi Edge',
+    description: 'Bollywood hits and Hindi popular music.',
+    streamUrl: 'https://strw2.openstream.co/634',
+    homepageUrl: 'https://mirchi.in/',
+    genre: 'Bollywood',
+    country: 'India',
+    bitrate: '128 kbps',
+    favicon: '',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Radio Mirchi',
+    popularity: 92
+  },
+  {
+    id: 'radio_city_hindi',
+    name: 'Radio City Hindi',
+    description: 'Top Hindi FM station with nonstop Bollywood.',
+    streamUrl: 'https://prclive1.listenon.in/Hindi',
+    homepageUrl: 'https://www.radiocity.in/',
+    genre: 'Hindi / Bollywood',
+    country: 'India',
+    bitrate: '128 kbps',
+    favicon: '',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Radio City',
+    popularity: 91
+  },
+  {
+    id: 'bollywood_gaane',
+    name: 'Bollywood Gaane',
+    description: 'Classic and modern Bollywood hit songs.',
+    streamUrl: 'https://stream.zeno.fm/f9pdqqq191zuv',
+    homepageUrl: 'https://zeno.fm/radio/bollywood-gaane/',
+    genre: 'Bollywood',
+    country: 'India',
+    bitrate: '128 kbps',
+    favicon: '',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Zeno FM',
+    popularity: 90
   }
 ];
 
@@ -982,6 +1027,7 @@ export const HIGH_LEVEL_GENRES = [
   'News & Talk',
   'Pop',
   'Rock',
+  'Bollywood & Hindi',
   'Soul & Funk',
   'World'
 ];
@@ -1004,6 +1050,9 @@ export function getStationCategory(station) {
   }
   if (g.includes('college') || g.includes('university') || g.includes('student') || name.includes('stanford') || name.includes('berkeley') || name.includes('ohlone') || name.includes('mit') || name.includes('princeton') || name.includes('santa clara') || name.includes('kzsu') || name.includes('kalx') || name.includes('kscu') || name.includes('wprb') || name.includes('wmbr') || name.includes('kohl')) {
     return 'College & University';
+  }
+  if (g.includes('bollywood') || g.includes('hindi') || g.includes('desi') || name.includes('mirchi') || name.includes('vividh') || name.includes('radio city')) {
+    return 'Bollywood & Hindi';
   }
   if (g.includes('news') || g.includes('talk') || g.includes('public radio') || name.includes('wnyc') || name.includes('bbc world service') || name.includes('npr') || name.includes('kqed') || name.includes('wbez') || name.includes('rfi') || name.includes('wgbh')) {
     return 'News & Talk';

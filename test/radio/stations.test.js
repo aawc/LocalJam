@@ -422,6 +422,13 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.equal(rp.lastPlayedAt, updated.lastPlayedAt);
   });
 
+
+  await t.test('getStationCategory categorizes Bollywood and Hindi stations correctly', () => {
+    assert.equal(getStationCategory({ genre: 'Bollywood' }), 'Bollywood & Hindi');
+    assert.equal(getStationCategory({ genre: 'Hindi' }), 'Bollywood & Hindi');
+    assert.equal(getStationCategory({ name: 'Radio Mirchi' }), 'Bollywood & Hindi');
+  });
+
   await t.test('Seamlessly upgrades legacy 23-station DB to 34 stations, adding Kids and News streams while preserving custom stations', async () => {
     const db = new MockRadioDB();
     // Simulate legacy DB with 23 old stations + 1 user custom station

@@ -6,6 +6,7 @@ import { setupMockDom, teardownMockDom } from '../helpers/mock-dom.js';
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('Browse Sheet Component (L1)', () => {
+
   let mockDb;
   let mockAudioEngine;
   let mockQueueManager;
@@ -124,6 +125,19 @@ describe('Browse Sheet Component (L1)', () => {
 
   afterEach(() => {
     teardownMockDom();
+  });
+
+  it('default radio sort is popularity-desc on DOM startup', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'radio' });
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    const selectedOpt = sortSelect.querySelector('option[selected]');
+    assert.ok(selectedOpt);
+    assert.equal(selectedOpt.value, 'popularity-desc');
   });
 
   it('exports verified debounce delay constant of 120ms', () => {
@@ -371,8 +385,8 @@ describe('Browse Sheet Component (L1)', () => {
     await delay(10);
 
     assert.ok(playedStation, 'onPlayStation should have been called');
-    assert.equal(playedStation.id, 'st_1');
-    assert.equal(mockAudioEngine.currentStation.id, 'st_1');
+    assert.equal(playedStation.id, 'soma_groove_salad');
+    assert.equal(mockAudioEngine.currentStation.id, 'soma_groove_salad');
     assert.ok(mockAudioEngine.catalog.length > 0, 'station catalog must be updated');
     assert.equal(closed, true, 'sheet should close on station selection');
   });
@@ -960,6 +974,9 @@ describe('Browse Sheet Component (L1)', () => {
     assert.ok(optionMap.has('provider'), 'Must include provider option');
     assert.equal(optionMap.get('provider'), 'Provider');
   });
+
+
+
 
   it('renders accessible provider groups with role="group" and sticky section headers when provider sort is selected (F11)', async () => {
     sampleStations = [
