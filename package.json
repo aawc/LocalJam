@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "capture": "node scripts/capture-visual.js"
   },
   "keywords": [
     "pwa",
