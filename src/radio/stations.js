@@ -967,49 +967,49 @@ export const CURATED_STATIONS = [
     popularity: 85
   },
   {
-    id: 'mirchi_edge',
-    name: 'Radio Mirchi Edge',
-    description: 'Bollywood hits and Hindi popular music.',
-    streamUrl: 'https://strw2.openstream.co/634',
-    homepageUrl: 'https://mirchi.in/',
-    genre: 'Bollywood',
+    id: 'mixify_hindi',
+    name: 'MixiFy Hindi Hits',
+    description: 'New Hindi hits and non-stop Bollywood music.',
+    streamUrl: 'https://server.mixify.in/listen/new_hits/radio.mp3',
+    homepageUrl: 'https://mixify.in',
+    genre: 'Bollywood / Hindi',
     country: 'India',
-    bitrate: '128 kbps',
+    bitrate: '64 kbps AAC+',
     favicon: '',
     isCustom: false,
     isFavorite: false,
-    provider: 'Radio Mirchi',
-    popularity: 92
-  },
-  {
-    id: 'radio_city_hindi',
-    name: 'Radio City Hindi',
-    description: 'Top Hindi FM station with nonstop Bollywood.',
-    streamUrl: 'https://prclive1.listenon.in/Hindi',
-    homepageUrl: 'https://www.radiocity.in/',
-    genre: 'Hindi / Bollywood',
-    country: 'India',
-    bitrate: '128 kbps',
-    favicon: '',
-    isCustom: false,
-    isFavorite: false,
-    provider: 'Radio City',
-    popularity: 91
-  },
-  {
-    id: 'bollywood_gaane',
-    name: 'Bollywood Gaane',
-    description: 'Classic and modern Bollywood hit songs.',
-    streamUrl: 'https://stream.zeno.fm/f9pdqqq191zuv',
-    homepageUrl: 'https://zeno.fm/radio/bollywood-gaane/',
-    genre: 'Bollywood',
-    country: 'India',
-    bitrate: '128 kbps',
-    favicon: '',
-    isCustom: false,
-    isFavorite: false,
-    provider: 'Zeno FM',
+    provider: 'MixiFy',
     popularity: 90
+  },
+  {
+    id: 'humm_radio',
+    name: 'Humm Radio',
+    description: 'Bollywood, Indian Pop, and contemporary Desi hits.',
+    streamUrl: 'https://mediaworks.streamguys1.com/humm_net_icy',
+    homepageUrl: 'https://hummfm.com',
+    genre: 'Bollywood / Indian Pop',
+    country: 'New Zealand',
+    bitrate: '131 kbps AAC',
+    favicon: '',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Humm Radio',
+    popularity: 88
+  },
+  {
+    id: 'bollywood_bangers',
+    name: 'Bollywood Bangers',
+    description: 'High energy Bollywood bangers and dance classics.',
+    streamUrl: 'https://mml2.prostream.se/listen/bollywood_bangers/radio.mp3',
+    homepageUrl: '',
+    genre: 'Bollywood Hits',
+    country: 'India',
+    bitrate: '128 kbps MP3',
+    favicon: '',
+    isCustom: false,
+    isFavorite: false,
+    provider: 'Prostream',
+    popularity: 85
   }
 ];
 
@@ -1051,7 +1051,7 @@ export function getStationCategory(station) {
   if (g.includes('college') || g.includes('university') || g.includes('student') || name.includes('stanford') || name.includes('berkeley') || name.includes('ohlone') || name.includes('mit') || name.includes('princeton') || name.includes('santa clara') || name.includes('kzsu') || name.includes('kalx') || name.includes('kscu') || name.includes('wprb') || name.includes('wmbr') || name.includes('kohl')) {
     return 'College & University';
   }
-  if (g.includes('bollywood') || g.includes('hindi') || g.includes('desi') || name.includes('mirchi') || name.includes('vividh') || name.includes('radio city')) {
+  if (g.includes('bollywood') || g.includes('hindi') || g.includes('desi') || name.includes('mixify') || name.includes('humm') || name.includes('mirchi') || name.includes('vividh') || name.includes('radio city')) {
     return 'Bollywood & Hindi';
   }
   if (g.includes('news') || g.includes('talk') || g.includes('public radio') || name.includes('wnyc') || name.includes('bbc world service') || name.includes('npr') || name.includes('kqed') || name.includes('wbez') || name.includes('rfi') || name.includes('wgbh')) {
