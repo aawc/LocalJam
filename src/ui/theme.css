@@ -1,5 +1,6 @@
 /* LocalJam - Extreme Minimalist & Colorblind-Safe Design Tokens */
 :root {
+  color-scheme: light dark;
   /* Surface & Background (Deep Matte Slate Hierarchy) */
   --bg-base: #0a0e17;
   --bg-surface: #111827;
@@ -77,5 +78,52 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+
+/* Light Theme Overrides */
+html[data-theme="light"] {
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f1f5f9;
+  --bg-surface-hover: #e2e8f0;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  
+  --surface-glass: rgba(255, 255, 255, 0.92);
+  --player-glass: rgba(248, 250, 252, 0.96);
+  --overlay-scrim: rgba(255, 255, 255, 0.6);
+  
+  /* Retain accessible accents */
+  --accent-cyan: #0284c7;  /* Slightly darker for light mode contrast */
+  --accent-amber: #d97706; /* Darker amber */
+  --status-warn: #D55E00;  /* Orange */
+}
+
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #f1f5f9;
+    --bg-surface-hover: #e2e8f0;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.18);
+    
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    
+    --surface-glass: rgba(255, 255, 255, 0.92);
+    --player-glass: rgba(248, 250, 252, 0.96);
+    --overlay-scrim: rgba(255, 255, 255, 0.6);
+    
+    --accent-cyan: #0284c7;
+    --accent-amber: #d97706;
+    --status-warn: #D55E00;
   }
 }

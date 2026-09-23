@@ -631,6 +631,7 @@ export function setupMockDom(options = {}) {
 
   const doc = {
     body,
+    documentElement: new MockElement("html"),
     activeElement: null,
     readyState: options.readyState || 'complete',
     createElement: (tag) => new MockElement(tag),

@@ -12,6 +12,7 @@ import { audioVisualizer as defaultVisualizer } from '../../visualizer/visualize
 import { equalizer as defaultEqualizer } from '../../player/equalizer.js';
 import { toggleFavoriteStation } from '../../radio/stations.js';
 import { APP_VERSION } from '../../version.js';
+import { setTheme } from '../theme.js';
 import { escapeHtml } from '../../utils/sanitize.js';
 import { attachGestures } from '../gestures.js';
 
@@ -81,6 +82,18 @@ export function createOverflowMenu(deps = {}) {
   let visualizerMode = 'bars';
   let visualizerRunning = false;
   let trackCount = 0;
+  let currentTheme = 'auto';
+  if (db && typeof db.getSetting === 'function') {
+    db.getSetting('theme').then(t => {
+      if (t) {
+        currentTheme = t;
+        const badge = sheetEl.querySelector('[data-action="theme-toggle"] .overflow-state-badge');
+        if (badge) badge.textContent = `[THEME: ${currentTheme.toUpperCase()}]`;
+      }
+    }).catch(() => {});
+  } else {
+    currentTheme = document.documentElement.getAttribute('data-theme') || 'auto';
+  }
 
   const sheetEl = document.createElement('div');
   sheetEl.className = 'overflow-sheet-layer layer-overlay';
@@ -188,7 +201,16 @@ export function createOverflowMenu(deps = {}) {
           <span class="overflow-state">[RELEASE NOTES]</span>
         </button>
 
-        <button type="button" class="overflow-row" data-action="feedback" role="menuitem">
+        
+      <button type="button" class="overflow-row" data-action="theme-toggle" role="menuitem">
+        <div class="overflow-primary">
+          <span class="overflow-icon" aria-hidden="true">◑</span>
+          <span class="overflow-label">Theme</span>
+        </div>
+        <span class="overflow-state overflow-state-badge">[THEME: ${currentTheme.toUpperCase()}]</span>
+      </button>
+      <div class="overflow-divider" role="separator"></div>
+      <button type="button" class="overflow-row" data-action="feedback" role="menuitem">
           <span class="overflow-label">Diagnostics &amp; Feedback</span>
           <span class="overflow-state">[DEBUG]</span>
         </button>
@@ -291,6 +313,12 @@ export function createOverflowMenu(deps = {}) {
         handleClose();
         if (typeof onOpenNotes === 'function') onOpenNotes();
       });
+    }
+
+
+    const themeBtn = contentEl.querySelector('[data-action="theme-toggle"]');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', cycleTheme);
     }
 
     const feedbackBtn = contentEl.querySelector('[data-action="feedback"]');
@@ -409,6 +437,27 @@ export function createOverflowMenu(deps = {}) {
       }
     }
     updateRowState('visualizer', getVisualizerStateText());
+  }
+
+  
+  async function cycleTheme() {
+    const sequence = ['auto', 'dark', 'light'];
+    const idx = sequence.indexOf(currentTheme);
+    currentTheme = sequence[(idx + 1) % sequence.length];
+    
+    // Update button text
+    const themeBtn = sheetEl.querySelector('[data-action="theme-toggle"]');
+    if (themeBtn) {
+      const stateBadge = themeBtn.querySelector('.overflow-state');
+      if (stateBadge) stateBadge.textContent = `[THEME: ${currentTheme.toUpperCase()}]`;
+    }
+    
+    if (typeof setTheme === 'function') {
+       await setTheme(currentTheme, db);
+    }
+    if (typeof onToast === 'function') {
+       onToast(`[✓] Theme set to ${currentTheme.toUpperCase()}`);
+    }
   }
 
   async function handleReset() {

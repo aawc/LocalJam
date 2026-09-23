@@ -20,6 +20,7 @@ import { createFeedbackModal } from './ui/components/feedback-modal.js';
 import { createUpdateBanner, initUpdateChecker } from './ui/components/update-banner.js';
 import { APP_VERSION } from './version.js';
 import { recordDiagnosticError } from './utils/diagnostics.js';
+import { initTheme } from './ui/theme.js';
 
 let lastStation = null;
 let lastTrack = null;
@@ -343,6 +344,7 @@ export async function initApp() {
   try {
     // 1. Initialize IndexedDB
     await db.init();
+    await initTheme(db);
 
     // 2. Mount Toast Notification Host into #toast-root
     const toastRoot = document.getElementById('toast-root');

@@ -21,6 +21,34 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 describe('Overflow Menu Component (L2)', () => {
+
+  it('renders theme switcher button and cycles themes on click', async () => {
+    let testDb = {
+       settings: new Map(),
+       getSetting: async function(k) { return this.settings.get(k); },
+       setSetting: async function(k, v) { this.settings.set(k, v); }
+    };
+    testDb.settings.set('theme', 'auto');
+    const menu = createOverflowMenu({ db: testDb });
+    await menu.onOpen({});
+    
+    // allow async setting resolution if needed
+    await new Promise(r => setTimeout(r, 10));
+    const btn = menu.element.querySelector('[data-action="theme-toggle"]');
+    assert.ok(btn);
+    // Click 1: auto -> dark
+    btn.click();
+    assert.ok(btn.innerHTML.includes('DARK'));
+    
+    // Click 2: dark -> light
+    btn.click();
+    assert.ok(btn.innerHTML.includes('LIGHT'));
+
+    // Click 3: light -> auto
+    btn.click();
+    assert.ok(btn.innerHTML.includes('AUTO'));
+  });
+
   let container;
 
   beforeEach(() => {
