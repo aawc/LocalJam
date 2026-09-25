@@ -15,7 +15,7 @@ import { queueManager as defaultQueueManager } from '../player/queue.js';
 import { sessionRegistry as defaultSessionRegistry } from '../storage/session-registry.js';
 import { audioVisualizer as defaultVisualizer, AudioVisualizer, VISUALIZER_MODES } from '../visualizer/visualizer.js';
 import { equalizer as defaultEqualizer } from '../player/equalizer.js';
-import { toggleFavoriteStation, getStationFallbackArtwork } from '../radio/stations.js';
+import { toggleFavoriteStation, getStationFallbackArtwork, formatBitrate } from '../radio/stations.js';
 import { escapeHtml } from '../utils/sanitize.js';
 import { attachGestures } from './gestures.js';
 import { hasFileSystemAccess as defaultHasFSAA } from './library-source.js';
@@ -558,13 +558,17 @@ export function createStage(deps) {
       glyph = '⏳';
       label = '[BUFFERING]';
       colorVar = 'var(--accent-amber)';
+    } else if (streamState === 'reconnecting') {
+      glyph = '▲';
+      label = '[RECONNECTING]';
+      colorVar = 'var(--accent-amber)';
     } else if (streamState === 'error') {
       glyph = '✖';
       label = '[OFFLINE]';
       colorVar = 'var(--accent-rose)';
     } else if (streamState === 'playing' && isPlaying) {
       glyph = '●';
-      label = `[LIVE] · ${bitrate || 128} kbps`;
+      label = `[LIVE] · ${formatBitrate(bitrate)}`;
       colorVar = 'var(--accent-cyan)';
     } else {
       glyph = '●';

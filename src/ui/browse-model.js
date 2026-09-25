@@ -4,7 +4,7 @@
  * for library tracks, albums, artists, favorites, history, and radio stations.
  */
 
-import { getStationCategory } from '../radio/stations.js';
+import { getStationCategory, formatBitrate } from '../radio/stations.js';
 
 /**
  * @typedef {{
@@ -338,7 +338,7 @@ export function buildStationRows(stations = []) {
       kind: 'station',
       primary: s.name || 'Unknown Station',
       secondary,
-      trailing: s.bitrate || '',
+      trailing: s.bitrate ? formatBitrate(s.bitrate) : '',
       provider: getStationProvider(s),
       popularity,
       payload: station

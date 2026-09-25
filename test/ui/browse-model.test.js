@@ -240,6 +240,20 @@ describe('Browse Model - Library & Radio Query Shaping', () => {
     assert.equal(rows[0].payload.id, 's1');
   });
 
+  it('buildStationRows normalizes bitrate in trailing using formatBitrate', () => {
+    const stations = [
+      { id: 's1', name: 'Station 1', genre: 'Jazz', bitrate: 256 },
+      { id: 's2', name: 'Station 2', genre: 'Rock', bitrate: '128000 bps' },
+      { id: 's3', name: 'Station 3', genre: 'Pop', bitrate: '' },
+      { id: 's4', name: 'Station 4', genre: 'Classical', bitrate: null }
+    ];
+    const rows = buildStationRows(stations);
+    assert.equal(rows[0].trailing, '256 kbps');
+    assert.equal(rows[1].trailing, '128 kbps');
+    assert.equal(rows[2].trailing, '');
+    assert.equal(rows[3].trailing, '');
+  });
+
   it('filterStations query matches provider names case-insensitively (F6)', () => {
     const providerFixtures = [
       { id: 's1', name: 'Secret Agent', genre: 'Spy', description: 'Spy music', country: 'US', provider: 'SomaFM' },

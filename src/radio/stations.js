@@ -1424,3 +1424,47 @@ export async function recordStationPlay(stationId, db) {
   await db.saveStations(stations);
   return target;
 }
+
+/**
+ * Normalizes varied bitrate representations into a canonical "N kbps [CODEC]" string.
+ *
+ * @param {string|number|null|undefined} raw - Raw bitrate input from metadata or catalog.
+ * @returns {string} Normalized string, e.g. "320 kbps", "160 kbps AAC", or "128 kbps".
+ */
+export function formatBitrate(raw) {
+  if (raw === null || raw === undefined || raw === '') {
+    return '128 kbps';
+  }
+
+  // Handle numerical input
+  if (typeof raw === 'number') {
+    if (isNaN(raw) || raw <= 0) return '128 kbps';
+    const kbps = raw >= 10000 ? Math.round(raw / 1000) : Math.round(raw);
+    return `${kbps} kbps`;
+  }
+
+  const str = String(raw).trim();
+  if (!str) return '128 kbps';
+
+  // Extract primary numeric segment and optional trailing codec (e.g. AAC, MP3)
+  const match = str.match(/^(\d+)\s*(?:k(?:bps)?|bps)?\s*([a-zA-Z0-9+]+)?/i);
+  if (!match) {
+    return '128 kbps';
+  }
+
+  let num = parseInt(match[1], 10);
+  if (isNaN(num) || num <= 0) return '128 kbps';
+
+  // Convert raw bps (e.g. 128000) to kbps
+  if (num >= 10000) {
+    num = Math.round(num / 1000);
+  }
+
+  const cleanCodec = (match[2] || '').trim().toLowerCase();
+  // Avoid duplicating if regex captured 'kbps' or 'bps' as codec
+  if (!cleanCodec || cleanCodec === 'kbps' || cleanCodec === 'bps') {
+    return `${num} kbps`;
+  }
+
+  return `${num} kbps ${match[2].trim().toUpperCase()}`;
+}

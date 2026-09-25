@@ -259,6 +259,198 @@ describe('Stage Viewport Component (L0)', () => {
     stage.destroy();
   });
 
+  it('renders radio station with streamState: playing and isPlaying: true as [LIVE] · 320 kbps without duplicate units', () => {
+    const mockStation = {
+      id: 'station-live-test',
+      name: 'Radio Paradise',
+      genre: 'Eclectic',
+      country: 'USA',
+      bitrate: '320 kbps'
+    };
+
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'playing',
+      subscribe: (listener) => {
+        listener({
+          isRadio: true,
+          isPlaying: true,
+          currentTrack: null,
+          currentStation: mockStation,
+          streamState: 'playing',
+          volume: 0.8
+        });
+        return () => {};
+      },
+      setVolume: () => {},
+      togglePlay: () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+    const html = stage.element.innerHTML;
+
+    assert.ok(html.includes('[LIVE] · 320 kbps'), "Must display '[LIVE] · 320 kbps'");
+    assert.ok(!html.includes('kbps kbps'), "Must NEVER display duplicate 'kbps kbps'");
+
+    stage.destroy();
+  });
+
+  it('renders radio station with streamState: reconnecting as [RECONNECTING] and ▲', () => {
+    const mockStation = {
+      id: 'station-reconnect',
+      name: 'Radio Paradise',
+      genre: 'Eclectic',
+      country: 'US',
+      bitrate: '320'
+    };
+
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'reconnecting',
+      subscribe: (listener) => {
+        listener({
+          isRadio: true,
+          isPlaying: true,
+          currentTrack: null,
+          currentStation: mockStation,
+          streamState: 'reconnecting',
+          volume: 0.8
+        });
+        return () => {};
+      },
+      setVolume: () => {},
+      togglePlay: () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+    const html = stage.element.innerHTML;
+
+    assert.ok(html.includes('[RECONNECTING]'), 'Must display [RECONNECTING] label');
+    assert.ok(html.includes('▲'), 'Must display ▲ glyph');
+
+    stage.destroy();
+  });
+
+  it('renders radio station with streamState: buffering as [BUFFERING] and ⏳', () => {
+    const mockStation = {
+      id: 'station-buffer',
+      name: 'Radio Paradise',
+      genre: 'Eclectic',
+      country: 'US',
+      bitrate: '320'
+    };
+
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'buffering',
+      subscribe: (listener) => {
+        listener({
+          isRadio: true,
+          isPlaying: true,
+          currentTrack: null,
+          currentStation: mockStation,
+          streamState: 'buffering',
+          volume: 0.8
+        });
+        return () => {};
+      },
+      setVolume: () => {},
+      togglePlay: () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+    const html = stage.element.innerHTML;
+
+    assert.ok(html.includes('[BUFFERING]'), 'Must display [BUFFERING] label');
+    assert.ok(html.includes('⏳'), 'Must display ⏳ glyph');
+
+    stage.destroy();
+  });
+
+  it('renders radio station with streamState: connecting as [CONNECTING] and ▲', () => {
+    const mockStation = {
+      id: 'station-connect',
+      name: 'Radio Paradise',
+      genre: 'Eclectic',
+      country: 'US',
+      bitrate: '320'
+    };
+
+    const mockAudioEngine = {
+      isRadio: true,
+      isPlaying: true,
+      currentTrack: null,
+      currentStation: mockStation,
+      streamState: 'connecting',
+      subscribe: (listener) => {
+        listener({
+          isRadio: true,
+          isPlaying: true,
+          currentTrack: null,
+          currentStation: mockStation,
+          streamState: 'connecting',
+          volume: 0.8
+        });
+        return () => {};
+      },
+      setVolume: () => {},
+      togglePlay: () => {}
+    };
+
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+    const html = stage.element.innerHTML;
+
+    assert.ok(html.includes('[CONNECTING]'), 'Must display [CONNECTING] label');
+    assert.ok(html.includes('▲'), 'Must display ▲ glyph');
+
+    stage.destroy();
+  });
+
   it('renders Tier 2 session-file missing state as Re-open music folder to play prompt', () => {
     const mockTrack = {
       id: 'track-reauth',

@@ -10,7 +10,8 @@ import {
   HIGH_LEVEL_GENRES,
   RADIO_GENRES,
   getStationCategory,
-  getStationFallbackArtwork
+  getStationFallbackArtwork,
+  formatBitrate
 } from '../../src/radio/stations.js';
 
 class MockRadioDB {
@@ -613,6 +614,41 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.equal(secondPass.find((s) => s.id === 'mixify_hindi')?.isFavorite, true);
     assert.equal(secondPass.find((s) => s.id === 'humm_radio')?.isFavorite, true);
     assert.equal(secondPass.find((s) => s.id === 'custom_user_stream_xyz')?.isFavorite, true);
+  });
+
+  await t.test('formatBitrate normalizes bare numbers, raw bps, pre-formatted strings, codec suffixes, and edge cases', () => {
+    // bare numbers / numeric strings
+    assert.equal(formatBitrate(320), '320 kbps');
+    assert.equal(formatBitrate(128), '128 kbps');
+    assert.equal(formatBitrate('320'), '320 kbps');
+    assert.equal(formatBitrate('256'), '256 kbps');
+
+    // raw bits-per-second (bps >= 10000)
+    assert.equal(formatBitrate(128000), '128 kbps');
+    assert.equal(formatBitrate(320000), '320 kbps');
+    assert.equal(formatBitrate('256000'), '256 kbps');
+    assert.equal(formatBitrate('256000 bps'), '256 kbps');
+    assert.equal(formatBitrate('128000 bps MP3'), '128 kbps MP3');
+
+    // pre-formatted strings
+    assert.equal(formatBitrate('320 kbps'), '320 kbps');
+    assert.equal(formatBitrate('128kbps'), '128 kbps');
+    assert.equal(formatBitrate('64 kbps'), '64 kbps');
+
+    // codec-tagged bitrates
+    assert.equal(formatBitrate('160 kbps AAC'), '160 kbps AAC');
+    assert.equal(formatBitrate('96kbps aac'), '96 kbps AAC');
+    assert.equal(formatBitrate('128 kbps MP3'), '128 kbps MP3');
+
+    // null / undefined / empty / unknown / invalid values
+    assert.equal(formatBitrate(null), '128 kbps');
+    assert.equal(formatBitrate(undefined), '128 kbps');
+    assert.equal(formatBitrate(''), '128 kbps');
+    assert.equal(formatBitrate('unknown'), '128 kbps');
+    assert.equal(formatBitrate('high'), '128 kbps');
+    assert.equal(formatBitrate(-10), '128 kbps');
+    assert.equal(formatBitrate(0), '128 kbps');
+    assert.equal(formatBitrate(NaN), '128 kbps');
   });
 });
 
