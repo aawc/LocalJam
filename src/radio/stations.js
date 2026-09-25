@@ -1013,7 +1013,27 @@ export const CURATED_STATIONS = [
   }
 ];
 
+export const DEPRECATED_STATIONS = {
+  mirchi_edge: {
+    replacementId: 'mixify_hindi',
+    reason: 'Stream decommissioned; replaced with MixiFy Hindi Hits'
+  },
+  radio_city_hindi: {
+    replacementId: 'humm_radio',
+    reason: 'Stream offline; replaced with Humm Radio'
+  },
+  bollywood_gaane: {
+    replacementId: 'bollywood_bangers',
+    reason: 'Stream offline; replaced with Bollywood Bangers'
+  },
+  bbc_radio_6: {
+    replacementId: 'nts_radio_1',
+    reason: 'Stream geo-blocked / restricted; replaced with NTS Radio 1'
+  }
+};
+
 export const HIGH_LEVEL_GENRES = [
+
   'All',
   'Ambient',
   'Classical',
@@ -1233,35 +1253,62 @@ export async function loadStations(db) {
   try {
     const saved = await db.getStations();
     if (!saved || saved.length === 0) {
-      await db.saveStations(CURATED_STATIONS.map((s) => ({ ...s })));
+      await db.saveStations(CURATED_STATIONS.map((s) => ({ ...s })), { sync: true });
       return CURATED_STATIONS.map((s) => ({ ...s }));
     }
 
     const curatedMap = new Map(CURATED_STATIONS.map((s) => [s.id, s]));
     let modified = false;
 
-    // Check existing records: update outdated URLs/metadata for curated stations while preserving user isFavorite
+    // Phase 2: Differential reconciliation for deprecated stations and metadata updates
     for (let i = 0; i < saved.length; i++) {
       const station = saved[i];
-      if (station.id === 'bbc_radio_6' || station.streamUrl?.includes('bbc_6music')) {
-        const nts = curatedMap.get('nts_radio_1');
-        if (nts) {
-          const alreadyHasNts = saved.some((s, idx) => idx !== i && s.id === 'nts_radio_1');
-          if (alreadyHasNts) {
+
+      // Check if station is deprecated by ID or legacy stream URL
+      let deprecation = DEPRECATED_STATIONS[station.id];
+      if (!deprecation && station.streamUrl?.includes('bbc_6music')) {
+        deprecation = DEPRECATED_STATIONS['bbc_radio_6'];
+      }
+
+      if (deprecation) {
+        modified = true;
+
+        if (deprecation.replacementId) {
+          const replacementInSaved = saved.find((s, idx) => idx !== i && s.id === deprecation.replacementId);
+          if (replacementInSaved) {
+            // Replacement already exists in saved stations (e.g. legacy 70-station DB)
+            // Transfer favorite and lastPlayedAt state if applicable
+            if (station.isFavorite) {
+              replacementInSaved.isFavorite = true;
+            }
+            if (station.lastPlayedAt && (!replacementInSaved.lastPlayedAt || station.lastPlayedAt > replacementInSaved.lastPlayedAt)) {
+              replacementInSaved.lastPlayedAt = station.lastPlayedAt;
+            }
+            // Remove the deprecated station
             saved.splice(i, 1);
             i--;
-            modified = true;
             continue;
           }
-          saved[i] = {
-            ...nts,
-            isFavorite: Boolean(station.isFavorite),
-            lastPlayedAt: station.lastPlayedAt || null
-          };
-          modified = true;
-          continue;
+
+          // Replacement not yet in saved stations: replace in-place with curated replacement
+          const curatedReplacement = curatedMap.get(deprecation.replacementId);
+          if (curatedReplacement) {
+            saved[i] = {
+              ...curatedReplacement,
+              isFavorite: Boolean(station.isFavorite),
+              lastPlayedAt: station.lastPlayedAt || null
+            };
+            continue;
+          }
         }
+
+        // Deprecated without replacement or replacement not in curated catalog
+        saved.splice(i, 1);
+        i--;
+        continue;
       }
+
+      // Check curated station metadata synchronization
       if (curatedMap.has(station.id)) {
         const curated = curatedMap.get(station.id);
         if (
@@ -1295,19 +1342,24 @@ export async function loadStations(db) {
       }
     }
 
-    if (modified && typeof db.saveStations === 'function') {
-      try {
-        await db.saveStations(saved);
-      } catch (saveErr) {
-        console.warn(`[Stations] Notice saving stations to DB: ${saveErr?.message}`);
+    if (modified) {
+      // Atomically synchronize full station list with store
+      if (typeof db.saveStations === 'function') {
+        try {
+          await db.saveStations(saved, { sync: true });
+        } catch (saveErr) {
+          console.warn(`[Stations] Notice saving stations to DB: ${saveErr?.message}`);
+        }
       }
     }
+
     return saved.map((s) => ({ ...s }));
   } catch (err) {
     console.error(`[Stations] Failed to load stations from DB: ${err?.message}`);
     return CURATED_STATIONS.map((s) => ({ ...s }));
   }
 }
+
 
 export async function addCustomStation(station, db) {
   if (!station || typeof station !== 'object') {

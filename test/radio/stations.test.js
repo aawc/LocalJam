@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CURATED_STATIONS,
+  DEPRECATED_STATIONS,
   loadStations,
   addCustomStation,
   toggleFavoriteStation,
@@ -19,10 +20,14 @@ class MockRadioDB {
   async getStations() {
     return [...this.stations];
   }
-  async saveStations(list) {
+  async saveStations(list, options) {
     this.stations = [...list];
   }
+  async deleteStation(id) {
+    this.stations = this.stations.filter((s) => s.id !== id);
+  }
 }
+
 
 test('Internet Radio Stations Suite', async (t) => {
   await t.test('Curated stations contain valid names, genres, providers, popularity, and HTTPS stream URLs', () => {
@@ -493,5 +498,122 @@ test('Internet Radio Stations Suite', async (t) => {
     assert.notEqual(rpMain.description, 'Old legacy description');
     assert.equal(rpMain.description, CURATED_STATIONS.find((s) => s.id === 'rp_main').description);
   });
+
+  await t.test('DEPRECATED_STATIONS registry defines dead Bollywood stations and replacements', () => {
+    assert.ok(DEPRECATED_STATIONS, 'DEPRECATED_STATIONS must be exported');
+    assert.equal(typeof DEPRECATED_STATIONS, 'object');
+
+    // Dead Bollywood stations from commit fcaee32
+    assert.ok(DEPRECATED_STATIONS.mirchi_edge, 'mirchi_edge must be marked deprecated');
+    assert.equal(DEPRECATED_STATIONS.mirchi_edge.replacementId, 'mixify_hindi');
+
+    assert.ok(DEPRECATED_STATIONS.radio_city_hindi, 'radio_city_hindi must be marked deprecated');
+    assert.equal(DEPRECATED_STATIONS.radio_city_hindi.replacementId, 'humm_radio');
+
+    assert.ok(DEPRECATED_STATIONS.bollywood_gaane, 'bollywood_gaane must be marked deprecated');
+    assert.equal(DEPRECATED_STATIONS.bollywood_gaane.replacementId, 'bollywood_bangers');
+
+    // BBC Radio 6
+    assert.ok(DEPRECATED_STATIONS.bbc_radio_6, 'bbc_radio_6 must be marked deprecated');
+    assert.equal(DEPRECATED_STATIONS.bbc_radio_6.replacementId, 'nts_radio_1');
+  });
+
+  await t.test('Reconciliation engine migrates legacy 70-station DB, prunes dead stations, transfers favorites, preserves custom stations, and is idempotent', async () => {
+    const db = new MockRadioDB();
+
+    // Construct a legacy 70-station database:
+    // 67 current curated stations + 3 obsolete dead Bollywood stations = 70 stations
+    const legacyDBStations = CURATED_STATIONS.map((s) => ({ ...s, isFavorite: false }));
+
+    // Add the 3 obsolete dead stations from previous releases
+    legacyDBStations.push({
+      id: 'mirchi_edge',
+      name: 'Radio Mirchi Edge',
+      streamUrl: 'https://per-mirchiedge-radio.streamguys1.com/mirchiedge',
+      genre: 'Bollywood / Hindi',
+      isFavorite: true,
+      lastPlayedAt: 1710000000000
+    });
+    legacyDBStations.push({
+      id: 'radio_city_hindi',
+      name: 'Radio City Hindi',
+      streamUrl: 'https://stream.radiocity.in/hindi',
+      genre: 'Bollywood / Hindi',
+      isFavorite: true,
+      lastPlayedAt: null
+    });
+    legacyDBStations.push({
+      id: 'bollywood_gaane',
+      name: 'Bollywood Gaane Purane',
+      streamUrl: 'https://stream.zeno.fm/bollywoodgaane',
+      genre: 'Bollywood / Classics',
+      isFavorite: false,
+      lastPlayedAt: null
+    });
+
+    // Also add a custom station to verify user-added streams are preserved
+    legacyDBStations.push({
+      id: 'custom_user_stream_xyz',
+      name: 'My Indie Radio',
+      streamUrl: 'https://stream.myindie.org/live',
+      genre: 'Indie',
+      isCustom: true,
+      isFavorite: true,
+      lastPlayedAt: 1720000000000
+    });
+
+    // Total in legacy store: 67 curated + 3 obsolete + 1 custom = 71 stations
+    assert.equal(legacyDBStations.length, CURATED_STATIONS.length + 3 + 1);
+    await db.saveStations(legacyDBStations);
+    assert.equal(db.stations.length, CURATED_STATIONS.length + 4);
+
+    // Run reconciliation via loadStations
+    const migrated = await loadStations(db);
+
+    // Must prune the 3 dead Bollywood stations while preserving all 67 curated + 1 custom = 68 stations
+    assert.equal(migrated.length, CURATED_STATIONS.length + 1, `Expected ${CURATED_STATIONS.length + 1} stations after pruning, got ${migrated.length}`);
+    assert.equal(db.stations.length, CURATED_STATIONS.length + 1, `DB store must have exactly ${CURATED_STATIONS.length + 1} stations after pruning`);
+
+    // Verify obsolete stations are completely removed
+    assert.ok(!migrated.some((s) => s.id === 'mirchi_edge'), 'mirchi_edge must be pruned');
+    assert.ok(!migrated.some((s) => s.id === 'radio_city_hindi'), 'radio_city_hindi must be pruned');
+    assert.ok(!migrated.some((s) => s.id === 'bollywood_gaane'), 'bollywood_gaane must be pruned');
+    assert.ok(!db.stations.some((s) => s.id === 'mirchi_edge'), 'mirchi_edge must be pruned from DB');
+    assert.ok(!db.stations.some((s) => s.id === 'radio_city_hindi'), 'radio_city_hindi must be pruned from DB');
+    assert.ok(!db.stations.some((s) => s.id === 'bollywood_gaane'), 'bollywood_gaane must be pruned from DB');
+
+    // Verify favorite states and lastPlayedAt were transferred to replacements
+    const mixify = migrated.find((s) => s.id === 'mixify_hindi');
+    assert.ok(mixify, 'mixify_hindi replacement must be present');
+    assert.equal(mixify.isFavorite, true, 'mixify_hindi must inherit isFavorite from mirchi_edge');
+    assert.equal(mixify.lastPlayedAt, 1710000000000, 'mixify_hindi must inherit lastPlayedAt from mirchi_edge');
+
+    const humm = migrated.find((s) => s.id === 'humm_radio');
+    assert.ok(humm, 'humm_radio replacement must be present');
+    assert.equal(humm.isFavorite, true, 'humm_radio must inherit isFavorite from radio_city_hindi');
+
+    const bangers = migrated.find((s) => s.id === 'bollywood_bangers');
+    assert.ok(bangers, 'bollywood_bangers replacement must be present');
+
+    // Verify custom station was preserved intact
+    const custom = migrated.find((s) => s.id === 'custom_user_stream_xyz');
+    assert.ok(custom, 'custom station must be preserved');
+    assert.equal(custom.name, 'My Indie Radio');
+    assert.equal(custom.isFavorite, true);
+    assert.equal(custom.lastPlayedAt, 1720000000000);
+
+    // Test Idempotence: running loadStations a second time must produce identical result without mutations
+    const secondPass = await loadStations(db);
+    assert.equal(secondPass.length, CURATED_STATIONS.length + 1);
+    assert.deepEqual(
+      secondPass.map((s) => s.id),
+      migrated.map((s) => s.id),
+      'Second loadStations pass must return identical station IDs'
+    );
+    assert.equal(secondPass.find((s) => s.id === 'mixify_hindi')?.isFavorite, true);
+    assert.equal(secondPass.find((s) => s.id === 'humm_radio')?.isFavorite, true);
+    assert.equal(secondPass.find((s) => s.id === 'custom_user_stream_xyz')?.isFavorite, true);
+  });
 });
+
 

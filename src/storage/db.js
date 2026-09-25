@@ -524,18 +524,37 @@ export class LocalJamDatabase {
   }
 
   /* === Stations Store === */
-  async saveStations(stations) {
+  async saveStations(stations, options = {}) {
+    const isSync = typeof options === 'boolean' ? options : Boolean(options && (options.sync || options.prune));
+    if (isSync && (!stations || stations.length === 0)) {
+      return this.clearStore('stations');
+    }
     const db = await this.open();
     return new Promise((resolve, reject) => {
       const tx = db.transaction('stations', 'readwrite');
       const store = tx.objectStore('stations');
-      for (const st of stations) {
+      if (isSync) {
+        store.clear();
+      }
+      for (const st of (stations || [])) {
         store.put(st);
       }
       tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error || new Error('[LocalJamDB] Stations save transaction aborted'));
       tx.onerror = () => reject(tx.error);
     });
   }
+
+  async deleteStation(id) {
+    if (!id) return;
+    const store = await this.getStore('stations', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
 
   async getStations() {
     const store = await this.getStore('stations', 'readonly');

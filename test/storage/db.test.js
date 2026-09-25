@@ -303,4 +303,96 @@ test('LocalJamDatabase - Full Store Operations and Aggregations', async (t) => {
     const emptyStations = await db.getStations();
     assert.equal(emptyStations.length, 0);
   });
+
+  await t.test('Stations Store - deleteStation and atomic sync in saveStations', async () => {
+    // Populate with 3 stations
+    await db.saveStations([
+      { id: 'st_alpha', name: 'Alpha Radio', streamUrl: 'https://stream.alpha/live' },
+      { id: 'st_beta', name: 'Beta Radio', streamUrl: 'https://stream.beta/live' },
+      { id: 'st_gamma', name: 'Gamma Radio', streamUrl: 'https://stream.gamma/live' }
+    ]);
+
+    let stations = await db.getStations();
+    assert.equal(stations.length, 3);
+
+    // deleteStation removes st_beta
+    assert.equal(typeof db.deleteStation, 'function', 'db.deleteStation must be a function');
+    await db.deleteStation('st_beta');
+
+    stations = await db.getStations();
+    assert.equal(stations.length, 2);
+    assert.ok(!stations.some((s) => s.id === 'st_beta'), 'st_beta must have been deleted');
+    assert.ok(stations.some((s) => s.id === 'st_alpha'));
+    assert.ok(stations.some((s) => s.id === 'st_gamma'));
+
+    // Standard saveStations without sync option preserves unmentioned stations
+    await db.saveStations([
+      { id: 'st_delta', name: 'Delta Radio', streamUrl: 'https://stream.delta/live' }
+    ]);
+    stations = await db.getStations();
+    assert.equal(stations.length, 3);
+    assert.ok(stations.some((s) => s.id === 'st_alpha'));
+    assert.ok(stations.some((s) => s.id === 'st_gamma'));
+    assert.ok(stations.some((s) => s.id === 'st_delta'));
+
+    // saveStations with { sync: true } atomically replaces/prunes unmentioned stations
+    await db.saveStations(
+      [
+        { id: 'st_alpha', name: 'Alpha Radio Updated', streamUrl: 'https://stream.alpha/v2' },
+        { id: 'st_epsilon', name: 'Epsilon Radio', streamUrl: 'https://stream.epsilon/live' }
+      ],
+      { sync: true }
+    );
+    stations = await db.getStations();
+    assert.equal(stations.length, 2, 'sync mode must prune unmentioned stations');
+    const alpha = stations.find((s) => s.id === 'st_alpha');
+    assert.ok(alpha);
+    assert.equal(alpha.name, 'Alpha Radio Updated');
+    assert.ok(stations.some((s) => s.id === 'st_epsilon'));
+    assert.ok(!stations.some((s) => s.id === 'st_gamma'), 'st_gamma must be pruned in sync mode');
+    assert.ok(!stations.some((s) => s.id === 'st_delta'), 'st_delta must be pruned in sync mode');
+
+    // saveStations with boolean sync=true parameter also prunes
+    await db.saveStations(
+      [{ id: 'st_epsilon', name: 'Epsilon Radio', streamUrl: 'https://stream.epsilon/live' }],
+      true
+    );
+    stations = await db.getStations();
+    assert.equal(stations.length, 1);
+    assert.equal(stations[0].id, 'st_epsilon');
+
+    // Clean up
+    await db.clearStore('stations');
+  });
+
+  await t.test('Stations Store - saveStations rejects when transaction aborts', async () => {
+    const mockIdb = createMockIDBFactory();
+    const abortDb = new LocalJamDatabase('AbortDB', 1, mockIdb);
+    await abortDb.init();
+
+    const mockUnderlyingDb = await abortDb.open();
+    const originalTransaction = mockUnderlyingDb.transaction.bind(mockUnderlyingDb);
+
+    mockUnderlyingDb.transaction = (storeName, mode) => {
+      const tx = originalTransaction(storeName, mode);
+      queueMicrotask(() => {
+        if (typeof tx.onabort === 'function') {
+          tx.error = new Error('QuotaExceededError: Transaction aborted');
+          tx.onabort();
+        }
+      });
+      return tx;
+    };
+
+    await assert.rejects(
+      async () => {
+        await abortDb.saveStations([{ id: 'st_fail', name: 'Fail Radio' }]);
+      },
+      (err) => {
+        assert.ok(err.message.includes('QuotaExceededError') || err.message.includes('aborted'));
+        return true;
+      }
+    );
+  });
 });
+
