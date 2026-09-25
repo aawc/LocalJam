@@ -10,6 +10,25 @@ import { sessionRegistry } from '../storage/session-registry.js';
 import { db } from '../storage/db.js';
 import { CURATED_STATIONS } from '../radio/stations.js';
 
+/**
+ * Appends or updates the cache-busting _lj_retry query parameter on a live stream URL.
+ * @param {string} baseStreamUrl
+ * @param {number} [timestamp=Date.now()]
+ * @returns {string} Stream URL with updated _lj_retry parameter
+ */
+export function getRetryStreamUrl(baseStreamUrl, timestamp = Date.now()) {
+  if (!baseStreamUrl || typeof baseStreamUrl !== 'string') return '';
+  try {
+    const urlObj = new URL(baseStreamUrl);
+    urlObj.searchParams.set('_lj_retry', String(timestamp));
+    return urlObj.toString();
+  } catch {
+    const cleanUrl = baseStreamUrl.replace(/([?&])_lj_retry=\d+(&?)/, (match, p1, p2) => (p2 ? p1 : ''));
+    const separator = cleanUrl.includes('?') ? '&' : '?';
+    return `${cleanUrl}${separator}_lj_retry=${timestamp}`;
+  }
+}
+
 export class AudioEngine {
   constructor() {
     this.audioA = typeof Audio !== 'undefined' ? new Audio() : null;
@@ -47,11 +66,30 @@ export class AudioEngine {
     /** @type {Set<Function>} */
     this.stateListeners = new Set();
 
+    // Resilient Radio Stream Controller state
+    this.maxReconnectAttempts = 5;
+    this.reconnectAttempts = 0;
+    this.reconnectTimer = null;
+    this.stallWatchdogTimer = null;
+    this.stallThresholdMs = 8000;
+    this.watchdogIntervalMs = 2000;
+    this.lastPlaybackPosition = -1;
+    this.lastPositionUpdateTime = 0;
+
+    // Window network listeners
+    this.handleOnline = () => this.onNetworkOnline();
+    this.handleOffline = () => this.onNetworkOffline();
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('online', this.handleOnline);
+      window.addEventListener('offline', this.handleOffline);
+    }
+
     if (this.audioA && this.audioB && this.radioAudio) {
       this.initAudioElements();
       this.initMediaSession();
     }
   }
+
 
   initAudioElements() {
     [this.audioA, this.audioB, this.radioAudio].forEach((audio, idx) => {
@@ -65,6 +103,15 @@ export class AudioEngine {
 
       audio.addEventListener('timeupdate', () => {
         if (this.getActiveAudio() === audio) {
+          if (this.isRadio) {
+            if (audio.currentTime !== this.lastPlaybackPosition) {
+              this.lastPlaybackPosition = audio.currentTime;
+              this.lastPositionUpdateTime = Date.now();
+            }
+            if (this.streamState === 'buffering' || this.streamState === 'connecting') {
+              this.streamState = 'playing';
+            }
+          }
           this.notifyState();
           this.syncMediaSessionPosition();
         }
@@ -77,6 +124,13 @@ export class AudioEngine {
       });
 
       audio.addEventListener('waiting', () => {
+        if (this.getActiveAudio() === audio && this.isRadio) {
+          this.streamState = 'buffering';
+          this.notifyState();
+        }
+      });
+
+      audio.addEventListener('stalled', () => {
         if (this.getActiveAudio() === audio && this.isRadio) {
           this.streamState = 'buffering';
           this.notifyState();
@@ -97,8 +151,11 @@ export class AudioEngine {
           const err = audio.error;
           console.error(`[AudioEngine] ${idx === 2 ? 'Radio' : idx === 0 ? 'Player A' : 'Player B'} error (code ${err?.code}): ${err?.message}`);
           if (this.isRadio) {
-            if (this.isUsingRadioFallback || !this.radioAudio) {
+            if (this.streamState !== 'error' && this.reconnectAttempts < this.maxReconnectAttempts) {
+              this.handleStreamStall();
+            } else {
               this.streamState = 'error';
+              this.isPlaying = false;
               this.notifyState();
             }
           } else {
@@ -122,10 +179,13 @@ export class AudioEngine {
           this.isPlaying = true;
           if (this.isRadio) {
             this.streamState = 'playing';
+            this.resetReconnection();
+            this.lastPositionUpdateTime = Date.now();
           }
           this.notifyState();
         }
       });
+
 
       audio.addEventListener('pause', () => {
         if (this.getActiveAudio() === audio) {
@@ -279,11 +339,14 @@ export class AudioEngine {
    */
   async playTrack(track, startPosition = 0) {
     if (!track) return;
+    this.stopStallWatchdog();
+    this.resetReconnection();
     await this.initWebAudio();
 
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
       await this.audioCtx.resume();
     }
+
 
     this.isRadio = false;
     this.currentStation = null;
@@ -451,21 +514,175 @@ export class AudioEngine {
     }
   }
 
-  /**
-   * Play Internet Radio Station with Web Audio pipeline & fallback
-   * @param {any} station
-   */
-  async playRadio(station) {
-    if (!station) return;
-    const streamUrl = station.streamUrl || station.url;
-    if (!streamUrl) return;
+  startStallWatchdog() {
+    this.stopStallWatchdog();
+    this.lastPositionUpdateTime = Date.now();
+    this.stallWatchdogTimer = setInterval(() => {
+      this.checkStall();
+    }, this.watchdogIntervalMs);
+    if (typeof this.stallWatchdogTimer?.unref === 'function') {
+      this.stallWatchdogTimer.unref();
+    }
+  }
 
-    this.isRadio = true;
-    this.currentStation = station;
-    this.currentTrack = null;
+  stopStallWatchdog() {
+    if (this.stallWatchdogTimer) {
+      clearInterval(this.stallWatchdogTimer);
+      this.stallWatchdogTimer = null;
+    }
+  }
+
+  checkStall() {
+    if (!this.isRadio || !this.isPlaying || (this.streamState !== 'playing' && this.streamState !== 'buffering')) return;
+    const activeAudio = this.getActiveAudio();
+    if (activeAudio && !activeAudio.paused) {
+      const now = Date.now();
+      if (this.lastPositionUpdateTime > 0 && (now - this.lastPositionUpdateTime) >= this.stallThresholdMs) {
+        console.warn(`[AudioEngine] Live radio stream stall detected (frozen at ${this.lastPlaybackPosition}s for ${now - this.lastPositionUpdateTime}ms in ${this.streamState} state). Initiating reconnection...`);
+        this.handleStreamStall();
+      }
+    }
+  }
+
+  handleStreamStall() {
+    this.streamState = 'connecting';
+    this.notifyState();
+    this.reconnectRadioStream();
+  }
+
+  resetReconnection() {
+    this.reconnectAttempts = 0;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  getRetryStreamUrl(url, timestamp = Date.now()) {
+    return getRetryStreamUrl(url, timestamp);
+  }
+
+  async reconnectRadioStream({ force = false, immediate = false } = {}) {
+    if (!this.isRadio || !this.currentStation) return;
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.streamState = 'buffering';
+      this.notifyState();
+      return;
+    }
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts && !force) {
+      console.error(`[AudioEngine] Reached maximum reconnection attempts (${this.maxReconnectAttempts}) for station ${this.currentStation.name}`);
+      this.streamState = 'error';
+      this.isPlaying = false;
+      this.stopStallWatchdog();
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      this.notifyState();
+      return;
+    }
+
+    this.reconnectAttempts++;
     this.streamState = 'connecting';
     this.notifyState();
 
+    const delay = immediate ? 0 : Math.min(16000, 1000 * Math.pow(2, this.reconnectAttempts - 1));
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    const doReconnect = async () => {
+      this.reconnectTimer = null;
+      if (!this.isPlaying || !this.isRadio || !this.currentStation) return;
+
+      const baseStreamUrl = this.currentStation.streamUrl || this.currentStation.url;
+      const retryUrl = getRetryStreamUrl(baseStreamUrl, Date.now());
+
+      try {
+        await this._executeRadioPlayback(this.currentStation, retryUrl);
+      } catch (err) {
+        console.warn(`[AudioEngine] Reconnect attempt ${this.reconnectAttempts} failed: ${err?.message}`);
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectRadioStream({ immediate: false });
+        } else {
+          this.streamState = 'error';
+          this.isPlaying = false;
+          this.stopStallWatchdog();
+          this.notifyState();
+        }
+      }
+    };
+
+    if (delay <= 0) {
+      await doReconnect();
+    } else {
+      this.reconnectTimer = setTimeout(doReconnect, delay);
+      if (typeof this.reconnectTimer?.unref === 'function') {
+        this.reconnectTimer.unref();
+      }
+    }
+  }
+
+
+  onNetworkOffline() {
+    if (this.isRadio && this.isPlaying) {
+      console.warn('[AudioEngine] Network disconnected (offline). Pausing stream and waiting for connection...');
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      this.streamState = 'buffering';
+      this.notifyState();
+    }
+  }
+
+  onNetworkOnline() {
+    console.log('[AudioEngine] Network reconnected (online).');
+    if (this.isRadio && (this.isPlaying || this.streamState === 'buffering')) {
+      if (this.currentStation) {
+        console.log('[AudioEngine] Resuming live radio stream following network recovery...');
+        this.reconnectAttempts = 0;
+        this.reconnectRadioStream({ force: true, immediate: true });
+      }
+    }
+  }
+
+  /**
+   * Play Internet Radio Station with Web Audio pipeline & fallback
+   * @param {any} station
+   * @param {string|null} [customStreamUrl=null]
+   */
+  async playRadio(station, customStreamUrl = null) {
+    if (!station) return;
+    const streamUrl = customStreamUrl || station.streamUrl || station.url;
+    if (!streamUrl) return;
+
+    this.isRadio = true;
+    this.isPlaying = true;
+    this.currentStation = station;
+    this.currentTrack = null;
+    this.isUsingRadioFallback = false;
+    this.streamState = 'connecting';
+    this.resetReconnection();
+    this.notifyState();
+
+    try {
+      await this._executeRadioPlayback(station, streamUrl);
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        this.isPlaying = false;
+        this.streamState = 'error';
+        this.stopStallWatchdog();
+        this.notifyState();
+      }
+    }
+  }
+
+  async _executeRadioPlayback(station, streamUrl) {
     // Revoke local object URL immediately to prevent memory leaks during radio sessions
     if (this.currentObjectUrl) {
       if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
@@ -477,7 +694,7 @@ export class AudioEngine {
       this.currentObjectUrl = null;
     }
 
-    if (this.radioAudio) {
+    if (this.radioAudio && !this.isUsingRadioFallback) {
       try {
         if (typeof this.radioAudio.pause === 'function') this.radioAudio.pause();
       } catch (_) {}
@@ -487,7 +704,6 @@ export class AudioEngine {
       this.radioAudio.src = '';
       if (typeof this.radioAudio.load === 'function') this.radioAudio.load();
     }
-    this.isUsingRadioFallback = false;
 
     await this.ensureAudioContextActive().catch(() => {});
 
@@ -497,7 +713,9 @@ export class AudioEngine {
     const nextGain = nextPlayer === 'B' ? this.gainB : this.gainA;
     const prevGain = nextPlayer === 'B' ? this.gainA : this.gainB;
 
-    if (nextAudio) {
+    let webAudioError = null;
+
+    if (nextAudio && !this.isUsingRadioFallback) {
       this.activePlayer = nextPlayer;
       try {
         nextAudio.crossOrigin = 'anonymous';
@@ -515,6 +733,14 @@ export class AudioEngine {
         if (playPromise !== undefined) {
           await playPromise;
         }
+
+        if (!this.isPlaying || !this.isRadio || this.currentStation?.id !== station?.id) {
+          try {
+            if (typeof nextAudio.pause === 'function') nextAudio.pause();
+          } catch (_) {}
+          return;
+        }
+
         if (prevAudio && prevAudio !== nextAudio && typeof prevAudio.pause === 'function') {
           try { prevAudio.pause(); } catch (_) {}
         }
@@ -522,6 +748,8 @@ export class AudioEngine {
         this.isPlaying = true;
         this.streamState = 'playing';
         this.isUsingRadioFallback = false;
+        this.lastPositionUpdateTime = Date.now();
+        this.startStallWatchdog();
         this.updateMediaSessionRadio(station);
         this.notifyState();
 
@@ -533,6 +761,7 @@ export class AudioEngine {
         }
         return;
       } catch (err) {
+        webAudioError = err;
         console.warn(`[AudioEngine] Web Audio radio playback failed, attempting direct fallback: ${err?.message}`);
         try {
           if (typeof nextAudio.pause === 'function') nextAudio.pause();
@@ -559,11 +788,21 @@ export class AudioEngine {
         if (fallbackPromise !== undefined) {
           await fallbackPromise;
         }
+
+        if (!this.isPlaying || !this.isRadio || this.currentStation?.id !== station?.id) {
+          try {
+            if (typeof this.radioAudio.pause === 'function') this.radioAudio.pause();
+          } catch (_) {}
+          return;
+        }
+
         if (prevAudio && prevAudio !== this.radioAudio && typeof prevAudio.pause === 'function') {
           try { prevAudio.pause(); } catch (_) {}
         }
         this.isPlaying = true;
         this.streamState = 'playing';
+        this.lastPositionUpdateTime = Date.now();
+        this.startStallWatchdog();
         this.updateMediaSessionRadio(station);
         this.notifyState();
 
@@ -587,16 +826,12 @@ export class AudioEngine {
 
         if (fbErr?.name !== 'AbortError') {
           console.error(`[AudioEngine] Radio stream fallback playback failed: ${fbErr?.message}`);
-          this.isPlaying = false;
-          this.streamState = 'error';
-          this.notifyState();
+          throw fbErr;
         }
       }
     } else {
       this.isUsingRadioFallback = false;
-      this.isPlaying = false;
-      this.streamState = 'error';
-      this.notifyState();
+      throw (webAudioError || new Error('[AudioEngine] No radio audio player available'));
     }
   }
 
@@ -641,6 +876,12 @@ export class AudioEngine {
   }
 
   pause() {
+    this.stopStallWatchdog();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
     const audio = this.getActiveAudio();
     if (audio && typeof audio.pause === 'function') {
       try { audio.pause(); } catch (_) {}
@@ -656,6 +897,12 @@ export class AudioEngine {
   }
 
   stop() {
+    this.stopStallWatchdog();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
     this.pause();
     [this.audioA, this.audioB, this.radioAudio].forEach((audio) => {
       if (!audio) return;
@@ -673,6 +920,18 @@ export class AudioEngine {
     this.streamState = 'idle';
     this.notifyState();
   }
+
+  destroy() {
+    this.stop();
+    this.stopStallWatchdog();
+    this.resetReconnection();
+    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+      window.removeEventListener('online', this.handleOnline);
+      window.removeEventListener('offline', this.handleOffline);
+    }
+    this.stateListeners.clear();
+  }
+
 
   togglePlay() {
     if (this.isPlaying) {
