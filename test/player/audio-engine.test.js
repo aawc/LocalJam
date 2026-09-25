@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { setupMockDom, teardownMockDom } from '../helpers/mock-dom.js';
 import { AudioEngine } from '../../src/player/audio-engine.js';
 
 test('Audio Engine State & Control Suite', async (t) => {
@@ -504,5 +506,461 @@ test('Audio Engine State & Control Suite', async (t) => {
     assert.equal(mockAudio.currentTime, 120, 'seekRelative(undefined) must not alter position');
     engine.seekRelative(NaN);
     assert.equal(mockAudio.currentTime, 120, 'seekRelative(NaN) must not alter position');
+  });
+
+  // =========================================================================
+  // Passive Event-Driven Radio Resilience Suite (Design Doc Specification)
+  // =========================================================================
+
+  class MockAudioElement {
+    constructor() {
+      this.src = '';
+      this.preload = 'metadata';
+      this.playsInline = true;
+      this.currentTime = 0;
+      this.duration = 0;
+      this.volume = 1;
+      this.error = null;
+      this._listeners = new Map();
+    }
+    addEventListener(type, fn) {
+      if (!this._listeners.has(type)) this._listeners.set(type, new Set());
+      this._listeners.get(type).add(fn);
+    }
+    removeEventListener(type, fn) {
+      if (this._listeners.has(type)) this._listeners.get(type).delete(fn);
+    }
+    dispatchEvent(type, eventObj = {}) {
+      const handlers = this._listeners.get(type);
+      if (handlers) {
+        for (const h of Array.from(handlers)) {
+          h({ type, target: this, ...eventObj });
+        }
+      }
+    }
+    play() {
+      return Promise.resolve();
+    }
+    pause() {}
+    load() {}
+    removeAttribute() {}
+    setAttribute() {}
+  }
+
+  function createMockClock() {
+    const origSetTimeout = globalThis.setTimeout;
+    const origClearTimeout = globalThis.clearTimeout;
+    let now = 0;
+    let nextId = 1;
+    const timers = new Map();
+
+    globalThis.setTimeout = (fn, delay = 0, ...args) => {
+      const id = nextId++;
+      const timerObj = {
+        id,
+        fn,
+        delay: Math.max(0, delay),
+        due: now + Math.max(0, delay),
+        args,
+        unref() { return this; }
+      };
+      timers.set(id, timerObj);
+      return timerObj;
+    };
+
+    globalThis.clearTimeout = (timerObj) => {
+      if (!timerObj) return;
+      const id = typeof timerObj === 'object' ? timerObj.id : timerObj;
+      timers.delete(id);
+    };
+
+    return {
+      get now() { return now; },
+      get timers() { return timers; },
+      async tick(ms) {
+        now += ms;
+        let ranAny = true;
+        while (ranAny) {
+          ranAny = false;
+          let earliest = null;
+          for (const timer of timers.values()) {
+            if (timer.due <= now) {
+              if (!earliest || timer.due < earliest.due || (timer.due === earliest.due && timer.id < earliest.id)) {
+                earliest = timer;
+              }
+            }
+          }
+          if (earliest) {
+            timers.delete(earliest.id);
+            earliest.fn(...earliest.args);
+            await Promise.resolve();
+            ranAny = true;
+          }
+        }
+        await Promise.resolve();
+      },
+      restore() {
+        globalThis.setTimeout = origSetTimeout;
+        globalThis.clearTimeout = origClearTimeout;
+      }
+    };
+  }
+
+  await t.test('waiting event sets streamState = buffering and arms 20s dead-socket timer', () => {
+    const engine = new AudioEngine();
+    engine.audioA = new MockAudioElement();
+    engine.audioB = new MockAudioElement();
+    engine.radioAudio = new MockAudioElement();
+    engine.initAudioElements();
+
+    engine.isRadio = true;
+    engine.isPlaying = true;
+    engine.isUsingRadioFallback = true;
+    engine.streamState = 'playing';
+
+    engine.getActiveAudio().dispatchEvent('waiting');
+    assert.equal(engine.streamState, 'buffering', 'streamState must transition to buffering');
+    assert.ok(engine.deadSocketTimer, 'dead-socket timer must be armed');
+  });
+
+  await t.test('playing event sets streamState = playing, clears dead-socket timer, and resets retry counter', () => {
+    const engine = new AudioEngine();
+    engine.audioA = new MockAudioElement();
+    engine.audioB = new MockAudioElement();
+    engine.radioAudio = new MockAudioElement();
+    engine.initAudioElements();
+
+    engine.isRadio = true;
+    engine.isPlaying = true;
+    engine.isUsingRadioFallback = true;
+    engine.streamState = 'buffering';
+    engine.startDeadSocketTimer();
+    engine.reconnectAttempts = 3;
+
+    assert.ok(engine.deadSocketTimer, 'dead-socket timer should be active before playing');
+
+    engine.getActiveAudio().dispatchEvent('playing');
+    assert.equal(engine.streamState, 'playing', 'streamState must transition to playing');
+    assert.equal(engine.deadSocketTimer, null, 'dead-socket timer must be cleared');
+    assert.equal(engine.reconnectAttempts, 0, 'reconnectAttempts must be reset to 0');
+  });
+
+  await t.test('canplay event clears dead-socket timer, resets reconnectAttempts, and sets streamState = playing when playing', () => {
+    const engine = new AudioEngine();
+    engine.audioA = new MockAudioElement();
+    engine.audioB = new MockAudioElement();
+    engine.radioAudio = new MockAudioElement();
+    engine.initAudioElements();
+
+    engine.isRadio = true;
+    engine.isPlaying = true;
+    engine.isUsingRadioFallback = true;
+    engine.streamState = 'buffering';
+    engine.startDeadSocketTimer();
+    engine.reconnectAttempts = 3;
+
+    engine.getActiveAudio().dispatchEvent('canplay');
+    assert.equal(engine.streamState, 'playing', 'streamState must transition to playing on canplay');
+    assert.equal(engine.deadSocketTimer, null, 'dead-socket timer must be cleared on canplay');
+    assert.equal(engine.reconnectAttempts, 0, 'reconnectAttempts must be reset to 0 on canplay');
+  });
+
+  await t.test('playRadio successfully falls back to radioAudio when Web Audio play rejection dispatches DOM error event', async () => {
+    const engine = new AudioEngine();
+    engine.audioA = new MockAudioElement();
+    engine.audioB = new MockAudioElement();
+    engine.radioAudio = new MockAudioElement();
+    engine.initAudioElements();
+
+    let radioAudioPlayCalled = false;
+    // When Web Audio element (audioB) plays, simulate CORS / format failure
+    // where the browser dispatches a DOM 'error' event and rejects play()
+    engine.audioB.play = async () => {
+      engine.audioB.error = { code: 4, message: 'MEDIA_ELEMENT_ERROR: Format error / CORS' };
+      engine.audioB.dispatchEvent('error');
+      throw new Error('MEDIA_ELEMENT_ERROR: Format error / CORS');
+    };
+
+    engine.radioAudio.play = async () => {
+      radioAudioPlayCalled = true;
+      return Promise.resolve();
+    };
+
+    const station = {
+      id: 'cors_station',
+      name: 'CORS Radio',
+      streamUrl: 'https://stream.example.com/cors.mp3'
+    };
+
+    await engine.playRadio(station);
+
+    assert.equal(radioAudioPlayCalled, true, 'radioAudio.play must be invoked as direct fallback');
+    assert.equal(engine.isUsingRadioFallback, true, 'isUsingRadioFallback flag must be true');
+    assert.equal(engine.getActiveAudio(), engine.radioAudio, 'getActiveAudio must return radioAudio');
+    assert.equal(engine.isPlaying, true, 'isPlaying must be true');
+    assert.equal(engine.streamState, 'playing', 'streamState must transition to playing');
+  });
+
+  await t.test('20s dead-socket expiration triggers reconnect with immediate: true', async () => {
+    const clock = createMockClock();
+    try {
+      const engine = new AudioEngine();
+      engine.audioA = new MockAudioElement();
+      engine.audioB = new MockAudioElement();
+      engine.radioAudio = new MockAudioElement();
+      engine.initAudioElements();
+
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.isUsingRadioFallback = true;
+      engine.streamState = 'buffering';
+      engine.currentStation = { id: 's1', name: 'Station 1', streamUrl: 'https://stream.example.com/live' };
+
+      let reconnectCalledWith = null;
+      engine.reconnectRadioStream = (opts) => {
+        reconnectCalledWith = opts;
+      };
+
+      engine.startDeadSocketTimer();
+
+      await clock.tick(19999);
+      assert.equal(reconnectCalledWith, null, 'reconnect must not fire before 20s');
+
+      await clock.tick(1);
+      assert.ok(reconnectCalledWith, 'reconnect must fire at exactly 20s');
+      assert.equal(reconnectCalledWith.immediate, true, 'dead-socket reconnect must be immediate');
+    } finally {
+      clock.restore();
+    }
+  });
+
+  await t.test('error event triggers exponential backoff reconnect with up to 5 retries (1s, 2s, 4s, 8s, 16s) and cache-busting', async () => {
+    const clock = createMockClock();
+    try {
+      const engine = new AudioEngine();
+      engine.audioA = new MockAudioElement();
+      engine.audioB = new MockAudioElement();
+      engine.radioAudio = new MockAudioElement();
+      engine.initAudioElements();
+
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.isUsingRadioFallback = true;
+      engine.streamState = 'playing';
+      engine.currentStation = { id: 'test_s', name: 'Test', streamUrl: 'https://stream.example.com/live' };
+
+      const attemptedUrls = [];
+      engine.executeStreamPlayback = async (station, url) => {
+        attemptedUrls.push(url);
+        throw new Error('Network stream failed');
+      };
+
+      // Trigger error on active element
+      engine.getActiveAudio().dispatchEvent('error');
+
+      // Attempt 1: backoff delay = 1000ms (1s)
+      assert.equal(engine.streamState, 'reconnecting', 'State should be reconnecting');
+      assert.equal(engine.reconnectAttempts, 1, 'Attempt 1');
+      await clock.tick(999);
+      assert.equal(attemptedUrls.length, 0, 'Should not execute playback before 1s');
+      await clock.tick(1);
+      assert.equal(attemptedUrls.length, 1, 'Attempt 1 executed after 1s');
+      assert.ok(attemptedUrls[0].includes('_lj_retry='), 'Retry URL must include cache-busting _lj_retry');
+
+      // Attempt 2: backoff delay = 2000ms (2s)
+      assert.equal(engine.reconnectAttempts, 2, 'Attempt 2 scheduled');
+      await clock.tick(1999);
+      assert.equal(attemptedUrls.length, 1);
+      await clock.tick(1);
+      assert.equal(attemptedUrls.length, 2, 'Attempt 2 executed after 2s');
+
+      // Attempt 3: backoff delay = 4000ms (4s)
+      assert.equal(engine.reconnectAttempts, 3, 'Attempt 3 scheduled');
+      await clock.tick(4000);
+      assert.equal(attemptedUrls.length, 3, 'Attempt 3 executed after 4s');
+
+      // Attempt 4: backoff delay = 8000ms (8s)
+      assert.equal(engine.reconnectAttempts, 4, 'Attempt 4 scheduled');
+      await clock.tick(8000);
+      assert.equal(attemptedUrls.length, 4, 'Attempt 4 executed after 8s');
+
+      // Attempt 5: backoff delay = 16000ms (16s)
+      assert.equal(engine.reconnectAttempts, 5, 'Attempt 5 scheduled');
+      await clock.tick(16000);
+      assert.equal(attemptedUrls.length, 5, 'Attempt 5 executed after 16s');
+    } finally {
+      clock.restore();
+    }
+  });
+
+  await t.test('5 failed retries transitions to streamState = error and halts playback', async () => {
+    const clock = createMockClock();
+    try {
+      const engine = new AudioEngine();
+      engine.audioA = new MockAudioElement();
+      engine.audioB = new MockAudioElement();
+      engine.radioAudio = new MockAudioElement();
+      engine.initAudioElements();
+
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.isUsingRadioFallback = true;
+      engine.streamState = 'playing';
+      engine.currentStation = { id: 'fail_s', name: 'Fail Station', streamUrl: 'https://stream.example.com/fail' };
+
+      engine.executeStreamPlayback = async () => {
+        throw new Error('Always fail');
+      };
+
+      engine.getActiveAudio().dispatchEvent('error');
+
+      // Tick through all 5 retries: 1s + 2s + 4s + 8s + 16s = 31000ms
+      await clock.tick(1000); // retry 1
+      await clock.tick(2000); // retry 2
+      await clock.tick(4000); // retry 3
+      await clock.tick(8000); // retry 4
+      await clock.tick(16000); // retry 5 (fails)
+
+      assert.equal(engine.streamState, 'error', 'Must transition to error state after 5 failed retries');
+      assert.equal(engine.isPlaying, false, 'Playback must be halted after 5 failed retries');
+      assert.equal(engine.reconnectTimer, null, 'Reconnect timer must be cleared');
+      assert.equal(engine.deadSocketTimer, null, 'Dead socket timer must be cleared');
+    } finally {
+      clock.restore();
+    }
+  });
+
+  await t.test('offline window event sets buffering and suspends timers', () => {
+    setupMockDom();
+    try {
+      const engine = new AudioEngine();
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.streamState = 'playing';
+      engine.startDeadSocketTimer();
+      engine.reconnectTimer = { id: 99 };
+
+      assert.ok(engine.deadSocketTimer, 'Dead socket timer should be set');
+      assert.ok(engine.reconnectTimer, 'Reconnect timer should be set');
+
+      window.dispatchEvent(new Event('offline'));
+
+      assert.equal(engine.streamState, 'buffering', 'offline event must set streamState to buffering');
+      assert.equal(engine.deadSocketTimer, null, 'offline event must suspend/clear dead socket timer');
+      assert.equal(engine.reconnectTimer, null, 'offline event must suspend/clear reconnect timer');
+    } finally {
+      teardownMockDom();
+    }
+  });
+
+  await t.test('online window event debounces 800ms and recovers active playback without retriggering on error state', async () => {
+    setupMockDom();
+    const clock = createMockClock();
+    try {
+      const engine = new AudioEngine();
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.streamState = 'buffering';
+      engine.currentStation = { id: 'online_s', name: 'Online Radio', streamUrl: 'https://stream.example.com/live' };
+
+      let reconnectCount = 0;
+      engine.reconnectRadioStream = ({ force, immediate }) => {
+        reconnectCount++;
+        assert.equal(force, true);
+        assert.equal(immediate, true);
+      };
+
+      // First online event
+      window.dispatchEvent(new Event('online'));
+      await clock.tick(400);
+      assert.equal(reconnectCount, 0, 'Should not reconnect before 800ms debounce');
+
+      // Second online event before 800ms expires (debounce reset)
+      window.dispatchEvent(new Event('online'));
+      await clock.tick(799);
+      assert.equal(reconnectCount, 0, 'Debounced timer should reset on subsequent online event');
+
+      await clock.tick(1);
+      assert.equal(reconnectCount, 1, 'Should trigger reconnect at exactly 800ms after last online event');
+
+      // If streamState was explicitly error, online event must NOT auto-reconnect
+      reconnectCount = 0;
+      engine.streamState = 'error';
+      window.dispatchEvent(new Event('online'));
+      await clock.tick(1000);
+      assert.equal(reconnectCount, 0, 'online event must NOT auto-reconnect if streamState is error');
+    } finally {
+      clock.restore();
+      teardownMockDom();
+    }
+  });
+
+  await t.test('Concurrency guards: pause(), stop(), and track switches cancel in-flight playback and clear all timers', async () => {
+    const clock = createMockClock();
+    try {
+      const engine = new AudioEngine();
+      engine.audioA = new MockAudioElement();
+      engine.audioB = new MockAudioElement();
+      engine.radioAudio = new MockAudioElement();
+      engine.initAudioElements();
+
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.streamState = 'reconnecting';
+      engine.startDeadSocketTimer();
+      engine.reconnectAttempts = 3;
+
+      const genBeforePause = engine.playbackGeneration;
+      engine.pause();
+
+      assert.equal(engine.deadSocketTimer, null, 'pause() must clear deadSocketTimer');
+      assert.equal(engine.reconnectTimer, null, 'pause() must clear reconnectTimer');
+      assert.equal(engine.reconnectAttempts, 0, 'pause() must reset reconnectAttempts');
+      assert.ok(engine.playbackGeneration > genBeforePause, 'pause() must increment playbackGeneration');
+      assert.equal(engine.isPlaying, false, 'pause() must set isPlaying = false');
+      assert.equal(engine.streamState, 'idle', 'pause() must set streamState = idle');
+
+      // Test stop()
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.streamState = 'buffering';
+      engine.startDeadSocketTimer();
+      engine.reconnectAttempts = 2;
+      const genBeforeStop = engine.playbackGeneration;
+
+      engine.stop();
+      assert.equal(engine.deadSocketTimer, null, 'stop() must clear deadSocketTimer');
+      assert.equal(engine.reconnectTimer, null, 'stop() must clear reconnectTimer');
+      assert.equal(engine.reconnectAttempts, 0, 'stop() must reset reconnectAttempts');
+      assert.ok(engine.playbackGeneration > genBeforeStop, 'stop() must increment playbackGeneration');
+      assert.equal(engine.streamState, 'idle', 'stop() must set streamState = idle');
+
+      // Test track switch (playTrack)
+      engine.isRadio = true;
+      engine.isPlaying = true;
+      engine.currentStation = { id: 's1' };
+      engine.startDeadSocketTimer();
+      engine.reconnectAttempts = 4;
+      const genBeforeTrack = engine.playbackGeneration;
+
+      await engine.playTrack({ id: 't1', title: 'Local Track' });
+      assert.equal(engine.deadSocketTimer, null, 'playTrack must clear deadSocketTimer');
+      assert.equal(engine.reconnectTimer, null, 'playTrack must clear reconnectTimer');
+      assert.equal(engine.reconnectAttempts, 0, 'playTrack must reset reconnectAttempts');
+      assert.ok(engine.playbackGeneration > genBeforeTrack, 'playTrack must increment playbackGeneration');
+      assert.equal(engine.isRadio, false, 'playTrack must switch isRadio to false');
+    } finally {
+      clock.restore();
+    }
+  });
+
+  await t.test('Verification that zero setInterval polling loops exist in audio-engine.js', () => {
+    const enginePath = new URL('../../src/player/audio-engine.js', import.meta.url);
+    const sourceCode = fs.readFileSync(enginePath, 'utf8');
+    assert.equal(
+      sourceCode.includes('setInterval'),
+      false,
+      'audio-engine.js must NOT contain any setInterval polling loops (zero synthetic polling)'
+    );
   });
 });

@@ -22,8 +22,14 @@ export class AudioEngine {
     this.stationCatalog = Array.isArray(CURATED_STATIONS) ? [...CURATED_STATIONS] : [];
     this.isPlaying = false;
     this.isRadio = false;
-    /** @type {'idle'|'connecting'|'buffering'|'playing'|'error'} */
+    /** @type {'idle'|'connecting'|'buffering'|'reconnecting'|'playing'|'error'} */
     this.streamState = 'idle';
+    this.deadSocketTimer = null;
+    this.reconnectTimer = null;
+    this.onlineDebounceTimer = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.playbackGeneration = 0;
     this.isUsingRadioFallback = false;
     this.volume = 0.8;
     this.muted = false;
@@ -51,6 +57,7 @@ export class AudioEngine {
       this.initAudioElements();
       this.initMediaSession();
     }
+    this.initWindowListeners();
   }
 
   initAudioElements() {
@@ -77,14 +84,17 @@ export class AudioEngine {
       });
 
       audio.addEventListener('waiting', () => {
-        if (this.getActiveAudio() === audio && this.isRadio) {
+        if (this.getActiveAudio() === audio && this.isRadio && this.isPlaying) {
           this.streamState = 'buffering';
+          this.startDeadSocketTimer();
           this.notifyState();
         }
       });
 
       audio.addEventListener('canplay', () => {
         if (this.getActiveAudio() === audio && this.isRadio) {
+          this.clearDeadSocketTimer();
+          this.reconnectAttempts = 0;
           if (this.isPlaying) {
             this.streamState = 'playing';
           }
@@ -97,8 +107,17 @@ export class AudioEngine {
           const err = audio.error;
           console.error(`[AudioEngine] ${idx === 2 ? 'Radio' : idx === 0 ? 'Player A' : 'Player B'} error (code ${err?.code}): ${err?.message}`);
           if (this.isRadio) {
-            if (this.isUsingRadioFallback || !this.radioAudio) {
+            if (this.streamState === 'playing' || this.streamState === 'buffering') {
+              this.reconnectRadioStream({ immediate: false });
+            } else if (this.streamState === 'connecting') {
+              if (this.isUsingRadioFallback || !this.radioAudio) {
+                this.streamState = 'error';
+                this.isPlaying = false;
+                this.notifyState();
+              }
+            } else if (this.streamState !== 'reconnecting') {
               this.streamState = 'error';
+              this.isPlaying = false;
               this.notifyState();
             }
           } else {
@@ -110,9 +129,6 @@ export class AudioEngine {
       audio.addEventListener('play', () => {
         if (this.getActiveAudio() === audio) {
           this.isPlaying = true;
-          if (this.isRadio) {
-            this.streamState = 'playing';
-          }
           this.notifyState();
         }
       });
@@ -122,6 +138,9 @@ export class AudioEngine {
           this.isPlaying = true;
           if (this.isRadio) {
             this.streamState = 'playing';
+            this.clearDeadSocketTimer();
+            this.clearReconnectTimer();
+            this.reconnectAttempts = 0;
           }
           this.notifyState();
         }
@@ -137,6 +156,128 @@ export class AudioEngine {
         }
       });
     });
+  }
+
+  initWindowListeners() {
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+
+    this._onWindowOffline = () => {
+      if (this.isRadio && this.isPlaying) {
+        this.streamState = 'buffering';
+        this.clearDeadSocketTimer();
+        this.clearReconnectTimer();
+        this.clearOnlineDebounceTimer();
+        this.notifyState();
+      }
+    };
+
+    this._onWindowOnline = () => {
+      if (!this.isRadio || !this.isPlaying || this.streamState === 'error') {
+        return;
+      }
+      this.clearOnlineDebounceTimer();
+      this.onlineDebounceTimer = setTimeout(() => {
+        if (this.isRadio && this.isPlaying && this.streamState !== 'error') {
+          this.reconnectRadioStream({ force: true, immediate: true });
+        }
+      }, 800);
+      if (typeof this.onlineDebounceTimer?.unref === 'function') {
+        this.onlineDebounceTimer.unref();
+      }
+    };
+
+    window.addEventListener('offline', this._onWindowOffline);
+    window.addEventListener('online', this._onWindowOnline);
+  }
+
+  startDeadSocketTimer() {
+    this.clearDeadSocketTimer();
+    this.deadSocketTimer = setTimeout(() => {
+      if (this.isRadio && this.isPlaying && this.streamState === 'buffering') {
+        console.warn('[AudioEngine] Dead socket detected (buffered >20s). Reconnecting...');
+        this.reconnectRadioStream({ immediate: true });
+      }
+    }, 20000);
+    if (typeof this.deadSocketTimer?.unref === 'function') {
+      this.deadSocketTimer.unref();
+    }
+  }
+
+  clearDeadSocketTimer() {
+    if (this.deadSocketTimer) {
+      clearTimeout(this.deadSocketTimer);
+      this.deadSocketTimer = null;
+    }
+  }
+
+  clearReconnectTimer() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  clearOnlineDebounceTimer() {
+    if (this.onlineDebounceTimer) {
+      clearTimeout(this.onlineDebounceTimer);
+      this.onlineDebounceTimer = null;
+    }
+  }
+
+  clearAllRadioTimers() {
+    this.clearDeadSocketTimer();
+    this.clearReconnectTimer();
+    this.clearOnlineDebounceTimer();
+  }
+
+  getRetryStreamUrl(url, timestamp = Date.now()) {
+    if (!url) return '';
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}_lj_retry=${timestamp}`;
+  }
+
+  async reconnectRadioStream({ force = false, immediate = false } = {}) {
+    if (!this.isRadio || !this.currentStation) return;
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.streamState = 'buffering';
+      this.clearDeadSocketTimer();
+      this.clearReconnectTimer();
+      this.notifyState();
+      return;
+    }
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts && !force) {
+      this.streamState = 'error';
+      this.isPlaying = false;
+      this.clearAllRadioTimers();
+      this.notifyState();
+      return;
+    }
+
+    this.reconnectAttempts++;
+    this.streamState = 'reconnecting';
+    this.notifyState();
+
+    const delay = immediate ? 0 : Math.min(16000, 1000 * Math.pow(2, this.reconnectAttempts - 1));
+    this.clearReconnectTimer();
+
+    const currentGen = ++this.playbackGeneration;
+    this.reconnectTimer = setTimeout(async () => {
+      if (this.playbackGeneration !== currentGen || !this.isPlaying || !this.isRadio) return;
+      const baseStreamUrl = this.currentStation.streamUrl || this.currentStation.url;
+      const retryUrl = this.getRetryStreamUrl(baseStreamUrl);
+      try {
+        await this.executeStreamPlayback(this.currentStation, retryUrl, currentGen);
+      } catch (_) {
+        if (this.playbackGeneration === currentGen && this.isPlaying && this.isRadio) {
+          this.reconnectRadioStream({ immediate: false });
+        }
+      }
+    }, delay);
+    if (typeof this.reconnectTimer?.unref === 'function') {
+      this.reconnectTimer.unref();
+    }
   }
 
   unlock() {
@@ -203,7 +344,7 @@ export class AudioEngine {
   }
 
   getActiveAudio() {
-    if (this.isRadio && this.isUsingRadioFallback && this.radioAudio) {
+    if (this.isRadio && ((this.isUsingRadioFallback && this.radioAudio) || (!this.audioA && !this.audioB && this.radioAudio))) {
       return this.radioAudio;
     }
     return this.activePlayer === 'A' ? this.audioA : this.audioB;
@@ -279,11 +420,17 @@ export class AudioEngine {
    */
   async playTrack(track, startPosition = 0) {
     if (!track) return;
+    this.clearAllRadioTimers();
+    this.reconnectAttempts = 0;
+    const currentGen = ++this.playbackGeneration;
+
     await this.initWebAudio();
+    if (this.playbackGeneration !== currentGen) return;
 
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
       await this.audioCtx.resume();
     }
+    if (this.playbackGeneration !== currentGen) return;
 
     this.isRadio = false;
     this.currentStation = null;
@@ -416,6 +563,10 @@ export class AudioEngine {
         if (playPromise !== undefined) {
           await playPromise;
         }
+        if (this.playbackGeneration !== currentGen) {
+          if (nextAudio && typeof nextAudio.pause === 'function') nextAudio.pause();
+          return;
+        }
       }
 
       // Handle Crossfade Gain Transition if Web Audio is active
@@ -445,6 +596,7 @@ export class AudioEngine {
         db.addPlayHistory(track.id, 0, false).catch((e) => console.error(e));
       }
     } catch (playErr) {
+      if (this.playbackGeneration !== currentGen) return;
       console.error(`[AudioEngine] Playback failed: ${playErr?.message}`);
       this.isPlaying = false;
       this.notifyState();
@@ -460,12 +612,39 @@ export class AudioEngine {
     const streamUrl = station.streamUrl || station.url;
     if (!streamUrl) return;
 
+    this.reconnectAttempts = 0;
+    this.clearAllRadioTimers();
+    const currentGen = ++this.playbackGeneration;
+
     this.isRadio = true;
     this.currentStation = station;
     this.currentTrack = null;
     this.streamState = 'connecting';
     this.notifyState();
 
+    try {
+      await this.executeStreamPlayback(station, streamUrl, currentGen);
+    } catch (fbErr) {
+      if (this.playbackGeneration !== currentGen) return;
+      this.isUsingRadioFallback = false;
+      this.isPlaying = false;
+      if (fbErr?.name !== 'AbortError') {
+        console.error(`[AudioEngine] Radio stream fallback playback failed: ${fbErr?.message}`);
+        this.streamState = 'error';
+      } else {
+        this.streamState = 'idle';
+      }
+      this.notifyState();
+    }
+  }
+
+  /**
+   * Internal stream playback executor with Web Audio pipeline & fallback
+   * @param {any} station
+   * @param {string} streamUrl
+   * @param {number} [gen=this.playbackGeneration]
+   */
+  async executeStreamPlayback(station, streamUrl, gen = this.playbackGeneration) {
     // Revoke local object URL immediately to prevent memory leaks during radio sessions
     if (this.currentObjectUrl) {
       if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
@@ -490,6 +669,7 @@ export class AudioEngine {
     this.isUsingRadioFallback = false;
 
     await this.ensureAudioContextActive().catch(() => {});
+    if (this.playbackGeneration !== gen) return;
 
     const prevAudio = this.getActiveAudio();
     const nextPlayer = this.activePlayer === 'A' ? 'B' : 'A';
@@ -515,6 +695,10 @@ export class AudioEngine {
         if (playPromise !== undefined) {
           await playPromise;
         }
+        if (this.playbackGeneration !== gen) {
+          if (typeof nextAudio.pause === 'function') nextAudio.pause();
+          return;
+        }
         if (prevAudio && prevAudio !== nextAudio && typeof prevAudio.pause === 'function') {
           try { prevAudio.pause(); } catch (_) {}
         }
@@ -522,6 +706,9 @@ export class AudioEngine {
         this.isPlaying = true;
         this.streamState = 'playing';
         this.isUsingRadioFallback = false;
+        this.clearDeadSocketTimer();
+        this.clearReconnectTimer();
+        this.reconnectAttempts = 0;
         this.updateMediaSessionRadio(station);
         this.notifyState();
 
@@ -546,6 +733,8 @@ export class AudioEngine {
       }
     }
 
+    if (this.playbackGeneration !== gen) return;
+
     // Direct fallback with radioAudio (for non-CORS streams or standalone element)
     if (this.radioAudio) {
       try {
@@ -559,11 +748,18 @@ export class AudioEngine {
         if (fallbackPromise !== undefined) {
           await fallbackPromise;
         }
+        if (this.playbackGeneration !== gen) {
+          if (typeof this.radioAudio.pause === 'function') this.radioAudio.pause();
+          return;
+        }
         if (prevAudio && prevAudio !== this.radioAudio && typeof prevAudio.pause === 'function') {
           try { prevAudio.pause(); } catch (_) {}
         }
         this.isPlaying = true;
         this.streamState = 'playing';
+        this.clearDeadSocketTimer();
+        this.clearReconnectTimer();
+        this.reconnectAttempts = 0;
         this.updateMediaSessionRadio(station);
         this.notifyState();
 
@@ -585,18 +781,11 @@ export class AudioEngine {
         this.radioAudio.src = '';
         if (typeof this.radioAudio.load === 'function') this.radioAudio.load();
 
-        if (fbErr?.name !== 'AbortError') {
-          console.error(`[AudioEngine] Radio stream fallback playback failed: ${fbErr?.message}`);
-          this.isPlaying = false;
-          this.streamState = 'error';
-          this.notifyState();
-        }
+        throw fbErr;
       }
     } else {
       this.isUsingRadioFallback = false;
-      this.isPlaying = false;
-      this.streamState = 'error';
-      this.notifyState();
+      throw new Error('No audio element available for radio playback');
     }
   }
 
@@ -649,6 +838,9 @@ export class AudioEngine {
       try { this.radioAudio.pause(); } catch (_) {}
     }
     this.isPlaying = false;
+    this.clearAllRadioTimers();
+    this.reconnectAttempts = 0;
+    this.playbackGeneration++;
     if (this.isRadio && this.streamState !== 'error') {
       this.streamState = 'idle';
     }
@@ -657,6 +849,9 @@ export class AudioEngine {
 
   stop() {
     this.pause();
+    this.clearAllRadioTimers();
+    this.reconnectAttempts = 0;
+    this.playbackGeneration++;
     [this.audioA, this.audioB, this.radioAudio].forEach((audio) => {
       if (!audio) return;
       try {
@@ -672,6 +867,14 @@ export class AudioEngine {
     this.isPlaying = false;
     this.streamState = 'idle';
     this.notifyState();
+  }
+
+  destroy() {
+    this.stop();
+    if (typeof window !== 'undefined') {
+      if (this._onWindowOffline) window.removeEventListener('offline', this._onWindowOffline);
+      if (this._onWindowOnline) window.removeEventListener('online', this._onWindowOnline);
+    }
   }
 
   togglePlay() {
