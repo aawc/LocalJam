@@ -122,9 +122,11 @@ test('LocalJam Dev Server - Comprehensive RFC 9110 & Static Serving Tests', asyn
   });
 
   await t.test('Handles CORS and Service-Worker-Allowed headers', async () => {
-    const res = await fetch(`${baseUrl}/README.md`);
+    const res = await fetch(`${baseUrl}/README.md`, {
+      headers: { Origin: 'http://localhost:3000' }
+    });
     assert.equal(res.status, 200);
-    assert.equal(res.headers.get('access-control-allow-origin'), '*');
+    assert.equal(res.headers.get('access-control-allow-origin'), 'http://localhost:3000');
     assert.equal(res.headers.get('service-worker-allowed'), '/');
   });
 });

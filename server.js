@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const PORT = parseInt(process.env.PORT || '3000', 10);
-export const HOST = process.env.HOST || '0.0.0.0';
+export const HOST = process.env.HOST || '127.0.0.1';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -44,7 +44,28 @@ const MIME_TYPES = {
 
 export function createServer(rootDirectory = __dirname) {
   return http.createServer(async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // SEC-DNS-01: Validate Host header to protect against DNS rebinding attacks
+    const rawHost = req.headers.host || '';
+    const hostHeader = (rawHost.startsWith('[') ? (rawHost.match(/^(\[[a-fA-F0-9:]+\])/)?.[1] || rawHost.split(':')[0]) : rawHost.split(':')[0]).toLowerCase();
+    if (hostHeader && hostHeader !== 'localhost' && hostHeader !== '127.0.0.1' && hostHeader !== '::1' && hostHeader !== '[::1]') {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('400 Bad Request - Invalid Host header');
+      return;
+    }
+
+    // Security & Access Control Headers (SEC-CORS-01: Restricted Origin)
+    const reqOrigin = req.headers.origin;
+    if (reqOrigin) {
+      try {
+        const parsedOrigin = new URL(reqOrigin);
+        if (parsedOrigin.hostname === 'localhost' || parsedOrigin.hostname === '127.0.0.1' || parsedOrigin.hostname === '::1' || parsedOrigin.hostname === '[::1]') {
+          res.setHeader('Access-Control-Allow-Origin', reqOrigin);
+          res.setHeader('Vary', 'Origin');
+        }
+      } catch (err) {
+        console.warn(`[LocalJam Server] Malformed Origin header ignored: ${reqOrigin} (${err?.message})`);
+      }
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
     res.setHeader('Service-Worker-Allowed', '/');
@@ -54,7 +75,7 @@ export function createServer(rootDirectory = __dirname) {
     res.setHeader('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' data: https: http: blob:; connect-src 'self' https: http:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';");
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' data: https: http: blob:; connect-src 'self' https: http:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';");
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createServer } from '../server.js';
+import { createServer, HOST } from '../server.js';
 import { escapeHtml, sanitizeUrl, isValidHttpUrl, sanitizeMimeType, sanitizeText } from '../src/utils/sanitize.js';
 import { createBrowseSheet } from '../src/ui/components/browse-sheet.js';
 import { createOverflowMenu } from '../src/ui/components/overflow-menu.js';
@@ -134,8 +134,12 @@ test('Security Audit Suite - SEC-10 & SEC-11: Server HTTP Security Headers & Err
     assert.ok(csp, 'CSP header must be present');
     assert.ok(csp.includes("default-src 'self'"));
     assert.ok(csp.includes("script-src 'self'"));
+    assert.ok(csp.includes("worker-src 'self'"), 'CSP must include worker-src self');
     assert.ok(csp.includes("object-src 'none'"));
     assert.ok(csp.includes("frame-ancestors 'none'"));
+
+    // SEC-CORS-01: Verify wildcard Access-Control-Allow-Origin is NOT sent
+    assert.notEqual(res.headers['access-control-allow-origin'], '*', 'Wildcard CORS must NOT be sent');
   });
 
   await t.test('[SEC-11] Generic error responses do not leak server stack traces or internal filesystem paths', async () => {
@@ -160,6 +164,7 @@ test('Security Audit Suite - SEC-02: Hosted PWA Content-Security-Policy in index
   // Assert strict CSP directives
   assert.ok(cspContent.includes("default-src 'self'"), 'CSP must restrict default-src to self');
   assert.ok(cspContent.includes("script-src 'self'"), 'CSP must restrict script-src to self');
+  assert.ok(cspContent.includes("worker-src 'self'"), 'CSP must restrict worker-src to self');
   assert.ok(!cspContent.includes("script-src 'unsafe-inline'"), 'CSP must NOT allow unsafe-inline in script-src');
   assert.ok(!cspContent.includes("script-src 'unsafe-eval'"), 'CSP must NOT allow unsafe-eval in script-src');
   assert.ok(cspContent.includes("object-src 'none'"), 'CSP must restrict object-src to none');
@@ -384,6 +389,62 @@ test('Security Audit Suite - SEC-09: Radio Station Input Validation & Protocol S
     assert.equal(added.streamUrl, 'https://stream.example.org/radio.mp3');
     assert.equal(added.homepageUrl, 'https://example.org');
     assert.equal(added.isCustom, true);
+  });
+
+  await t.test('[SEC-FAV-01] Rejects SVG data URLs and accepts valid raster PNG data URLs for station favicon', async () => {
+    const svgStation = await addCustomStation({
+      name: 'SVG Favicon Station',
+      streamUrl: 'https://stream.example.org/radio.mp3',
+      favicon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48L3N2Zz4='
+    });
+    assert.equal(svgStation.favicon, '', 'SVG data URL favicon must be rejected and cleared');
+
+    const pngDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const pngStation = await addCustomStation({
+      name: 'PNG Favicon Station',
+      streamUrl: 'https://stream.example.org/radio.mp3',
+      favicon: pngDataUrl
+    });
+    assert.equal(pngStation.favicon, pngDataUrl, 'Valid PNG data URL favicon must be accepted');
+  });
+});
+
+test('Security Hardening Suite 2026 - SEC-HOST-01, SEC-CORS-01 & SEC-DNS-01: Server Host & Origin Isolation', async (t) => {
+  await t.test('[SEC-HOST-01] Default server host binds to 127.0.0.1 (loopback interface)', () => {
+    assert.equal(HOST, '127.0.0.1', 'Default HOST must be 127.0.0.1 to prevent unauthenticated network exposure');
+  });
+
+  const server = createServer(rootDir);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+
+  t.after(() => {
+    server.close();
+  });
+
+  await t.test('[SEC-CORS-01] Standard HTTP responses never send Access-Control-Allow-Origin: *', async () => {
+    const res = await sendRawRequest(port, 'GET', '/package.json');
+    assert.notEqual(res.headers['access-control-allow-origin'], '*', 'Wildcard Access-Control-Allow-Origin must not be sent');
+  });
+
+  await t.test('[SEC-DNS-01] Rejects requests with external Host header with 400 Bad Request', async () => {
+    const res = await sendRawRequest(port, 'GET', '/package.json', {
+      Host: 'malicious.domain.com'
+    });
+    assert.equal(res.statusCode, 400, 'Must reject external Host header');
+    assert.equal(res.body, '400 Bad Request - Invalid Host header');
+  });
+
+  await t.test('[SEC-DNS-01] Accepts requests with legitimate localhost and 127.0.0.1 Host headers', async () => {
+    const resLocalhost = await sendRawRequest(port, 'GET', '/package.json', {
+      Host: `localhost:${port}`
+    });
+    assert.equal(resLocalhost.statusCode, 200);
+
+    const resIp = await sendRawRequest(port, 'GET', '/package.json', {
+      Host: `127.0.0.1:${port}`
+    });
+    assert.equal(resIp.statusCode, 200);
   });
 });
 

@@ -3,7 +3,7 @@
  * High-quality, reliable HTTPS audio streams.
  */
 
-import { isValidHttpUrl, sanitizeText } from '../utils/sanitize.js';
+import { isValidHttpUrl, sanitizeMimeType, sanitizeText } from '../utils/sanitize.js';
 
 export const CURATED_STATIONS = [
   {
@@ -1374,7 +1374,21 @@ export async function addCustomStation(station, db) {
   const homepageUrl = rawHomepage && isValidHttpUrl(rawHomepage) ? rawHomepage : '';
 
   const rawFavicon = typeof station.favicon === 'string' ? station.favicon.trim() : '';
-  const favicon = rawFavicon && (isValidHttpUrl(rawFavicon) || rawFavicon.startsWith('data:image/')) ? rawFavicon : '';
+  let favicon = '';
+  if (rawFavicon) {
+    if (isValidHttpUrl(rawFavicon)) {
+      favicon = rawFavicon;
+    } else if (rawFavicon.startsWith('data:image/')) {
+      const mimeMatch = /^data:(image\/[a-zA-Z0-9.+-]+);base64,/i.exec(rawFavicon);
+      if (mimeMatch) {
+        const mime = mimeMatch[1].toLowerCase();
+        const safeMime = sanitizeMimeType(mime, null);
+        if (safeMime && safeMime !== 'image/svg+xml') {
+          favicon = rawFavicon;
+        }
+      }
+    }
+  }
 
   const newStation = {
     id: 'custom_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
