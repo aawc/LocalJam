@@ -1,7 +1,14 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createBrowseSheet, DEBOUNCE_DELAY_MS, STAR_DEDUPE_MS } from '../../src/ui/components/browse-sheet.js';
 import { setupMockDom, teardownMockDom } from '../helpers/mock-dom.js';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const CSS_PATH = path.join(ROOT_DIR, 'src/ui/app.css');
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -1396,4 +1403,121 @@ describe('Browse Sheet Component (L1)', () => {
       assert.equal(globalThis.document.activeElement, sortSelect, `focus must stay on select after ${key}`);
     }
   });
+
+  it('calls scrollIntoView on the currently playing track row when opening the browse sheet on library tab', async () => {
+    mockAudioEngine.currentTrack = sampleTracks[1];
+    mockAudioEngine.isRadio = false;
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+
+    await sheet.onOpen({ tab: 'library' });
+
+    const playingRow = sheet.element.querySelector('.browse-list .browse-row.is-playing');
+    assert.ok(playingRow, 'playing row must exist');
+    assert.equal(playingRow.getAttribute('data-id'), 'trk_2');
+    assert.equal(playingRow._scrolledIntoView, true, 'playing row scrollIntoView must be called');
+    assert.deepEqual(playingRow._lastScrollIntoViewOptions, { block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  });
+
+  it('calls scrollIntoView on the currently playing radio station row when opening the browse sheet on radio tab', async () => {
+    mockAudioEngine.currentStation = sampleStations[1];
+    mockAudioEngine.isRadio = true;
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+
+    await sheet.onOpen({ tab: 'radio' });
+
+    const playingRow = sheet.element.querySelector('.browse-list .browse-row.is-playing');
+    assert.ok(playingRow, 'playing station row must exist');
+    assert.equal(playingRow.getAttribute('data-id'), 'st_2');
+    assert.equal(playingRow._scrolledIntoView, true, 'playing station row scrollIntoView must be called');
+    assert.deepEqual(playingRow._lastScrollIntoViewOptions, { block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  });
+
+  it('calls scrollIntoView on currently playing item when switching tabs to the tab containing it', async () => {
+    mockAudioEngine.currentStation = sampleStations[0];
+    mockAudioEngine.isRadio = true;
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+
+    // Open on library tab first where no radio station is displayed
+    await sheet.onOpen({ tab: 'library' });
+    let playingRow = sheet.element.querySelector('.browse-list .browse-row.is-playing');
+    assert.equal(playingRow, null, 'no row should be playing in library tab when radio is active');
+
+    // Switch to radio tab
+    const radioTabBtn = sheet.element.querySelector('[data-tab="radio"]');
+    assert.ok(radioTabBtn, 'radio tab button must exist');
+    radioTabBtn.click();
+
+    playingRow = sheet.element.querySelector('.browse-list .browse-row.is-playing');
+    assert.ok(playingRow, 'playing station row must exist after tab switch');
+    assert.equal(playingRow.getAttribute('data-id'), 'st_1');
+    assert.equal(playingRow._scrolledIntoView, true, 'playing station row scrollIntoView must be called on tab switch');
+    assert.deepEqual(playingRow._lastScrollIntoViewOptions, { block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  });
+
+  it('calls requestAnimationFrame with doScroll when requestAnimationFrame is available', async () => {
+    mockAudioEngine.currentTrack = sampleTracks[0];
+    mockAudioEngine.isRadio = false;
+
+    let rafCalled = false;
+    let rafCallback = null;
+    globalThis.requestAnimationFrame = (cb) => {
+      rafCalled = true;
+      rafCallback = cb;
+      return 1;
+    };
+
+    try {
+      const sheet = createBrowseSheet({
+        db: mockDb,
+        audioEngine: mockAudioEngine,
+        queueManager: mockQueueManager
+      });
+
+      await sheet.onOpen({ tab: 'library' });
+
+      assert.equal(rafCalled, true, 'requestAnimationFrame should be called');
+      const playingRow = sheet.element.querySelector('.browse-list .browse-row.is-playing');
+      assert.ok(playingRow);
+      assert.equal(playingRow._scrolledIntoView, true);
+
+      // Reset spy flag and execute the rAF callback
+      playingRow._scrolledIntoView = false;
+      rafCallback();
+      assert.equal(playingRow._scrolledIntoView, true, 'rAF callback should also invoke scrollIntoView');
+    } finally {
+      delete globalThis.requestAnimationFrame;
+    }
+  });
+
+  it('does not throw when opening sheet with no track or station playing', async () => {
+    mockAudioEngine.currentTrack = null;
+    mockAudioEngine.currentStation = null;
+    mockAudioEngine.isPlaying = false;
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+
+    await sheet.onOpen({ tab: 'library' });
+    const playingRow = sheet.element.querySelector('.browse-list .browse-row.is-playing');
+    assert.equal(playingRow, null);
+  });
+
 });

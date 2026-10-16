@@ -103,6 +103,7 @@ export function createBrowseSheet(deps = {}) {
     }
   }
 
+
   function onClose() {
     cancelPendingFilter();
     if (openerEl && typeof openerEl.focus === 'function') {
@@ -414,12 +415,29 @@ export function createBrowseSheet(deps = {}) {
     }
   }
 
-  function renderAll() {
+  function scrollPlayingRowIntoView(behavior = 'auto') {
+    const doScroll = () => {
+      const playingRow = sheetEl?.querySelector('.browse-list .browse-row.is-playing');
+      if (playingRow && typeof playingRow.scrollIntoView === 'function') {
+        playingRow.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior });
+      }
+    };
+    doScroll();
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(doScroll);
+    }
+  }
+
+  function renderAll(options = { scrollPlaying: true }) {
+    const { scrollPlaying = true } = options;
     updateRows();
     contentContainer.innerHTML = renderHeaderMarkup();
     renderListRows();
     bindHeaderEvents();
     scrollActiveChipIntoView();
+    if (scrollPlaying) {
+      scrollPlayingRowIntoView('auto');
+    }
   }
 
   function bindHeaderEvents() {
@@ -438,7 +456,7 @@ export function createBrowseSheet(deps = {}) {
               console.warn('[BrowseSheet] Failed to persist browse.tab:', err?.name, err?.message, { tab: activeTab });
             });
           }
-          renderAll();
+          renderAll({ scrollPlaying: true });
           focusFirst();
         }
       });
@@ -854,7 +872,7 @@ export function createBrowseSheet(deps = {}) {
       activeTab = props.tab || (await db.getSetting?.('browse.tab')) || 'library';
       openerEl = props.openerEl || (typeof document !== 'undefined' ? document.activeElement : null);
       await loadData();
-      renderAll();
+      renderAll({ scrollPlaying: true });
     },
     onClose,
     focusFirst,
