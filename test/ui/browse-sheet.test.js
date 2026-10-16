@@ -3,8 +3,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createBrowseSheet, DEBOUNCE_DELAY_MS, STAR_DEDUPE_MS } from '../../src/ui/components/browse-sheet.js';
+import {
+  createBrowseSheet,
+  DEBOUNCE_DELAY_MS,
+  STAR_DEDUPE_MS,
+  FILTER_EXPIRATION_MS,
+  FILTER_STORAGE_KEY
+} from '../../src/ui/components/browse-sheet.js';
 import { setupMockDom, teardownMockDom } from '../helpers/mock-dom.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../../');
@@ -1518,6 +1525,342 @@ describe('Browse Sheet Component (L1)', () => {
     await sheet.onOpen({ tab: 'library' });
     const playingRow = sheet.element.querySelector('.browse-list .browse-row.is-playing');
     assert.equal(playingRow, null);
+  });
+
+  it('exports verified FILTER_EXPIRATION_MS (1 hour) and FILTER_STORAGE_KEY constants', () => {
+    assert.equal(FILTER_EXPIRATION_MS, 3600000);
+    assert.equal(FILTER_STORAGE_KEY, 'browse.filterState');
+  });
+
+  it('persists filter criteria (query, mode, genre, sort) to browse.filterState with a valid timestamp', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+
+    await sheet.onOpen({ tab: 'library' });
+
+    // Mode chip selection
+    const albumChip = sheet.element.querySelector('[data-mode="albums"]');
+    assert.ok(albumChip, 'albums mode chip must exist');
+    albumChip.click();
+
+    let state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.ok(state, 'state must be persisted after mode chip selection');
+    assert.equal(state.activeTab, 'library');
+    assert.equal(state.library.mode, 'albums');
+    assert.equal(typeof state.timestamp, 'number');
+    assert.ok(Date.now() - state.timestamp < 2000, 'timestamp must be recent');
+
+    // Debounced filter input in library
+    const input = sheet.element.querySelector('.browse-filter-input');
+    input.value = 'Midnight';
+    input.dispatchEvent(new globalThis.Event('input'));
+    await delay(150);
+
+    state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.equal(state.library.query, 'Midnight');
+
+    // Switch to radio tab
+    const radioTabBtn = sheet.element.querySelector('[data-tab="radio"]');
+    radioTabBtn.click();
+
+    state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.equal(state.activeTab, 'radio');
+    assert.equal(state.library.query, 'Midnight', 'library query preserved in persisted state');
+
+    // Select radio genre chip
+    const ambientChip = sheet.element.querySelector('[data-genre="Ambient"]');
+    assert.ok(ambientChip, 'ambient genre chip must exist');
+    ambientChip.click();
+
+    state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.equal(state.radio.genre, 'Ambient');
+
+    // Select radio sort
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    sortSelect.value = 'name-asc';
+    sortSelect.dispatchEvent(new globalThis.Event('change'));
+
+    state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.equal(state.radio.sort, 'name-asc');
+
+    // Switch back to library and test drill-in persistence
+    const libraryTabBtn = sheet.element.querySelector('[data-tab="library"]');
+    libraryTabBtn.click();
+
+    // Clear filter to see albums
+    const libInput = sheet.element.querySelector('.browse-filter-input');
+    libInput.value = '';
+    libInput.dispatchEvent(new globalThis.Event('input'));
+    await delay(150);
+
+    const albumRow = sheet.element.querySelector('.browse-row[data-kind="album"]');
+    assert.ok(albumRow, 'album row must exist');
+    albumRow.click();
+
+    state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.ok(state.library.drill, 'drill-in must be persisted');
+    assert.equal(state.library.drill.kind, 'album');
+
+    // Exit drill-in via back button
+    const backBtn = sheet.element.querySelector('[data-action="back"]');
+    assert.ok(backBtn, 'back button must exist');
+    backBtn.click();
+
+    state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.equal(state.library.drill, null, 'drill-in exit must clear drill in state');
+
+    // Close sheet
+    sheet.onClose();
+    state = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.ok(state, 'state must be persisted on close');
+    assert.ok(Date.now() - state.timestamp < 2000);
+  });
+
+  it('reopening the sheet within 1 hour (< FILTER_EXPIRATION_MS) restores activeTab, filterQuery, libraryMode, radioGenre, and radioSort', async () => {
+    const thirtyMinutesAgo = Date.now() - 1800000;
+    await mockDb.setSetting(FILTER_STORAGE_KEY, {
+      timestamp: thirtyMinutesAgo,
+      activeTab: 'radio',
+      library: {
+        mode: 'artists',
+        query: 'Solar',
+        drill: null
+      },
+      radio: {
+        genre: 'Ambient',
+        sort: 'bitrate-desc',
+        query: 'Groove'
+      }
+    });
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+
+    // Reopen without explicit tab prop -> restores activeTab: 'radio'
+    await sheet.onOpen();
+
+    const activeTabBtn = sheet.element.querySelector('.tab-btn.active');
+    assert.ok(activeTabBtn);
+    assert.equal(activeTabBtn.getAttribute('data-tab'), 'radio');
+
+    const input = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(input.value, 'Groove');
+
+    const activeGenreChip = sheet.element.querySelector('.browse-chips-bar [data-genre="Ambient"].active');
+    assert.ok(activeGenreChip, 'restored genre chip must be active');
+
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    const selectedSortOpt = sortSelect.querySelector('option[selected]');
+    assert.equal(selectedSortOpt.value, 'bitrate-desc', 'restored sort value must match');
+
+    // Only SomaFM Groove Salad should be visible
+    const rows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(rows.length, 1);
+    assert.ok(rows[0].textContent.includes('SomaFM: Groove Salad'));
+
+    // Switch to library tab -> restores library query 'Solar' and mode 'artists'
+    const libraryTabBtn = sheet.element.querySelector('[data-tab="library"]');
+    libraryTabBtn.click();
+
+    const libInput = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(libInput.value, 'Solar');
+
+    const activeModeChip = sheet.element.querySelector('.browse-chips-bar [data-mode="artists"].active');
+    assert.ok(activeModeChip, 'restored library mode chip must be active');
+
+    // Explicit props.tab override on open
+    const sheet2 = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+    await sheet2.onOpen({ tab: 'library' });
+
+    const sheet2TabBtn = sheet2.element.querySelector('.tab-btn.active');
+    assert.equal(sheet2TabBtn.getAttribute('data-tab'), 'library');
+    const sheet2Input = sheet2.element.querySelector('.browse-filter-input');
+    assert.equal(sheet2Input.value, 'Solar');
+  });
+
+  it('opening the sheet after 1 hour (timestamp older than FILTER_EXPIRATION_MS) discards expired state, clears browse.filterState in db, and resets to defaults', async () => {
+    const expiredTime = Date.now() - 3660000; // 61 minutes ago (> 1 hour)
+    await mockDb.setSetting(FILTER_STORAGE_KEY, {
+      timestamp: expiredTime,
+      activeTab: 'radio',
+      library: {
+        mode: 'artists',
+        query: 'Solar',
+        drill: null
+      },
+      radio: {
+        genre: 'Ambient',
+        sort: 'bitrate-desc',
+        query: 'Groove'
+      }
+    });
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+
+    await sheet.onOpen();
+
+    // Expired state must be cleared in DB
+    const stateInDb = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.equal(stateInDb, null, 'expired filter state must be cleared to null');
+
+    // Defaults restored:
+    const activeTabBtn = sheet.element.querySelector('.tab-btn.active');
+    assert.equal(activeTabBtn.getAttribute('data-tab'), 'library', 'default tab is library');
+
+    const input = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(input.value, '', 'filter input is reset to empty');
+
+    const activeModeChip = sheet.element.querySelector('.browse-chips-bar [data-mode="songs"].active');
+    assert.ok(activeModeChip, 'default songs mode chip is active');
+
+    // Switch to radio: defaults restored there too
+    const radioTabBtn = sheet.element.querySelector('[data-tab="radio"]');
+    radioTabBtn.click();
+
+    const radioInput = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(radioInput.value, '');
+
+    const sortSelect = sheet.element.querySelector('.browse-sort-select');
+    const selectedSortOpt = sortSelect.querySelector('option[selected]');
+    assert.equal(selectedSortOpt.value, 'popularity-desc');
+  });
+
+  it('discards filter state with negative age or future timestamp (clock skew)', async () => {
+    const futureTime = Date.now() + 120000; // 2 minutes in the future
+    await mockDb.setSetting(FILTER_STORAGE_KEY, {
+      timestamp: futureTime,
+      activeTab: 'radio',
+      library: { mode: 'starred', query: 'Midnight', drill: null },
+      radio: { genre: 'Favorites', sort: 'name-asc', query: 'Radio' }
+    });
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+
+    await sheet.onOpen();
+
+    const stateInDb = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.equal(stateInDb, null, 'future timestamp state must be cleared');
+    const input = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(input.value, '');
+  });
+
+  it('switching tabs preserves queries across tabs and updates persisted state', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      loadStations: async () => sampleStations
+    });
+
+    await sheet.onOpen({ tab: 'library' });
+
+    // 1. Type in Library search
+    const libInput = sheet.element.querySelector('.browse-filter-input');
+    libInput.value = 'Midnight';
+    libInput.dispatchEvent(new globalThis.Event('input'));
+    await delay(150);
+
+    let rows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(rows.length, 1);
+    assert.ok(rows[0].textContent.includes('Midnight City'));
+
+    // 2. Switch to Radio tab
+    const radioTabBtn = sheet.element.querySelector('[data-tab="radio"]');
+    radioTabBtn.click();
+
+    const radioInput = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(radioInput.value, '', 'radio filter starts empty');
+    rows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(rows.length, 4, 'all stations visible initially');
+
+    // 3. Type in Radio search
+    radioInput.value = 'Paradise';
+    radioInput.dispatchEvent(new globalThis.Event('input'));
+    await delay(150);
+
+    rows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(rows.length, 1);
+    assert.ok(rows[0].textContent.includes('Radio Paradise'));
+
+    // 4. Switch back to Library tab: verify library query 'Midnight' restored
+    const libraryTabBtn = sheet.element.querySelector('[data-tab="library"]');
+    libraryTabBtn.click();
+
+    const restoredLibInput = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(restoredLibInput.value, 'Midnight', 'library query restored on tab return');
+    rows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(rows.length, 1);
+    assert.ok(rows[0].textContent.includes('Midnight City'));
+
+    // 5. Switch back to Radio tab: verify radio query 'Paradise' restored
+    radioTabBtn.click();
+
+    const restoredRadioInput = sheet.element.querySelector('.browse-filter-input');
+    assert.equal(restoredRadioInput.value, 'Paradise', 'radio query restored on tab return');
+    rows = sheet.element.querySelectorAll('.browse-row');
+    assert.equal(rows.length, 1);
+    assert.ok(rows[0].textContent.includes('Radio Paradise'));
+
+    // 6. Verify persisted state in DB reflects both tab queries
+    const saved = await mockDb.getSetting(FILTER_STORAGE_KEY);
+    assert.ok(saved);
+    assert.equal(saved.library.query, 'Midnight');
+    assert.equal(saved.radio.query, 'Paradise');
+  });
+
+  it('persistFilterState and restoreFilterState gracefully catch and handle DB rejections', async () => {
+    mockDb.setSetting = async () => {
+      throw new Error('Storage write failed');
+    };
+    mockDb.getSetting = async () => {
+      throw new Error('Storage read failed');
+    };
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+
+    // onOpen should catch getSetting rejection and fallback cleanly
+    await assert.doesNotReject(async () => {
+      await sheet.onOpen({ tab: 'library' });
+    });
+
+    // onClose and chip selection should catch setSetting rejection without throwing
+    const albumChip = sheet.element.querySelector('[data-mode="albums"]');
+    if (albumChip) {
+      assert.doesNotThrow(() => {
+        albumChip.click();
+      });
+    }
+
+    assert.doesNotThrow(() => {
+      sheet.onClose();
+    });
   });
 
 });

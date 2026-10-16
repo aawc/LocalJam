@@ -24,6 +24,8 @@ import { attachGestures } from '../gestures.js';
 
 export const DEBOUNCE_DELAY_MS = 120;
 export const STAR_DEDUPE_MS = 700;
+export const FILTER_EXPIRATION_MS = 3600000; // 1 hour (60 * 60 * 1000 ms)
+export const FILTER_STORAGE_KEY = 'browse.filterState';
 const FOCUSABLE_SELECTOR = 'button, input, select, [tabindex]';
 
 /**
@@ -67,6 +69,8 @@ export function createBrowseSheet(deps = {}) {
   let radioGenre = 'All';
   let radioSort = 'popularity-desc';
   let filterQuery = '';
+  let lastLibraryQuery = '';
+  let lastRadioQuery = '';
 
   let cachedTracks = [];
   let cachedFavorites = [];
@@ -103,9 +107,65 @@ export function createBrowseSheet(deps = {}) {
     }
   }
 
+  async function persistFilterState() {
+    if (typeof db.setSetting !== 'function') return;
+    const state = {
+      timestamp: Date.now(),
+      activeTab,
+      library: {
+        mode: libraryMode,
+        query: activeTab === 'library' ? filterQuery : lastLibraryQuery,
+        drill: libraryDrill ? { kind: libraryDrill.kind, name: libraryDrill.name } : null
+      },
+      radio: {
+        genre: radioGenre,
+        sort: radioSort,
+        query: activeTab === 'radio' ? filterQuery : lastRadioQuery
+      }
+    };
+    try {
+      await db.setSetting(FILTER_STORAGE_KEY, state);
+    } catch (err) {
+      console.warn('[BrowseSheet] Failed to persist filter state:', err?.name, err?.message);
+    }
+  }
+
+  async function restoreFilterState(propsTab) {
+    if (typeof db.getSetting !== 'function') return false;
+    try {
+      const state = await db.getSetting(FILTER_STORAGE_KEY);
+      if (!state || typeof state.timestamp !== 'number') return false;
+      const now = Date.now();
+      const age = now - state.timestamp;
+      if (age >= FILTER_EXPIRATION_MS || age < 0) {
+        await db.setSetting(FILTER_STORAGE_KEY, null);
+        return false;
+      }
+      // Valid state within 1 hour:
+      if (!propsTab && state.activeTab) {
+        activeTab = state.activeTab;
+      }
+      if (state.library) {
+        if (state.library.mode) libraryMode = state.library.mode;
+        if (state.library.drill) libraryDrill = state.library.drill;
+        lastLibraryQuery = state.library.query || '';
+      }
+      if (state.radio) {
+        if (state.radio.genre) radioGenre = state.radio.genre;
+        if (state.radio.sort) radioSort = state.radio.sort;
+        lastRadioQuery = state.radio.query || '';
+      }
+      filterQuery = activeTab === 'library' ? lastLibraryQuery : lastRadioQuery;
+      return true;
+    } catch (err) {
+      console.warn('[BrowseSheet] Failed to restore filter state:', err?.name, err?.message);
+      return false;
+    }
+  }
 
   function onClose() {
     cancelPendingFilter();
+    persistFilterState();
     if (openerEl && typeof openerEl.focus === 'function') {
       try {
         openerEl.focus();
@@ -135,6 +195,7 @@ export function createBrowseSheet(deps = {}) {
   function exitDrillIn() {
     libraryDrill = null;
     cancelPendingFilter();
+    persistFilterState();
     renderAll();
   }
 
@@ -449,8 +510,9 @@ export function createBrowseSheet(deps = {}) {
         if (targetTab && targetTab !== activeTab) {
           cancelPendingFilter();
           activeTab = targetTab;
-          filterQuery = '';
+          filterQuery = activeTab === 'library' ? lastLibraryQuery : lastRadioQuery;
           libraryDrill = null;
+          persistFilterState();
           if (typeof db.setSetting === 'function') {
             Promise.resolve(db.setSetting('browse.tab', activeTab)).catch((err) => {
               console.warn('[BrowseSheet] Failed to persist browse.tab:', err?.name, err?.message, { tab: activeTab });
@@ -498,6 +560,12 @@ export function createBrowseSheet(deps = {}) {
         cancelPendingFilter();
         debounceTimer = setTimeout(() => {
           filterQuery = val;
+          if (activeTab === 'library') {
+            lastLibraryQuery = filterQuery;
+          } else {
+            lastRadioQuery = filterQuery;
+          }
+          persistFilterState();
           updateRows();
           renderListRows();
         }, DEBOUNCE_DELAY_MS);
@@ -579,6 +647,7 @@ export function createBrowseSheet(deps = {}) {
         if (m) {
           libraryMode = m;
           libraryDrill = null;
+          persistFilterState();
           for (const c of modeChips) {
             const isActive = c === chip;
             c.classList.toggle('active', isActive);
@@ -609,6 +678,7 @@ export function createBrowseSheet(deps = {}) {
         const g = chip.getAttribute('data-genre');
         if (g) {
           radioGenre = g;
+          persistFilterState();
           for (const c of genreChips) {
             const isActive = c === chip;
             c.classList.toggle('active', isActive);
@@ -629,6 +699,7 @@ export function createBrowseSheet(deps = {}) {
     if (sortSelect) {
       sortSelect.addEventListener('change', (e) => {
         radioSort = e.target.value;
+        persistFilterState();
         updateRows();
         renderListRows();
       });
@@ -690,6 +761,8 @@ export function createBrowseSheet(deps = {}) {
       libraryDrill = { kind: rowItem.kind, name: rowItem.primary };
       cancelPendingFilter();
       filterQuery = '';
+      lastLibraryQuery = '';
+      persistFilterState();
       renderAll();
       return;
     }
@@ -867,9 +940,20 @@ export function createBrowseSheet(deps = {}) {
     element: sheetEl,
     async onOpen(props = {}) {
       cancelPendingFilter();
-      filterQuery = '';
-      libraryDrill = null;
-      activeTab = props.tab || (await db.getSetting?.('browse.tab')) || 'library';
+      const restored = await restoreFilterState(props.tab);
+      if (!restored) {
+        filterQuery = '';
+        lastLibraryQuery = '';
+        lastRadioQuery = '';
+        libraryMode = 'songs';
+        radioGenre = 'All';
+        radioSort = 'popularity-desc';
+        libraryDrill = null;
+        activeTab = props.tab || (await db.getSetting?.('browse.tab')) || 'library';
+      } else if (props.tab) {
+        activeTab = props.tab;
+        filterQuery = activeTab === 'library' ? lastLibraryQuery : lastRadioQuery;
+      }
       openerEl = props.openerEl || (typeof document !== 'undefined' ? document.activeElement : null);
       await loadData();
       renderAll({ scrollPlaying: true });
