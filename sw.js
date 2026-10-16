@@ -69,6 +69,8 @@ const APP_SHELL_ASSETS = [
   './src/metadata/id3v2.js',
   './src/metadata/flac.js',
   './src/metadata/m4a.js',
+  './src/metadata/ogg.js',
+  './src/metadata/wav.js',
   './src/metadata/filename-parser.js',
   './src/utils/sanitize.js',
   './src/utils/diagnostics.js'
@@ -137,6 +139,10 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('.m4a') ||
     url.pathname.endsWith('.aac') ||
     url.pathname.endsWith('.ogg') ||
+    url.pathname.endsWith('.oga') ||
+    url.pathname.endsWith('.opus') ||
+    url.pathname.endsWith('.wav') ||
+    url.pathname.endsWith('.webm') ||
     url.hostname.includes('radioparadise.com') ||
     url.hostname.includes('somafm.com') ||
     url.hostname.includes('streamguys1.com') ||

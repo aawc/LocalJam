@@ -6,7 +6,12 @@
 import { parseID3v2, parseID3v1 } from './id3v2.js';
 import { parseFLAC } from './flac.js';
 import { parseM4A } from './m4a.js';
+import { parseOgg } from './ogg.js';
+import { parseWAV } from './wav.js';
 import { parseFilenameMetadata } from './filename-parser.js';
+
+export { parseOgg } from './ogg.js';
+export { parseWAV } from './wav.js';
 
 export const CHUNK_SIZE = 128 * 1024; // 128 KB chunk for safe memory consumption
 
@@ -41,12 +46,23 @@ export function extractMetadataFromChunk(headerBuffer, filename, relativePath = 
       }
       // 4. Check Ogg container ('OggS' -> 0x4F 0x67 0x67 0x53)
       else if (bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) {
-        // Basic Ogg stream detection
-        meta = { format: 'OGG', title: null, artist: null, album: null };
+        meta = parseOgg(bytes);
       }
       // 5. Check WAV container ('RIFF'....'WAVE')
-      else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
-        meta = { format: 'WAV', title: null, artist: null, album: null };
+      else if (
+        bytes.length >= 12 &&
+        bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+        bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45
+      ) {
+        meta = parseWAV(bytes);
+      }
+      // 6. Check WebM container (EBML magic 0x1A 0x45 0xDF 0xA3 at offset 0)
+      else if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
+        meta = { format: 'WebM' };
+      }
+      // 7. Check ADTS AAC syncword (0xFFF... 12 bits set: bytes[0] === 0xFF && (bytes[1] & 0xF0) === 0xF0)
+      else if (bytes[0] === 0xFF && (bytes[1] & 0xF0) === 0xF0) {
+        meta = { format: 'AAC' };
       }
     }
 

@@ -282,7 +282,7 @@ async function scanDirectoryHandle(dirHandle, path = '') {
       try {
         const file = await entry.getFile();
         const ext = name.split('.').pop().toLowerCase();
-        if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'wav', 'opus'].includes(ext)) {
+        if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'oga', 'opus', 'wav', 'webm'].includes(ext)) {
           if (sessionRegistry && typeof sessionRegistry.registerFile === 'function') {
             sessionRegistry.registerFile(file, relativePath);
           }
@@ -327,7 +327,7 @@ export const reconciler = {
     for (const file of fileList) {
       const relativePath = file.webkitRelativePath || file.name;
       const ext = file.name.split('.').pop().toLowerCase();
-      if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'wav', 'opus'].includes(ext)) {
+      if (['mp3', 'flac', 'm4a', 'mp4', 'aac', 'ogg', 'oga', 'opus', 'wav', 'webm'].includes(ext)) {
         if (sessionRegistry && typeof sessionRegistry.registerFile === 'function') {
           sessionRegistry.registerFile(file, relativePath);
         }

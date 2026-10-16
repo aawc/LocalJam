@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FilesystemReconciler } from '../../src/storage/reconciler.js';
+import { FilesystemReconciler, reconciler } from '../../src/storage/reconciler.js';
+import { db } from '../../src/storage/db.js';
 
 // In-Memory Mock Database for applyDiff tests
 class MockDatabase {
@@ -127,5 +128,44 @@ test('Filesystem 3-Way Reconciler Suite', async (t) => {
 
     // BrandNew should have been added
     assert.equal(mockDb.tracks.size, 3);
+  });
+
+  await t.test('reconcileFileList matches and ingests .oga, .opus, .wav, .webm, and .aac extensions', async () => {
+    const originalGetAll = db.getAllTracks;
+    const originalPutBatch = db.putTracksBatch;
+    try {
+      const storedTracks = [];
+      db.getAllTracks = async () => [];
+      db.putTracksBatch = async (batch) => {
+        storedTracks.push(...batch);
+      };
+
+      const mockFile = (name, size = 1000) => ({
+        name,
+        size,
+        lastModified: 1000,
+        slice: () => ({ arrayBuffer: async () => new ArrayBuffer(0) })
+      });
+
+      const files = [
+        mockFile('track1.oga', 1000),
+        mockFile('track2.opus', 2000),
+        mockFile('track3.wav', 3000),
+        mockFile('track4.webm', 4000),
+        mockFile('track5.aac', 5000),
+        mockFile('ignore.txt', 500),
+        mockFile('cover.jpg', 12000)
+      ];
+
+      const result = await reconciler.reconcileFileList(files);
+      assert.equal(result.scannedCount, 5);
+      assert.equal(result.diff.toAdd.length, 5);
+      const extensions = result.diff.toAdd.map((item) => item.filename.split('.').pop());
+      assert.deepEqual(extensions.sort(), ['aac', 'oga', 'opus', 'wav', 'webm']);
+      assert.equal(storedTracks.length, 5);
+    } finally {
+      db.getAllTracks = originalGetAll;
+      db.putTracksBatch = originalPutBatch;
+    }
   });
 });

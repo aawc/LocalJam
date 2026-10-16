@@ -11,8 +11,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
-const HOST = process.env.HOST || '0.0.0.0';
+export const PORT = parseInt(process.env.PORT || '3000', 10);
+export const HOST = process.env.HOST || '0.0.0.0';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -32,8 +32,11 @@ const MIME_TYPES = {
   '.m4a': 'audio/mp4',
   '.mp4': 'video/mp4',
   '.ogg': 'audio/ogg',
-  '.opus': 'audio/ogg; codecs=opus',
+  '.oga': 'audio/ogg',
+  '.opus': 'audio/ogg',
   '.wav': 'audio/wav',
+  '.webm': 'audio/webm',
+  '.aac': 'audio/aac',
   '.woff2': 'font/woff2',
   '.woff': 'font/woff',
   '.ttf': 'font/ttf'
@@ -41,7 +44,6 @@ const MIME_TYPES = {
 
 export function createServer(rootDirectory = __dirname) {
   return http.createServer(async (req, res) => {
-    // Security & Access Control Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
