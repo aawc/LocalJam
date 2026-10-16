@@ -229,7 +229,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #94a3b8);
 }
 
 .stage-visualizer-canvas {
@@ -322,7 +322,7 @@ body {
 .timestamp-remaining {
   font-size: 11px;
   font-family: var(--font-mono, monospace);
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #94a3b8);
   min-width: 38px;
   text-align: center;
 }
@@ -516,7 +516,7 @@ body {
   border: none;
   padding: 0 4px;
   margin: 0;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #94a3b8);
   font-size: inherit;
   font-family: inherit;
   font-weight: bold;
@@ -842,15 +842,19 @@ body {
   background: transparent;
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  padding: 5px 12px;
+  padding: 8px 16px;
+  min-height: 38px;
   border-radius: var(--radius-full);
   cursor: pointer;
   white-space: nowrap;
   font-family: inherit;
   flex-shrink: 0;
-  line-height: 1;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s ease;
 }
 
@@ -873,16 +877,42 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
-  font-size: 12px;
-  padding: 4px 10px;
+  font-size: 13px;
+  min-height: 38px;
+  padding: 8px 14px;
   cursor: pointer;
   font-family: inherit;
   outline: none;
   flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .browse-sort-select:focus {
   border-color: var(--accent-cyan);
+}
+
+@media (pointer: coarse), (max-width: 600px) {
+  .chip,
+  .browse-chip-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+
+  .browse-sort-select {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .browse-header-row2,
+  .browse-chips-bar,
+  .browse-sheet-chips {
+    gap: 10px;
+    padding-top: 4px;
+    padding-bottom: 8px;
+  }
 }
 
 .browse-back-chip {
@@ -935,7 +965,7 @@ body {
 }
 .browse-list::-webkit-scrollbar-thumb:hover,
 .browse-sheet-list::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted, #64748b);
+  background: var(--text-muted, #94a3b8);
 }
 
 /* Provider Grouping & Sticky Headers (F11) */
@@ -1087,7 +1117,7 @@ body {
 .browse-row-trailing {
   font-size: 11px;
   font-family: var(--font-mono, monospace);
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #94a3b8);
   margin-left: auto;
   white-space: nowrap;
   flex-shrink: 0;

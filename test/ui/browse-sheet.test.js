@@ -1863,4 +1863,28 @@ describe('Browse Sheet Component (L1)', () => {
     });
   });
 
+  it('enforces touch target accessibility against fat-fingering for filter chips and sort select (WCAG 2.1 SC 2.5.5)', () => {
+    assert.ok(fs.existsSync(CSS_PATH), 'src/ui/app.css must exist');
+    const css = fs.readFileSync(CSS_PATH, 'utf8');
+
+    // 1. Verify .chip and .browse-chip-btn base styling contains min-height: 38px and padding: 8px 16px
+    const chipRuleMatch = css.match(/(?:\.chip,\s*\.browse-chip-btn|\.browse-chip-btn,\s*\.chip)\s*\{([^}]+)\}/);
+    assert.ok(chipRuleMatch, '.chip / .browse-chip-btn rule block must exist in app.css');
+    const chipBody = chipRuleMatch[1];
+    assert.match(chipBody, /min-height:\s*38px;?/, '.chip / .browse-chip-btn must contain min-height: 38px');
+    assert.match(chipBody, /padding:\s*8px\s+16px;?/, '.chip / .browse-chip-btn must contain padding: 8px 16px');
+
+    // 2. Verify .browse-sort-select contains min-height: 38px
+    const sortSelectMatch = css.match(/\.browse-sort-select\s*\{([^}]+)\}/);
+    assert.ok(sortSelectMatch, '.browse-sort-select rule block must exist in app.css');
+    const sortSelectBody = sortSelectMatch[1];
+    assert.match(sortSelectBody, /min-height:\s*38px;?/, '.browse-sort-select must contain min-height: 38px');
+
+    // 3. Verify @media (pointer: coarse) contains min-height: 44px and min-width: 44px for touch accessibility
+    const coarseMediaIndex = css.indexOf('@media (pointer: coarse)');
+    assert.ok(coarseMediaIndex !== -1, '@media (pointer: coarse) block must exist in app.css');
+    const coarseMediaSlice = css.slice(coarseMediaIndex, coarseMediaIndex + 800);
+    assert.match(coarseMediaSlice, /min-height:\s*44px;?/, '@media (pointer: coarse) must contain min-height: 44px');
+    assert.match(coarseMediaSlice, /min-width:\s*44px;?/, '@media (pointer: coarse) must contain min-width: 44px');
+  });
 });
