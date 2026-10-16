@@ -11,8 +11,8 @@
 
   /* Typography */
   --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #64748b;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
@@ -20,8 +20,8 @@
   --accent-cyan: #38bdf8;        /* Focus rings, primary buttons, seek slider, active highlights */
   --accent-blue: #0072B2;        /* Primary contrast cobalt blue */
   --accent-amber: #fbbf24;       /* Star favorites, warnings, cautionary state */
-  --accent-rose: #f43f5e;        /* Missing files, errors, destructive actions */
-  --accent-purple: #a855f7;      /* Playing indicators, visualizer, audio badges */
+  --accent-rose: #fb7185;        /* Missing files, errors, destructive actions */
+  --accent-purple: #c084fc;      /* Playing indicators, visualizer, audio badges */
 
   /* Semantic Status Aliases */
   --status-available: var(--accent-blue);   /* [AVAILABLE] / [PASS] */
@@ -92,17 +92,17 @@ html[data-theme="light"] {
   --border-strong: rgba(0, 0, 0, 0.18);
   
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-secondary: #334155;
+  --text-muted: #475569;
   
   --surface-glass: rgba(255, 255, 255, 0.92);
   --player-glass: rgba(248, 250, 252, 0.96);
   --overlay-scrim: rgba(255, 255, 255, 0.6);
   
   /* Retain accessible accents */
-  --accent-cyan: #0284c7;  /* Slightly darker for light mode contrast */
-  --accent-amber: #d97706; /* Darker amber */
-  --status-warn: #D55E00;  /* Orange */
+  --accent-cyan: #0369a1;  /* Slightly darker for light mode contrast */
+  --accent-amber: #b45309; /* Darker amber */
+  --status-warn: #9a3412;  /* Orange */
 }
 
 @media (prefers-color-scheme: light) {
@@ -115,15 +115,15 @@ html[data-theme="light"] {
     --border-strong: rgba(0, 0, 0, 0.18);
     
     --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #64748b;
+    --text-secondary: #334155;
+    --text-muted: #475569;
     
     --surface-glass: rgba(255, 255, 255, 0.92);
     --player-glass: rgba(248, 250, 252, 0.96);
     --overlay-scrim: rgba(255, 255, 255, 0.6);
     
-    --accent-cyan: #0284c7;
-    --accent-amber: #d97706;
-    --status-warn: #D55E00;
+    --accent-cyan: #0369a1;
+    --accent-amber: #b45309;
+    --status-warn: #9a3412;
   }
 }
