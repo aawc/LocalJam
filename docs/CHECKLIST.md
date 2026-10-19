@@ -258,6 +258,6 @@ This checklist tracks resolution of reported issues and feature requests. Each c
 
 - [x] **FR 34: PWA Update Notification Resilience, Native Alerts, and Bootstrap Isolation** `[DONE]`
   - *Description:* Resolve update notification suppression where a newer service worker was installed in the waiting state (`waitingWorkerState: "installed"`) but never notified the user. Isolate playback state hydration with defensive error handling so cold-start hydration failures never abort bootstrap or prevent update detection. Bind `initUpdateChecker` immediately to existing `navigator.serviceWorker.getRegistration()` on boot and dynamically resolve concrete semantic release versions to avoid generic `"New Release"` dismissals. Implement two-tier native platform notification dispatch (`registration.showNotification` with `Window.Notification` fallback, 5s deduplication, and window focus handling in `sw.js` on `notificationclick`), provide dual-coded opt-in controls (`Notify Me` in update banner, `Update alerts` in overflow menu), and record notification capability telemetry in diagnostics.
-  - *Associated Commits:* `<pending>`
+  - *Associated Commits:* `6514a83`
 
 
