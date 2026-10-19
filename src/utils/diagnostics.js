@@ -213,7 +213,13 @@ export async function captureDiagnostics(deps = {}) {
     } catch (_) {}
 
     try {
-      if (typeof db.getDirectoryHandles === 'function') {
+      if (typeof db.getAllDirectoryHandles === 'function') {
+        const roots = (await db.getAllDirectoryHandles()) || [];
+        result.storage.storeCounts.roots = roots.length;
+      } else if (typeof db.getRoots === 'function') {
+        const roots = (await db.getRoots()) || [];
+        result.storage.storeCounts.roots = roots.length;
+      } else if (typeof db.getDirectoryHandles === 'function') {
         const roots = (await db.getDirectoryHandles()) || [];
         result.storage.storeCounts.roots = roots.length;
       }

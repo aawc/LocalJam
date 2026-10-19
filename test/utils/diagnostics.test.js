@@ -64,7 +64,7 @@ describe('PWA Diagnostics & State Collector Suite', () => {
         { id: 't2', isMissing: 1 },
         { id: 't3', isMissing: 0 }
       ],
-      getDirectoryHandles: async () => [{ name: 'Music' }],
+      getAllDirectoryHandles: async () => [{ name: 'Music' }],
       getAllPlaylists: async () => [{ id: 'p1' }],
       getFavorites: async () => ['t1'],
       getRecentHistory: async () => [{ id: 't1' }],
@@ -198,5 +198,22 @@ describe('PWA Diagnostics & State Collector Suite', () => {
     assert.ok(mdSynced.includes('App Version (Local Bundle)'));
     assert.ok(mdSynced.includes('Remote Version (Deployed Origin)'));
     assert.ok(mdSynced.includes('synced'));
+  });
+
+  it('captureDiagnostics populates storeCounts.roots from getAllDirectoryHandles, getRoots, or getDirectoryHandles', async () => {
+    const diagWithGetAll = await captureDiagnostics({
+      db: { getAllDirectoryHandles: async () => [{ name: 'A' }, { name: 'B' }] }
+    });
+    assert.equal(diagWithGetAll.storage.storeCounts.roots, 2);
+
+    const diagWithGetRoots = await captureDiagnostics({
+      db: { getRoots: async () => [{ name: 'A' }] }
+    });
+    assert.equal(diagWithGetRoots.storage.storeCounts.roots, 1);
+
+    const diagWithGetHandles = await captureDiagnostics({
+      db: { getDirectoryHandles: async () => [{ name: 'A' }, { name: 'B' }, { name: 'C' }] }
+    });
+    assert.equal(diagWithGetHandles.storage.storeCounts.roots, 3);
   });
 });

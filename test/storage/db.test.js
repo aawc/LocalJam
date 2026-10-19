@@ -160,6 +160,17 @@ test('LocalJamDatabase - Full Store Operations and Aggregations', async (t) => {
     assert.equal(handles.length, 2);
     assert.equal(handles[0].name, 'MusicFolder');
     assert.equal(handles[1].name, 'LocalDrive');
+
+    const handlesAlias = await db.getDirectoryHandles();
+    assert.deepEqual(handlesAlias, handles);
+    const roots = await db.getRoots();
+    assert.deepEqual(handlesAlias, roots);
+  });
+
+  await t.test('getDirectoryHandles() aliases to getAllDirectoryHandles()', async () => {
+    const allHandles = await db.getAllDirectoryHandles();
+    const handles = await db.getDirectoryHandles();
+    assert.deepEqual(handles, allHandles);
   });
 
   await t.test('Tracks Store - CRUD, batch, and normalization', async () => {

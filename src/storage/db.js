@@ -146,6 +146,10 @@ export class LocalJamDatabase {
     return this.getRoots();
   }
 
+  async getDirectoryHandles() {
+    return this.getAllDirectoryHandles();
+  }
+
   /* === Tracks Store === */
   async putTrack(track) {
     // Ensure isMissing is integer flag (0 or 1)
