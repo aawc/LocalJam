@@ -109,15 +109,23 @@ export class FilesystemReconciler {
    * @param {string} rootId
    * @param {object} diff - Result of computeDiff
    * @param {Function} [progressCallback] - (processed, total, status) => void
+   * @param {object} [options] - Reconciliation options, e.g. { purgeMissing: boolean }
    */
-  static async applyDiff(db, rootId, diff, progressCallback = null) {
+  static async applyDiff(db, rootId, diff, progressCallback = null, options = {}) {
+    let cb = progressCallback;
+    let opts = options;
+    if (typeof cb === 'object' && cb !== null && (!opts || Object.keys(opts).length === 0)) {
+      opts = cb;
+      cb = null;
+    }
+
     const totalOperations = diff.toAdd.length + diff.toUpdate.length + diff.toRename.length + diff.toMarkMissing.length;
     let processed = 0;
 
     const report = (status) => {
       processed++;
-      if (progressCallback) {
-        progressCallback(processed, totalOperations, status);
+      if (cb) {
+        cb(processed, totalOperations, status);
       }
     };
 
@@ -138,12 +146,24 @@ export class FilesystemReconciler {
     }
 
     // 2. Process missing tracks
-    for (const missing of diff.toMarkMissing) {
-      if (missing.isMissing !== 1) {
-        const updated = Object.assign({}, missing, { isMissing: 1 });
-        tracksToPut.push(updated);
+    if (opts && opts.purgeMissing === true) {
+      const missingIds = diff.toMarkMissing.map((t) => t.id);
+      if (missingIds.length > 0) {
+        if (typeof db.deleteTracksBatch === 'function') {
+          await db.deleteTracksBatch(missingIds);
+        }
+        for (const missing of diff.toMarkMissing) {
+          report(`Purged missing track: ${missing.title}`);
+        }
       }
-      report(`Marked missing: ${missing.title}`);
+    } else {
+      for (const missing of diff.toMarkMissing) {
+        if (missing.isMissing !== 1) {
+          const updated = Object.assign({}, missing, { isMissing: 1 });
+          tracksToPut.push(updated);
+        }
+        report(`Marked missing: ${missing.title}`);
+      }
     }
 
     // 3. Process updates (modified files)
@@ -307,21 +327,33 @@ async function scanDirectoryHandle(dirHandle, path = '') {
 }
 
 export const reconciler = {
-  async reconcileDirectoryHandle(dirHandle, progressCallback) {
+  async reconcileDirectoryHandle(dirHandle, progressCallback, options = {}) {
+    let cb = progressCallback;
+    let opts = options;
+    if (typeof cb === 'object' && cb !== null && (!opts || Object.keys(opts).length === 0)) {
+      opts = cb;
+      cb = null;
+    }
     const rootId = 'root_' + (dirHandle.name || 'default');
     await db.saveDirectoryHandle(rootId, dirHandle);
     const scannedItems = await scanDirectoryHandle(dirHandle);
     const existingTracks = (await db.getAllTracks()).filter((t) => t.rootId === rootId);
     const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
     await FilesystemReconciler.applyDiff(db, rootId, diff, (processed, total, status) => {
-      if (progressCallback) {
-        progressCallback({ processed, total, status, parsedCount: scannedItems.length });
+      if (cb) {
+        cb({ processed, total, status, parsedCount: scannedItems.length });
       }
-    });
+    }, opts);
     return { scannedCount: scannedItems.length, diff };
   },
 
-  async reconcileFileList(fileList, progressCallback) {
+  async reconcileFileList(fileList, progressCallback, options = {}) {
+    let cb = progressCallback;
+    let opts = options;
+    if (typeof cb === 'object' && cb !== null && (!opts || Object.keys(opts).length === 0)) {
+      opts = cb;
+      cb = null;
+    }
     const rootId = 'root_session_files';
     const scannedItems = [];
     for (const file of fileList) {
@@ -343,11 +375,15 @@ export const reconciler = {
     const existingTracks = (await db.getAllTracks()).filter((t) => t.rootId === rootId);
     const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
     await FilesystemReconciler.applyDiff(db, rootId, diff, (processed, total, status) => {
-      if (progressCallback) {
-        progressCallback({ processed, total, status, parsedCount: scannedItems.length });
+      if (cb) {
+        cb({ processed, total, status, parsedCount: scannedItems.length });
       }
-    });
+    }, opts);
     return { scannedCount: scannedItems.length, diff };
+  },
+
+  async purgeMissingTracks(rootId = null) {
+    return db.purgeMissingTracks(rootId);
   }
 };
 

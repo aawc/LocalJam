@@ -403,22 +403,27 @@ export async function initApp() {
       focusFirst: () => feedbackModal.focusFirst?.()
     }));
 
-    layers.register('browse', () => createBrowseSheet({
-      onPlayTrack: (track, tracks, index) => {
-        audioEngine.isRadio = false;
-        lastTrack = track;
-        queueManager.setQueue(tracks, index);
-        audioEngine.playTrack(track);
-      },
-      onPlayStation: (station) => {
-        lastStation = station;
-        audioEngine.playRadio(station);
-      },
-      onPickFolder: async () => pickFolder(),
-      onOpenFeedback: () => layers.open('feedback'),
-      onToast: (msg) => showToast(msg),
-      onClose: () => layers.close()
-    }));
+    let browseSheetInstance = null;
+
+    layers.register('browse', () => {
+      browseSheetInstance = createBrowseSheet({
+        onPlayTrack: (track, tracks, index) => {
+          audioEngine.isRadio = false;
+          lastTrack = track;
+          queueManager.setQueue(tracks, index);
+          audioEngine.playTrack(track);
+        },
+        onPlayStation: (station) => {
+          lastStation = station;
+          audioEngine.playRadio(station);
+        },
+        onPickFolder: async () => pickFolder(),
+        onOpenFeedback: () => layers.open('feedback'),
+        onToast: (msg) => showToast(msg),
+        onClose: () => layers.close()
+      });
+      return browseSheetInstance;
+    });
 
     let stageInstance = null;
 
@@ -427,7 +432,24 @@ export async function initApp() {
       onOpenNotes: () => layers.open('notes'),
       onOpenFeedback: () => layers.open('feedback'),
       onPickFolder: async () => pickFolder(),
-      onRescan: async () => rescan(),
+      onRescan: async () => {
+        await rescan();
+        const all = (await db.getAllTracks()) || [];
+        const active = all.filter((t) => !t.isMissing);
+        const missing = all.filter((t) => t.isMissing);
+        if (missing.length > 0) {
+          showToast(`[RESCAN: ${active.length} active, ${missing.length} missing — tap 'Clean missing' to purge]`);
+        } else {
+          showToast(`[RESCAN: ${active.length} tracks up to date]`);
+        }
+      },
+      onCleanMissing: async () => {
+        const purged = await db.purgeMissingTracks();
+        showToast(`[CLEANED: removed ${purged} missing ${purged === 1 ? 'track' : 'tracks'}]`);
+        if (browseSheetInstance?.refresh) {
+          browseSheetInstance.refresh();
+        }
+      },
       onReset: async () => {
         audioEngine.pause();
       },

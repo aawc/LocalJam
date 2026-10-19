@@ -768,8 +768,15 @@ export function createBrowseSheet(deps = {}) {
     }
 
     if (rowItem.kind === 'track') {
+      if (rowItem.payload?.isMissing) {
+        if (typeof onToast === 'function') {
+          onToast('[MISSING: file not found on disk]');
+        }
+        return;
+      }
+
       const visibleTracks = visibleRows
-        .filter((r) => r.kind === 'track')
+        .filter((r) => r.kind === 'track' && !r.payload?.isMissing)
         .map((r) => r.payload);
       const index = visibleTracks.findIndex((t) => t.id === rowItem.payload.id);
 
@@ -957,6 +964,10 @@ export function createBrowseSheet(deps = {}) {
       openerEl = props.openerEl || (typeof document !== 'undefined' ? document.activeElement : null);
       await loadData();
       renderAll({ scrollPlaying: true });
+    },
+    async refresh() {
+      await loadData();
+      renderAll();
     },
     onClose,
     focusFirst,

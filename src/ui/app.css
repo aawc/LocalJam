@@ -1329,6 +1329,10 @@ body {
   white-space: nowrap;
 }
 
+.overflow-state-rose {
+  color: var(--accent-rose, #f43f5e);
+}
+
 .overflow-volume-row {
   display: flex;
   justify-content: space-between;

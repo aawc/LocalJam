@@ -57,6 +57,7 @@ export function createOverflowMenu(deps = {}) {
     onOpenFeedback,
     onPickFolder,
     onRescan,
+    onCleanMissing,
     onReset,
     onToggleVisualizer,
     onToast,
@@ -82,6 +83,7 @@ export function createOverflowMenu(deps = {}) {
   let visualizerMode = 'bars';
   let visualizerRunning = false;
   let trackCount = 0;
+  let missingCount = 0;
   let currentTheme = 'auto';
   if (db && typeof db.getSetting === 'function') {
     db.getSetting('theme').then(t => {
@@ -193,7 +195,12 @@ export function createOverflowMenu(deps = {}) {
 
         <button type="button" class="overflow-row" data-action="rescan" role="menuitem">
           <span class="overflow-label">Rescan library</span>
-          <span class="overflow-state">[${trackCount} tracks]</span>
+          <span class="overflow-state">${missingCount > 0 ? `[${trackCount} tracks (${missingCount} missing)]` : `[${trackCount} tracks]`}</span>
+        </button>
+
+        <button type="button" class="overflow-row" data-action="clean-missing" role="menuitem"${missingCount > 0 ? '' : ' hidden'}>
+          <span class="overflow-label">Clean missing tracks</span>
+          <span class="overflow-state overflow-state-rose">[${missingCount} missing]</span>
         </button>
 
         <button type="button" class="overflow-row" data-action="notes" role="menuitem">
@@ -223,6 +230,11 @@ export function createOverflowMenu(deps = {}) {
         </button>
       </div>
     `;
+
+    const cleanBtn = contentEl.querySelector('[data-action="clean-missing"]');
+    if (cleanBtn) {
+      cleanBtn.hidden = (missingCount === 0);
+    }
 
     bindEvents();
   }
@@ -304,6 +316,14 @@ export function createOverflowMenu(deps = {}) {
       rescanBtn.addEventListener('click', () => {
         handleClose();
         if (typeof onRescan === 'function') onRescan();
+      });
+    }
+
+    const cleanMissingBtn = contentEl.querySelector('[data-action="clean-missing"]');
+    if (cleanMissingBtn) {
+      cleanMissingBtn.addEventListener('click', () => {
+        handleClose();
+        if (typeof onCleanMissing === 'function') onCleanMissing();
       });
     }
 
@@ -611,6 +631,10 @@ export function createOverflowMenu(deps = {}) {
       trackCount = props.trackCount;
     }
 
+    if (props.missingCount !== undefined) {
+      missingCount = props.missingCount;
+    }
+
     if (props.isStarred !== undefined) {
       isStarred = Boolean(props.isStarred);
     }
@@ -624,8 +648,18 @@ export function createOverflowMenu(deps = {}) {
     // Async updates in background if not supplied in props
     if (props.trackCount === undefined && db && typeof db.getAllTracks === 'function') {
       db.getAllTracks().then((all) => {
-        trackCount = Array.isArray(all) ? all.length : 0;
-        updateRowState('rescan', `[${trackCount} tracks]`);
+        const list = Array.isArray(all) ? all : [];
+        const activeTracks = list.filter((t) => !t.isMissing);
+        const missingTracks = list.filter((t) => t.isMissing);
+        trackCount = activeTracks.length;
+        missingCount = missingTracks.length;
+        updateRowState('rescan', missingCount > 0 ? `[${trackCount} tracks (${missingCount} missing)]` : `[${trackCount} tracks]`);
+        const cleanBtn = contentEl.querySelector('[data-action="clean-missing"]');
+        if (cleanBtn) {
+          cleanBtn.hidden = (missingCount === 0);
+          const st = cleanBtn.querySelector('.overflow-state');
+          if (st) st.textContent = `[${missingCount} missing]`;
+        }
       }).catch((err) => {
         if (err?.message?.includes('IndexedDB is not supported')) return;
         console.warn('[Overflow] Failed to retrieve track count', err);

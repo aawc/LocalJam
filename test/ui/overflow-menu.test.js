@@ -534,4 +534,65 @@ describe('Overflow Menu Component (L2)', () => {
     assert.equal(closed, true, 'clicking close button must invoke onClose');
     assert.equal(eventFired, true, 'clicking close button must dispatch layer-close event');
   });
+
+  it('clean-missing row rendering, visibility, and click callback', async () => {
+    let cleanCalled = false;
+    let closed = false;
+
+    const mockDb = {
+      getAllTracks: async () => [
+        { id: 'trk_1', isMissing: 0 },
+        { id: 'trk_2', isMissing: 1 },
+        { id: 'trk_3', isMissing: 1 }
+      ]
+    };
+
+    const menu = createOverflowMenu({
+      db: mockDb,
+      onCleanMissing: () => { cleanCalled = true; },
+      onClose: () => { closed = true; }
+    });
+    container.appendChild(menu.element);
+
+    // Initial render with missingCount = 0 (before DB resolution)
+    menu.onOpen();
+    const cleanBtn = menu.element.querySelector('[data-action="clean-missing"]');
+    assert.ok(cleanBtn);
+    assert.equal(cleanBtn.hidden, true);
+
+    // Wait for DB async track resolution
+    await new Promise((r) => setTimeout(r, 20));
+
+    // After resolution: 2 missing tracks detected
+    assert.equal(cleanBtn.hidden, false);
+    const stateEl = cleanBtn.querySelector('.overflow-state');
+    assert.ok(stateEl);
+    assert.equal(stateEl.textContent, '[2 missing]');
+
+    // Rescan row should also reflect missing count
+    const rescanState = menu.element.querySelector('[data-action="rescan"] .overflow-state');
+    assert.ok(rescanState);
+    assert.equal(rescanState.textContent, '[1 tracks (2 missing)]');
+
+    // Clicking clean-missing invokes onCleanMissing and closes menu
+    await cleanBtn.dispatchEvent(new Event('click'));
+    assert.equal(cleanCalled, true);
+    assert.equal(closed, true);
+  });
+
+  it('clean-missing row renders directly when missingCount provided in props', () => {
+    const menu = createOverflowMenu({
+      onCleanMissing: () => {}
+    });
+    container.appendChild(menu.element);
+    menu.onOpen({ trackCount: 5, missingCount: 3 });
+
+    const cleanBtn = menu.element.querySelector('[data-action="clean-missing"]');
+    assert.ok(cleanBtn);
+    assert.equal(cleanBtn.hidden, false);
+    assert.ok(cleanBtn.innerHTML.includes('[3 missing]'));
+
+    const rescanBtn = menu.element.querySelector('[data-action="rescan"]');
+    assert.ok(rescanBtn.innerHTML.includes('[5 tracks (3 missing)]'));
+  });
 });

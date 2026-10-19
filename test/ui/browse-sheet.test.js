@@ -813,6 +813,52 @@ describe('Browse Sheet Component (L1)', () => {
     assert.equal(closed, 1, 'Enter closes the sheet');
   });
 
+  it('clicking missing track shows toast and does not call onPlayTrack or close sheet', async () => {
+    let playCalled = false;
+    let closed = false;
+
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager,
+      onPlayTrack: () => { playCalled = true; },
+      onToast: (msg) => toastMessages.push(msg),
+      onClose: () => { closed = true; }
+    });
+    await sheet.onOpen({ tab: 'library' });
+
+    // trk_4 in sampleTracks is 'Lost Signal', with isMissing: 1
+    const missingRow = sheet.element.querySelector('[data-primary="Lost Signal"]');
+    assert.ok(missingRow, 'missing track row must exist in library list');
+
+    // Click on missing track row
+    missingRow.dispatchEvent(new globalThis.Event('click'));
+    await delay(10);
+
+    assert.equal(playCalled, false, 'onPlayTrack must NOT be called for missing track');
+    assert.equal(closed, false, 'sheet must NOT close when clicking missing track');
+    assert.ok(
+      toastMessages.some((msg) => msg.includes('[MISSING: file not found on disk]')),
+      'announces missing file toast'
+    );
+  });
+
+  it('refresh method reloads data and re-renders visible rows', async () => {
+    const sheet = createBrowseSheet({
+      db: mockDb,
+      audioEngine: mockAudioEngine,
+      queueManager: mockQueueManager
+    });
+    await sheet.onOpen({ tab: 'library' });
+    assert.ok(sheet.element.querySelector('[data-primary="Lost Signal"]'));
+
+    // Remove trk_4 from sampleTracks in DB
+    sampleTracks = sampleTracks.filter((t) => t.id !== 'trk_4');
+    await sheet.refresh();
+
+    assert.equal(sheet.element.querySelector('[data-primary="Lost Signal"]'), null);
+  });
+
   it('clicking header close button [X] invokes onClose', async () => {
     let closed = 0;
     const sheet = createBrowseSheet({

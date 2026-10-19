@@ -134,7 +134,7 @@ export async function pickFolder(opts = {}) {
  *   db?: object,
  *   reconciler?: object
  * }} [opts]
- * @returns {Promise<boolean>}
+ * @returns {Promise<boolean | { success: boolean, scannedCount: number, addedCount: number, updatedCount: number, missingCount: number }>}
  */
 export async function rescan(opts = {}) {
   const db = opts.db || defaultDb;
@@ -156,6 +156,9 @@ export async function rescan(opts = {}) {
 
     if (validRoots.length > 0) {
       let totalScanned = 0;
+      let totalAdded = 0;
+      let totalUpdated = 0;
+      let totalMissing = 0;
       for (const root of validRoots) {
         const handle = root.handle || root;
         if (typeof handle.queryPermission === 'function') {
@@ -174,13 +177,24 @@ export async function rescan(opts = {}) {
         }
 
         try {
-          const result = await reconciler.reconcileDirectoryHandle(handle, opts.onProgress);
+          const result = await reconciler.reconcileDirectoryHandle(handle, opts.onProgress, opts);
           totalScanned += (result?.scannedCount || 0);
+          if (result?.diff) {
+            totalAdded += (result.diff.toAdd?.length || 0);
+            totalUpdated += (result.diff.toUpdate?.length || 0) + (result.diff.toRename?.length || 0);
+            totalMissing += (result.diff.toMarkMissing?.length || 0);
+          }
         } catch (recErr) {
           console.error('[LibrarySource] Failed to reconcile stored directory handle:', root.name || root.id, recErr);
         }
       }
-      return totalScanned > 0;
+      return {
+        success: true,
+        scannedCount: totalScanned,
+        addedCount: totalAdded,
+        updatedCount: totalUpdated,
+        missingCount: totalMissing
+      };
     }
   }
 

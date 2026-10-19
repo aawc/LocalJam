@@ -235,6 +235,40 @@ export class LocalJamDatabase {
     });
   }
 
+  async deleteTracksBatch(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) return 0;
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('tracks', 'readwrite');
+      const store = tx.objectStore('tracks');
+      for (const id of ids) {
+        store.delete(id);
+      }
+      tx.oncomplete = () => resolve(ids.length);
+      tx.onerror = () => {
+        console.error(`[LocalJamDB] Error batch deleting tracks: ${tx.error?.message}`);
+        reject(tx.error);
+      };
+    });
+  }
+
+  async purgeMissingTracks(rootId = null) {
+    const all = await this.getAllTracks();
+    const missing = (all || []).filter((t) => {
+      const isMiss = t.isMissing === 1 || t.isMissing === true;
+      if (!isMiss) return false;
+      if (rootId && t.rootId !== rootId) return false;
+      return true;
+    });
+    const ids = missing.map((t) => t.id);
+    if (ids.length === 0) return 0;
+    await this.deleteTracksBatch(ids);
+    if (typeof this.removeFavorite === 'function') {
+      await Promise.all(ids.map((id) => this.removeFavorite(id).catch(() => {})));
+    }
+    return ids.length;
+  }
+
   async getAllAlbums() {
     const tracks = await this.getAllTracks();
     const map = new Map();
@@ -407,6 +441,15 @@ export class LocalJamDatabase {
       const req = store.get(trackId);
       req.onsuccess = () => resolve(!!req.result);
       req.onerror = () => resolve(false);
+    });
+  }
+
+  async removeFavorite(trackId) {
+    const store = await this.getStore('favorites', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const req = store.delete(trackId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
     });
   }
 

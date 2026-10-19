@@ -20,6 +20,13 @@ class MockDatabase {
     }
   }
 
+  async deleteTracksBatch(ids) {
+    for (const id of ids) {
+      this.tracks.delete(id);
+    }
+    return ids.length;
+  }
+
   async saveArtwork(artworkId, mimeType, dataUrl) {
     this.artwork.set(artworkId, { artworkId, mimeType, dataUrl });
   }
@@ -128,6 +135,58 @@ test('Filesystem 3-Way Reconciler Suite', async (t) => {
 
     // BrandNew should have been added
     assert.equal(mockDb.tracks.size, 3);
+  });
+
+  await t.test('applyDiff with { purgeMissing: true } deletes missing tracks rather than marking isMissing: 1', async () => {
+    const mockDb = new MockDatabase();
+    const existingTracks = [
+      { id: 'trk_kept', rootId, relativePath: 'Kept.mp3', filename: 'Kept.mp3', size: 5000, mtime: 1000, title: 'Kept', isMissing: 0 },
+      { id: 'trk_missing', rootId, relativePath: 'Missing.mp3', filename: 'Missing.mp3', size: 3000, mtime: 1000, title: 'Missing', isMissing: 0 }
+    ];
+    for (const t of existingTracks) mockDb.tracks.set(t.id, t);
+
+    const scannedItems = [
+      { relativePath: 'Kept.mp3', filename: 'Kept.mp3', size: 5000, mtime: 1000 }
+    ];
+
+    const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
+    assert.equal(diff.toMarkMissing.length, 1);
+    assert.equal(diff.toMarkMissing[0].id, 'trk_missing');
+
+    const progressReports = [];
+    await FilesystemReconciler.applyDiff(
+      mockDb,
+      rootId,
+      diff,
+      (p, t, s) => progressReports.push(s),
+      { purgeMissing: true }
+    );
+
+    assert.ok(progressReports.some((msg) => msg.includes('Purged missing track')));
+    assert.ok(mockDb.tracks.has('trk_kept'));
+    assert.equal(mockDb.tracks.has('trk_missing'), false, 'Missing track should be deleted from DB');
+    assert.equal(mockDb.tracks.size, 1);
+  });
+
+  await t.test('reconciler.purgeMissingTracks delegates to db.purgeMissingTracks', async () => {
+    const originalPurge = db.purgeMissingTracks;
+    try {
+      let passedRootId = undefined;
+      db.purgeMissingTracks = async (rootId) => {
+        passedRootId = rootId;
+        return 42;
+      };
+
+      const result = await reconciler.purgeMissingTracks('root_custom');
+      assert.equal(result, 42);
+      assert.equal(passedRootId, 'root_custom');
+
+      const resultGlobal = await reconciler.purgeMissingTracks();
+      assert.equal(resultGlobal, 42);
+      assert.equal(passedRootId, null);
+    } finally {
+      db.purgeMissingTracks = originalPurge;
+    }
   });
 
   await t.test('reconcileFileList matches and ingests .oga, .opus, .wav, .webm, and .aac extensions', async () => {

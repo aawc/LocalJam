@@ -172,12 +172,55 @@ describe('Library Source Abstraction', () => {
       }
     });
 
-    assert.equal(result, true);
+    assert.equal(result.success, true);
+    assert.equal(result.scannedCount, 20);
+    assert.equal(result.addedCount, 0);
+    assert.equal(result.updatedCount, 0);
+    assert.equal(result.missingCount, 0);
     assert.equal(showPickerCalled, false, 'showDirectoryPicker must NOT be called when stored handles exist');
     assert.equal(reconciledHandles.length, 2);
     assert.equal(reconciledHandles[0], mockHandle1);
     assert.equal(reconciledHandles[1], mockHandle2);
     assert.deepEqual(lastProgress, { parsedCount: 10, status: 'done' });
+  });
+
+  it('rescan returns detailed counts aggregated across multiple roots', async () => {
+    globalThis.window.showDirectoryPicker = async () => {};
+    const mockHandle1 = { name: 'FolderA', queryPermission: async () => 'granted' };
+    const mockDb = {
+      getAllDirectoryHandles: async () => [
+        { id: 'root_A', name: 'FolderA', handle: mockHandle1 }
+      ]
+    };
+
+    let passedOptions = null;
+    const mockReconciler = {
+      reconcileDirectoryHandle: async (handle, onProgress, options) => {
+        passedOptions = options;
+        return {
+          scannedCount: 15,
+          diff: {
+            toAdd: [{ id: '1' }, { id: '2' }],
+            toUpdate: [{ id: '3' }],
+            toRename: [{ id: '4' }],
+            toMarkMissing: [{ id: '5' }, { id: '6' }, { id: '7' }]
+          }
+        };
+      }
+    };
+
+    const result = await rescan({
+      db: mockDb,
+      reconciler: mockReconciler,
+      purgeMissing: true
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.scannedCount, 15);
+    assert.equal(result.addedCount, 2);
+    assert.equal(result.updatedCount, 2); // 1 update + 1 rename
+    assert.equal(result.missingCount, 3);
+    assert.equal(passedOptions?.purgeMissing, true);
   });
 
   it('rescan falls back to pickFolder on Tier 1 when stored handles list is empty (F2)', async () => {

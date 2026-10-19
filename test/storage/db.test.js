@@ -84,6 +84,7 @@ function createMockIDBFactory() {
                   const req = { onsuccess: null, onerror: null };
                   queueMicrotask(() => {
                     if (req.onsuccess) req.onsuccess({ target: req });
+                    if (tx.oncomplete) tx.oncomplete();
                   });
                   return req;
                 },
@@ -406,4 +407,70 @@ test('LocalJamDatabase - Full Store Operations and Aggregations', async (t) => {
     );
   });
 });
+
+test('LocalJamDatabase - deleteTracksBatch and purgeMissingTracks', async (t) => {
+  const mockIdb = createMockIDBFactory();
+  const db = new LocalJamDatabase('TestDB_Purge', 1, mockIdb);
+  await db.init();
+
+  await t.test('deleteTracksBatch handles invalid / empty input and deletes batch', async () => {
+    assert.equal(await db.deleteTracksBatch([]), 0);
+    assert.equal(await db.deleteTracksBatch(null), 0);
+    assert.equal(await db.deleteTracksBatch('invalid'), 0);
+
+    await db.putTracksBatch([
+      { id: 'trk_b1', rootId: 'root_1', title: 'Song 1', isMissing: 0 },
+      { id: 'trk_b2', rootId: 'root_1', title: 'Song 2', isMissing: 0 },
+      { id: 'trk_b3', rootId: 'root_1', title: 'Song 3', isMissing: 0 }
+    ]);
+
+    const deleted = await db.deleteTracksBatch(['trk_b1', 'trk_b3']);
+    assert.equal(deleted, 2);
+    assert.equal(await db.getTrack('trk_b1'), null);
+    assert.ok(await db.getTrack('trk_b2'));
+    assert.equal(await db.getTrack('trk_b3'), null);
+  });
+
+  await t.test('purgeMissingTracks purges missing tracks and updates favorites', async () => {
+    // When no tracks exist
+    assert.equal(await db.purgeMissingTracks(), 0);
+
+    await db.putTracksBatch([
+      { id: 'trk_m1', rootId: 'root_A', title: 'Active A', isMissing: 0 },
+      { id: 'trk_m2', rootId: 'root_A', title: 'Missing A', isMissing: 1 },
+      { id: 'trk_m3', rootId: 'root_B', title: 'Missing B', isMissing: true },
+      { id: 'trk_m4', rootId: 'root_B', title: 'Active B', isMissing: false }
+    ]);
+
+    // Star missing tracks
+    await db.toggleFavorite('trk_m2');
+    await db.toggleFavorite('trk_m3');
+    assert.equal(await db.isFavorite('trk_m2'), true);
+    assert.equal(await db.isFavorite('trk_m3'), true);
+
+    // Purge missing tracks only for root_A
+    const purgedRootA = await db.purgeMissingTracks('root_A');
+    assert.equal(purgedRootA, 1);
+    assert.equal(await db.getTrack('trk_m2'), null);
+    assert.equal(await db.isFavorite('trk_m2'), false);
+    // root_B missing track should still exist
+    assert.ok(await db.getTrack('trk_m3'));
+    assert.equal(await db.isFavorite('trk_m3'), true);
+
+    // Purge globally (all roots)
+    const purgedGlobal = await db.purgeMissingTracks();
+    assert.equal(purgedGlobal, 1);
+    assert.equal(await db.getTrack('trk_m3'), null);
+    assert.equal(await db.isFavorite('trk_m3'), false);
+
+    // Purge again when none are missing
+    assert.equal(await db.purgeMissingTracks(), 0);
+
+    // Remaining tracks should be active only
+    const remaining = await db.getAllTracks();
+    const remainingIds = remaining.map((t) => t.id).sort();
+    assert.deepEqual(remainingIds, ['trk_b2', 'trk_m1', 'trk_m4']);
+  });
+});
+
 
