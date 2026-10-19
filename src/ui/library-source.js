@@ -35,7 +35,8 @@ export async function pickFolder(opts = {}) {
 
   if (opts.fileList) {
     try {
-      const result = await reconciler.reconcileFileList(opts.fileList, opts.onProgress);
+      const result = await reconciler.reconcileFileList(opts.fileList, opts.onProgress, opts);
+      if (typeof opts.onResult === 'function') opts.onResult(result);
       return Boolean(result && (result.scannedCount > 0 || (result.diff && (result.diff.toAdd?.length > 0 || result.diff.added?.length > 0))));
     } catch (err) {
       console.error('[LibrarySource] Failed to reconcile file list:', err);
@@ -56,7 +57,8 @@ export async function pickFolder(opts = {}) {
     }
 
     try {
-      const result = await reconciler.reconcileDirectoryHandle(dirHandle, opts.onProgress);
+      const result = await reconciler.reconcileDirectoryHandle(dirHandle, opts.onProgress, opts);
+      if (typeof opts.onResult === 'function') opts.onResult(result);
       return Boolean(result && (result.scannedCount > 0 || (result.diff && (result.diff.toAdd?.length > 0 || result.diff.added?.length > 0))));
     } catch (err) {
       console.error('[LibrarySource] Reconcile directory handle error:', err);
@@ -88,7 +90,8 @@ export async function pickFolder(opts = {}) {
             return;
           }
 
-          const result = await reconciler.reconcileFileList(files, opts.onProgress);
+          const result = await reconciler.reconcileFileList(files, opts.onProgress, opts);
+          if (typeof opts.onResult === 'function') opts.onResult(result);
           resolve(Boolean(result && (result.scannedCount > 0 || (result.diff && (result.diff.toAdd?.length > 0 || result.diff.added?.length > 0)))));
         } catch (err) {
           console.error('[LibrarySource] Reconcile file list fallback error:', err);
@@ -139,6 +142,12 @@ export async function pickFolder(opts = {}) {
 export async function rescan(opts = {}) {
   const db = opts.db || defaultDb;
   const reconciler = opts.reconciler || defaultReconciler;
+  const purgeMissing = opts.purgeMissing !== false;
+  let fallbackResult = null;
+  const rescanOpts = Object.assign({}, opts, {
+    purgeMissing,
+    onResult: (res) => { fallbackResult = res; }
+  });
 
   if (hasFileSystemAccess()) {
     let roots = [];
@@ -177,7 +186,7 @@ export async function rescan(opts = {}) {
         }
 
         try {
-          const result = await reconciler.reconcileDirectoryHandle(handle, opts.onProgress, opts);
+          const result = await reconciler.reconcileDirectoryHandle(handle, opts.onProgress, rescanOpts);
           totalScanned += (result?.scannedCount || 0);
           if (result?.diff) {
             totalAdded += (result.diff.toAdd?.length || 0);
@@ -199,5 +208,15 @@ export async function rescan(opts = {}) {
   }
 
   // Fallback to pickFolder when no stored handles exist or on Tier 2
-  return pickFolder(opts);
+  const picked = await pickFolder(rescanOpts);
+  if (fallbackResult) {
+    return {
+      success: Boolean(picked),
+      scannedCount: fallbackResult.scannedCount || 0,
+      addedCount: fallbackResult.diff?.toAdd?.length || 0,
+      updatedCount: (fallbackResult.diff?.toUpdate?.length || 0) + (fallbackResult.diff?.toRename?.length || 0),
+      missingCount: fallbackResult.diff?.toMarkMissing?.length || 0
+    };
+  }
+  return picked;
 }

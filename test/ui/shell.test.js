@@ -975,4 +975,106 @@ test('Shell Bootstrap - initApp registers ServiceWorker when document.readyState
   }
 });
 
+test('Shell Overflow - onRescan purges missing tracks and updates library state', async () => {
+  setupMockDom();
+  const timerIds = [];
+  const originalSetInterval = globalThis.setInterval;
+  const originalSetTimeout = globalThis.setTimeout;
+  globalThis.setInterval = (fn, ms) => {
+    const t = originalSetInterval(fn, ms);
+    timerIds.push({ timer: t, type: 'interval' });
+    return t;
+  };
+  globalThis.setTimeout = (fn, ms) => {
+    const t = originalSetTimeout(fn, ms);
+    timerIds.push({ timer: t, type: 'timeout' });
+    return t;
+  };
+
+  const originalFetch = globalThis.fetch;
+  const originalDbInit = db.init;
+  const originalGetPlaybackState = db.getPlaybackState;
+  const originalGetAllTracks = db.getAllTracks;
+  const originalPurgeMissingTracks = db.purgeMissingTracks;
+  const originalGetStations = db.getStations;
+
+  let purgeCalled = false;
+  let tracks = [
+    { id: 't1', title: 'Active Song', isMissing: 0 },
+    { id: 't2', title: 'Missing Song', isMissing: 1 }
+  ];
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({ version: 'v2026.09.040' })
+  });
+
+  globalThis.window.showDirectoryPicker = async () => {};
+  const mockHandle = {
+    name: 'Music',
+    queryPermission: async () => 'granted',
+    async *values() {},
+    async *entries() {}
+  };
+  const originalGetAllDirectoryHandles = db.getAllDirectoryHandles;
+  db.getAllDirectoryHandles = async () => [{ id: 'root_1', name: 'Music', handle: mockHandle }];
+
+  db.init = async () => {};
+  db.getPlaybackState = async () => null;
+  db.getAllTracks = async () => tracks;
+  db.getStations = async () => [];
+  db.purgeMissingTracks = async () => {
+    purgeCalled = true;
+    const count = tracks.filter((t) => t.isMissing).length;
+    tracks = tracks.filter((t) => !t.isMissing);
+    return count;
+  };
+
+  document.body.innerHTML = `
+    <div id="stage-root"></div>
+    <div id="layer-root"></div>
+    <div id="toast-root"></div>
+    <div id="aria-live-region"></div>
+  `;
+
+  try {
+    await initApp();
+
+    // Open overflow menu
+    layers.open('overflow');
+    const overflowEl = document.querySelector('.overflow-sheet-layer');
+    assert.ok(overflowEl);
+
+    const rescanBtn = overflowEl.querySelector('[data-action="rescan"]');
+    assert.ok(rescanBtn);
+
+    // Trigger rescan
+    await rescanBtn.dispatchEvent(new Event('click'));
+    // Wait for async onRescan completion
+    await new Promise((r) => setTimeout(r, 50));
+
+    assert.equal(purgeCalled, true, 'db.purgeMissingTracks must be called during rescan');
+    assert.equal(tracks.length, 1);
+    assert.equal(tracks[0].id, 't1');
+  } finally {
+    for (const t of timerIds) {
+      if (t.type === 'interval') clearInterval(t.timer);
+      else clearTimeout(t.timer);
+    }
+    globalThis.setInterval = originalSetInterval;
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.fetch = originalFetch;
+    db.init = originalDbInit;
+    db.getPlaybackState = originalGetPlaybackState;
+    db.getAllTracks = originalGetAllTracks;
+    db.getStations = originalGetStations;
+    db.purgeMissingTracks = originalPurgeMissingTracks;
+    db.getAllDirectoryHandles = originalGetAllDirectoryHandles;
+    delete globalThis.window.showDirectoryPicker;
+    layers.destroy();
+    teardownMockDom();
+  }
+});
+
+
 

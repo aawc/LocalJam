@@ -151,6 +151,11 @@ export class FilesystemReconciler {
       if (missingIds.length > 0) {
         if (typeof db.deleteTracksBatch === 'function') {
           await db.deleteTracksBatch(missingIds);
+        } else if (typeof db.deleteTrack === 'function') {
+          await Promise.all(missingIds.map((id) => db.deleteTrack(id).catch(() => {})));
+        }
+        if (typeof db.removeFavorite === 'function') {
+          await Promise.all(missingIds.map((id) => db.removeFavorite(id).catch(() => {})));
         }
         for (const missing of diff.toMarkMissing) {
           report(`Purged missing track: ${missing.title}`);

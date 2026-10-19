@@ -109,6 +109,13 @@ describe('Browse Sheet Component (L1)', () => {
       },
       async setSetting(k, v) {
         this.settings.set(k, v);
+      },
+      async deleteTracksBatch(ids) {
+        sampleTracks = sampleTracks.filter((t) => !ids.includes(t.id));
+        return ids.length;
+      },
+      async removeFavorite(id) {
+        this.favorites.delete(id);
       }
     };
 
@@ -841,6 +848,46 @@ describe('Browse Sheet Component (L1)', () => {
       toastMessages.some((msg) => msg.includes('[MISSING: file not found on disk]')),
       'announces missing file toast'
     );
+  });
+
+  it('clicking missing track prompts user to remove from library and removes track from DB and UI when confirmed', async () => {
+    let playCalled = false;
+    let closed = false;
+    const origConfirm = globalThis.confirm;
+    globalThis.confirm = () => true;
+
+    try {
+      const sheet = createBrowseSheet({
+        db: mockDb,
+        audioEngine: mockAudioEngine,
+        queueManager: mockQueueManager,
+        onPlayTrack: () => { playCalled = true; },
+        onToast: (msg) => toastMessages.push(msg),
+        onClose: () => { closed = true; }
+      });
+      await sheet.onOpen({ tab: 'library' });
+
+      // trk_4 is present
+      const missingRow = sheet.element.querySelector('[data-primary="Lost Signal"]');
+      assert.ok(missingRow);
+
+      // Click on missing track row
+      await missingRow.dispatchEvent(new globalThis.Event('click'));
+      await delay(20);
+
+      assert.equal(playCalled, false, 'onPlayTrack must not be called');
+      assert.equal(closed, false, 'sheet must stay open');
+      assert.ok(
+        toastMessages.some((msg) => msg.includes('[REMOVED] Lost Signal')),
+        'announces removed toast'
+      );
+      // trk_4 should no longer exist in sheet DOM
+      assert.equal(sheet.element.querySelector('[data-primary="Lost Signal"]'), null);
+      // trk_4 should be deleted from DB
+      assert.equal(sampleTracks.some((t) => t.id === 'trk_4'), false);
+    } finally {
+      globalThis.confirm = origConfirm;
+    }
   });
 
   it('refresh method reloads data and re-renders visible rows', async () => {

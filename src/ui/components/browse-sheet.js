@@ -83,6 +83,7 @@ export function createBrowseSheet(deps = {}) {
   let sheetGestureUnbind = null;
   let rowGestureUnbinds = [];
   let openerEl = null;
+  const deletingTrackIds = new Set();
 
   const sheetEl = document.createElement('div');
   sheetEl.className = 'browse-sheet';
@@ -754,7 +755,7 @@ export function createBrowseSheet(deps = {}) {
     }
   }
 
-  function handleRowActivate(rowItem) {
+  async function handleRowActivate(rowItem) {
     if (!rowItem) return;
 
     if (rowItem.kind === 'album' || rowItem.kind === 'artist') {
@@ -769,7 +770,33 @@ export function createBrowseSheet(deps = {}) {
 
     if (rowItem.kind === 'track') {
       if (rowItem.payload?.isMissing) {
-        if (typeof onToast === 'function') {
+        const trackId = rowItem.payload.id || rowItem.id;
+        if (deletingTrackIds.has(trackId)) return;
+
+        const trackTitle = rowItem.primary || 'This track';
+        const shouldRemove = typeof globalThis.confirm === 'function'
+          ? globalThis.confirm(`"${trackTitle}" was not found on disk. Remove it from your library?`)
+          : false;
+
+        if (shouldRemove) {
+          deletingTrackIds.add(trackId);
+          try {
+            if (db && typeof db.deleteTracksBatch === 'function') {
+              await db.deleteTracksBatch([trackId]);
+            }
+            if (db && typeof db.removeFavorite === 'function') {
+              await db.removeFavorite(trackId).catch(() => {});
+            }
+            await loadData();
+            updateRows();
+            renderListRows();
+            if (typeof onToast === 'function') {
+              onToast(`[REMOVED] ${trackTitle}`);
+            }
+          } finally {
+            deletingTrackIds.delete(trackId);
+          }
+        } else if (typeof onToast === 'function') {
           onToast('[MISSING: file not found on disk]');
         }
         return;

@@ -249,7 +249,8 @@ describe('Library Source Abstraction', () => {
       fileList: dummyFiles
     });
 
-    assert.equal(result, true);
+    assert.equal(result.success, true);
+    assert.equal(result.scannedCount, 1);
     assert.equal(handlesQueried, true, 'db.getAllDirectoryHandles must be queried on Tier 1');
     assert.equal(pickFolderInvoked, true, 'must fall back to pickFolder when handles are empty');
   });
@@ -271,7 +272,66 @@ describe('Library Source Abstraction', () => {
       fileList: dummyFiles
     });
 
-    assert.equal(result, true);
+    assert.equal(result.success, true);
+    assert.equal(result.scannedCount, 1);
     assert.equal(pickFolderInvoked, true);
   });
+
+  it('rescan defaults purgeMissing to true when not explicitly passed', async () => {
+    globalThis.window.showDirectoryPicker = async () => {};
+    const mockHandle1 = { name: 'FolderA', queryPermission: async () => 'granted' };
+    const mockDb = {
+      getAllDirectoryHandles: async () => [
+        { id: 'root_A', name: 'FolderA', handle: mockHandle1 }
+      ]
+    };
+
+    let passedOptions = null;
+    const mockReconciler = {
+      reconcileDirectoryHandle: async (handle, onProgress, options) => {
+        passedOptions = options;
+        return { scannedCount: 5, diff: {} };
+      }
+    };
+
+    await rescan({
+      db: mockDb,
+      reconciler: mockReconciler
+    });
+
+    assert.equal(passedOptions?.purgeMissing, true);
+  });
+
+  it('pickFolder forwards options to reconcileFileList and reconcileDirectoryHandle', async () => {
+    globalThis.window.showDirectoryPicker = async () => ({ name: 'TestDir' });
+    let passedDirectoryOptions = null;
+    let passedFileOptions = null;
+
+    const mockReconciler = {
+      reconcileDirectoryHandle: async (handle, onProgress, options) => {
+        passedDirectoryOptions = options;
+        return { scannedCount: 1 };
+      },
+      reconcileFileList: async (files, onProgress, options) => {
+        passedFileOptions = options;
+        return { scannedCount: 1 };
+      }
+    };
+
+    // 1. Directory picker path
+    await pickFolder({
+      reconciler: mockReconciler,
+      purgeMissing: true
+    });
+    assert.equal(passedDirectoryOptions?.purgeMissing, true);
+
+    // 2. File list path
+    await pickFolder({
+      reconciler: mockReconciler,
+      fileList: [{ name: 'test.mp3' }],
+      purgeMissing: true
+    });
+    assert.equal(passedFileOptions?.purgeMissing, true);
+  });
 });
+

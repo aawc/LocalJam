@@ -433,21 +433,34 @@ export async function initApp() {
       onOpenFeedback: () => layers.open('feedback'),
       onPickFolder: async () => pickFolder(),
       onRescan: async () => {
-        await rescan();
+        const rescanResult = await rescan({ purgeMissing: true });
+        const purgedDb = (db && typeof db.purgeMissingTracks === 'function')
+          ? await db.purgeMissingTracks()
+          : 0;
         const all = (await db.getAllTracks()) || [];
         const active = all.filter((t) => !t.isMissing);
         const missing = all.filter((t) => t.isMissing);
-        if (missing.length > 0) {
-          showToast(`[RESCAN: ${active.length} active, ${missing.length} missing — tap 'Clean missing' to purge]`);
+        const totalPurged = (rescanResult && typeof rescanResult.missingCount === 'number' && rescanResult.missingCount > 0 ? rescanResult.missingCount : 0) + (purgedDb || 0);
+
+        if (totalPurged > 0) {
+          showToast(`[RESCAN: ${active.length} active, cleaned ${totalPurged} deleted ${totalPurged === 1 ? 'track' : 'tracks'}]`);
+        } else if (missing.length > 0) {
+          showToast(`[RESCAN: ${active.length} active, ${missing.length} missing]`);
         } else {
           showToast(`[RESCAN: ${active.length} tracks up to date]`);
+        }
+        if (browseSheetInstance && typeof browseSheetInstance.refresh === 'function') {
+          await browseSheetInstance.refresh();
+        }
+        if (audioEngine && typeof audioEngine.notifyState === 'function') {
+          audioEngine.notifyState();
         }
       },
       onCleanMissing: async () => {
         const purged = await db.purgeMissingTracks();
         showToast(`[CLEANED: removed ${purged} missing ${purged === 1 ? 'track' : 'tracks'}]`);
-        if (browseSheetInstance?.refresh) {
-          browseSheetInstance.refresh();
+        if (browseSheetInstance && typeof browseSheetInstance.refresh === 'function') {
+          await browseSheetInstance.refresh();
         }
       },
       onReset: async () => {

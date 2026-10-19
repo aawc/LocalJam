@@ -8,6 +8,11 @@ class MockDatabase {
   constructor() {
     this.tracks = new Map();
     this.artwork = new Map();
+    this.favorites = new Set();
+  }
+
+  async removeFavorite(id) {
+    this.favorites.delete(id);
   }
 
   async putTrack(track) {
@@ -153,6 +158,9 @@ test('Filesystem 3-Way Reconciler Suite', async (t) => {
     assert.equal(diff.toMarkMissing.length, 1);
     assert.equal(diff.toMarkMissing[0].id, 'trk_missing');
 
+    mockDb.favorites.add('trk_missing');
+    mockDb.favorites.add('trk_kept');
+
     const progressReports = [];
     await FilesystemReconciler.applyDiff(
       mockDb,
@@ -165,7 +173,42 @@ test('Filesystem 3-Way Reconciler Suite', async (t) => {
     assert.ok(progressReports.some((msg) => msg.includes('Purged missing track')));
     assert.ok(mockDb.tracks.has('trk_kept'));
     assert.equal(mockDb.tracks.has('trk_missing'), false, 'Missing track should be deleted from DB');
+    assert.equal(mockDb.favorites.has('trk_missing'), false, 'Missing track should be removed from favorites');
+    assert.equal(mockDb.favorites.has('trk_kept'), true, 'Kept track should remain in favorites');
     assert.equal(mockDb.tracks.size, 1);
+  });
+
+  await t.test('applyDiff with { purgeMissing: true } falls back to db.deleteTrack if deleteTracksBatch is undefined', async () => {
+    const mockDb = new MockDatabase();
+    mockDb.deleteTracksBatch = undefined;
+    const deletedSingle = [];
+    mockDb.deleteTrack = async (id) => {
+      deletedSingle.push(id);
+      mockDb.tracks.delete(id);
+    };
+
+    const existingTracks = [
+      { id: 'trk_kept', rootId, relativePath: 'Kept.mp3', filename: 'Kept.mp3', size: 5000, mtime: 1000, title: 'Kept', isMissing: 0 },
+      { id: 'trk_missing', rootId, relativePath: 'Missing.mp3', filename: 'Missing.mp3', size: 3000, mtime: 1000, title: 'Missing', isMissing: 0 }
+    ];
+    for (const t of existingTracks) mockDb.tracks.set(t.id, t);
+
+    const scannedItems = [
+      { relativePath: 'Kept.mp3', filename: 'Kept.mp3', size: 5000, mtime: 1000 }
+    ];
+
+    const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
+    await FilesystemReconciler.applyDiff(
+      mockDb,
+      rootId,
+      diff,
+      null,
+      { purgeMissing: true }
+    );
+
+    assert.deepEqual(deletedSingle, ['trk_missing']);
+    assert.equal(mockDb.tracks.has('trk_missing'), false);
+    assert.equal(mockDb.tracks.has('trk_kept'), true);
   });
 
   await t.test('reconciler.purgeMissingTracks delegates to db.purgeMissingTracks', async () => {
