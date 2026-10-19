@@ -1166,5 +1166,108 @@ test('Shell Bootstrap - initApp runs startup library hygiene purging missing tra
   }
 });
 
+test('Shell Bootstrap - initApp detects physically deleted tracks and purges them on startup', async () => {
+  setupMockDom();
+
+  const timerIds = [];
+  const originalSetInterval = globalThis.setInterval;
+  const originalSetTimeout = globalThis.setTimeout;
+  globalThis.setInterval = (fn, ms) => {
+    const t = originalSetInterval(fn, ms);
+    timerIds.push({ timer: t, type: 'interval' });
+    return t;
+  };
+  globalThis.setTimeout = (fn, ms) => {
+    const t = originalSetTimeout(fn, ms);
+    timerIds.push({ timer: t, type: 'timeout' });
+    return t;
+  };
+
+  const originalFetch = globalThis.fetch;
+  const originalDbInit = db.init;
+  const originalGetPlaybackState = db.getPlaybackState;
+  const originalGetAllTracks = db.getAllTracks;
+  const originalPurgeMissingTracks = db.purgeMissingTracks;
+  const originalDeleteTracksBatch = db.deleteTracksBatch;
+  const originalPutTracksBatch = db.putTracksBatch;
+  const originalGetStations = db.getStations;
+
+  let purgeMissingCalled = false;
+  let tracksToUpdateBatch = null;
+
+  const initialTracks = [
+    {
+      id: 'trk_scraper',
+      title: 'Scraped Track',
+      artist: 'yt-dlp',
+      album: 'yt-dlp',
+      albumArtist: 'yt-dlp',
+      rootId: 'root_yt-dlp',
+      filename: 'song.mp3'
+    },
+    {
+      id: 'trk_alive',
+      title: 'Alive Track',
+      artist: 'Singer',
+      album: 'Songs',
+      rootId: 'root_Songs',
+      filename: 'alive.mp3'
+    }
+  ];
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({ version: 'v2026.10.137' })
+  });
+
+  db.init = async () => {};
+  db.getPlaybackState = async () => null;
+  db.getAllTracks = async () => initialTracks;
+  db.getStations = async () => [];
+  db.purgeMissingTracks = async () => {
+    purgeMissingCalled = true;
+    return 1;
+  };
+  db.putTracksBatch = async (tracks) => {
+    tracksToUpdateBatch = tracks;
+  };
+
+  document.body.innerHTML = `
+    <div id="stage-root"></div>
+    <div id="layer-root"></div>
+    <div id="toast-root"></div>
+    <div id="aria-live-region"></div>
+  `;
+
+  try {
+    await initApp();
+
+    assert.equal(purgeMissingCalled, true, 'db.purgeMissingTracks must be called on startup');
+    assert.ok(tracksToUpdateBatch, 'putTracksBatch must be called to normalize scraper tracks');
+    assert.equal(tracksToUpdateBatch.length, 1);
+    assert.equal(tracksToUpdateBatch[0].album, 'Songs', 'Album must be normalized from yt-dlp to Songs');
+    assert.equal(tracksToUpdateBatch[0].artist, 'Unknown Artist', 'Artist must be normalized from yt-dlp to Unknown Artist');
+    assert.equal(tracksToUpdateBatch[0].albumArtist, 'Unknown Artist', 'albumArtist must be normalized from yt-dlp to Unknown Artist');
+    assert.equal(tracksToUpdateBatch[0].rootId, 'root_Songs', 'rootId must be normalized from root_yt-dlp to root_Songs');
+  } finally {
+    for (const t of timerIds) {
+      if (t.type === 'interval') clearInterval(t.timer);
+      else clearTimeout(t.timer);
+    }
+    globalThis.setInterval = originalSetInterval;
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.fetch = originalFetch;
+    db.init = originalDbInit;
+    db.getPlaybackState = originalGetPlaybackState;
+    db.getAllTracks = originalGetAllTracks;
+    db.getStations = originalGetStations;
+    db.purgeMissingTracks = originalPurgeMissingTracks;
+    db.deleteTracksBatch = originalDeleteTracksBatch;
+    db.putTracksBatch = originalPutTracksBatch;
+    layers.destroy();
+    teardownMockDom();
+  }
+});
+
 
 

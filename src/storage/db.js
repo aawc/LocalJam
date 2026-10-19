@@ -254,19 +254,30 @@ export class LocalJamDatabase {
 
   async purgeMissingTracks(rootId = null) {
     const all = await this.getAllTracks();
-    const missing = (all || []).filter((t) => {
-      const isMiss = t.isMissing === 1 || t.isMissing === true;
-      if (!isMiss) return false;
-      if (rootId && t.rootId !== rootId) return false;
-      return true;
-    });
-    const ids = missing.map((t) => t.id);
-    if (ids.length === 0) return 0;
-    await this.deleteTracksBatch(ids);
-    if (typeof this.removeFavorite === 'function') {
-      await Promise.all(ids.map((id) => this.removeFavorite(id).catch(() => {})));
+    const missingIds = [];
+    for (const t of (all || [])) {
+      if (!t) continue;
+      if (rootId && t.rootId !== rootId) continue;
+      if (t.isMissing === 1 || t.isMissing === true) {
+        missingIds.push(t.id);
+        continue;
+      }
+      if (t.handle && typeof t.handle.getFile === 'function') {
+        try {
+          await t.handle.getFile();
+        } catch (err) {
+          if (err && err.name === 'NotFoundError') {
+            missingIds.push(t.id);
+          }
+        }
+      }
     }
-    return ids.length;
+    if (missingIds.length === 0) return 0;
+    await this.deleteTracksBatch(missingIds);
+    if (typeof this.removeFavorite === 'function') {
+      await Promise.all(missingIds.map((id) => this.removeFavorite(id).catch(() => {})));
+    }
+    return missingIds.length;
   }
 
   async getAllAlbums() {

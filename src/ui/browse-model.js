@@ -51,6 +51,39 @@ export function filterTracks(tracks = [], query = '') {
   });
 }
 
+const SCRAPER_NAME_REGEX = /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i;
+
+/**
+ * Resolves clean album name, falling back to root folder or 'Songs' instead of scraper/unknown names.
+ * @param {object} t
+ * @returns {string}
+ */
+export function resolveTrackAlbum(t) {
+  let album = (typeof t?.album === 'string' ? t.album : '').trim();
+  if (!album || album.toLowerCase() === 'unknown album' || SCRAPER_NAME_REGEX.test(album)) {
+    if (typeof t?.rootId === 'string' && !/^(root_default|root_session_files|root_yt-dlp)$/i.test(t.rootId)) {
+      album = t.rootId.replace(/^root_/, '');
+    }
+  }
+  if (!album || album.toLowerCase() === 'unknown album' || SCRAPER_NAME_REGEX.test(album)) {
+    album = 'Songs';
+  }
+  return album;
+}
+
+/**
+ * Resolves clean artist name, sanitizing scrapers to 'Unknown Artist'.
+ * @param {object} t
+ * @returns {string}
+ */
+export function resolveTrackArtist(t) {
+  let artist = (typeof t?.artist === 'string' ? t.artist : '').trim();
+  if (!artist || SCRAPER_NAME_REGEX.test(artist)) {
+    artist = 'Unknown Artist';
+  }
+  return artist;
+}
+
 /**
  * Builds BrowseRow items for local music library based on active mode, query, and drill-in state.
  * @param {{
@@ -81,9 +114,9 @@ export function buildLibraryRows({
     const availableTracks = tracks.filter((t) => !t.isMissing);
     const drilled = availableTracks.filter((t) => {
       if (drill.kind === 'album') {
-        return (t.album || '').toLowerCase() === drillName;
+        return resolveTrackAlbum(t).toLowerCase() === drillName;
       }
-      return (t.artist || '').toLowerCase() === drillName;
+      return resolveTrackArtist(t).toLowerCase() === drillName;
     });
 
     const filtered = filterTracks(drilled, query);
@@ -91,7 +124,7 @@ export function buildLibraryRows({
       id: t.id,
       kind: 'track',
       primary: t.title || t.filename || 'Unknown Track',
-      secondary: t.artist || 'Unknown Artist',
+      secondary: resolveTrackArtist(t),
       trailing: formatDuration(t.duration),
       payload: t
     }));
@@ -104,7 +137,7 @@ export function buildLibraryRows({
       id: t.id,
       kind: 'track',
       primary: t.title || t.filename || 'Unknown Track',
-      secondary: t.artist || 'Unknown Artist',
+      secondary: resolveTrackArtist(t),
       trailing: t.isMissing ? '[MISSING]' : formatDuration(t.duration),
       payload: t
     }));
@@ -116,9 +149,12 @@ export function buildLibraryRows({
     const albumMap = new Map();
 
     for (const t of availableTracks) {
-      const albumName = t.album || 'Unknown Album';
-      const artistName = t.albumArtist || t.artist || 'Unknown Artist';
-      const key = `${albumName}:::${artistName}`;
+      const albumName = resolveTrackAlbum(t);
+      const artistName = (t.albumArtist && !SCRAPER_NAME_REGEX.test(t.albumArtist.trim()))
+        ? t.albumArtist.trim()
+        : resolveTrackArtist(t);
+      const isSongsFolder = albumName.toLowerCase() === 'songs';
+      const key = isSongsFolder ? 'Songs' : `${albumName}:::${artistName}`;
       if (!albumMap.has(key)) {
         albumMap.set(key, {
           name: albumName,
@@ -128,6 +164,14 @@ export function buildLibraryRows({
         });
       }
       albumMap.get(key).tracks.push(t);
+    }
+
+    for (const album of albumMap.values()) {
+      if (album.name.toLowerCase() === 'songs') {
+        const firstArtist = resolveTrackArtist(album.tracks[0]);
+        const allSame = album.tracks.every((tr) => resolveTrackArtist(tr) === firstArtist);
+        album.artist = allSame ? firstArtist : 'Various Artists';
+      }
     }
 
     let albumList = Array.from(albumMap.values());
@@ -156,7 +200,7 @@ export function buildLibraryRows({
     const artistMap = new Map();
 
     for (const t of availableTracks) {
-      const artistName = t.artist || 'Unknown Artist';
+      const artistName = resolveTrackArtist(t);
       if (!artistMap.has(artistName)) {
         artistMap.set(artistName, {
           name: artistName,
@@ -195,7 +239,7 @@ export function buildLibraryRows({
       id: t.id,
       kind: 'track',
       primary: t.title || t.filename || 'Unknown Track',
-      secondary: t.artist || 'Unknown Artist',
+      secondary: resolveTrackArtist(t),
       trailing: formatDuration(t.duration),
       payload: t
     }));
@@ -219,7 +263,7 @@ export function buildLibraryRows({
       id: t.id,
       kind: 'track',
       primary: t.title || t.filename || 'Unknown Track',
-      secondary: t.artist || 'Unknown Artist',
+      secondary: resolveTrackArtist(t),
       trailing: formatDuration(t.duration),
       payload: t
     }));

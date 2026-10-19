@@ -91,8 +91,8 @@ export class FilesystemReconciler {
       }
     }
 
-    // DB tracks still unmatched are marked as missing (strictly scoped to this root or legacy unassigned tracks)
-    const toMarkMissing = missingDbTracks.filter((t) => (!t.rootId || t.rootId === rootId) && !matchedDbIds.has(t.id));
+    // DB tracks still unmatched are marked as missing (scoped to this root or legacy unassigned/scraper tracks)
+    const toMarkMissing = missingDbTracks.filter((t) => (!t.rootId || t.rootId === rootId || /^(root_default|root_yt-dlp|root_session_files)$/i.test(t.rootId)) && !matchedDbIds.has(t.id));
 
     return {
       unmodified,
@@ -129,6 +129,15 @@ export class FilesystemReconciler {
       }
     };
 
+    const SCRAPER_REGEX = /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i;
+    let rootName = 'Songs';
+    if (rootId && !/^(root_default|root_session_files|root_yt-dlp)$/i.test(rootId)) {
+      const parsed = rootId.replace(/^root_/, '');
+      if (!SCRAPER_REGEX.test(parsed)) {
+        rootName = parsed;
+      }
+    }
+
     const tracksToPut = [];
 
     // 1. Process renames
@@ -138,13 +147,20 @@ export class FilesystemReconciler {
         const file = item.file || (item.handle && typeof item.handle.getFile === 'function' ? await item.handle.getFile() : null);
         if (file) {
           const headerSlice = await file.slice(0, 131072).arrayBuffer();
-          meta = extractMetadataFromChunk(headerSlice, item.filename, newRelativePath, item.size);
+          meta = extractMetadataFromChunk(headerSlice, item.filename, newRelativePath, item.size, null, rootName);
         }
       } catch (err) {
         console.warn(`[Reconciler] Error re-extracting metadata for renamed track ${item.filename}: ${err?.message}`);
       }
       if (!meta) {
-        meta = extractMetadataFromChunk(new Uint8Array(0), item.filename, newRelativePath, item.size);
+        meta = extractMetadataFromChunk(new Uint8Array(0), item.filename, newRelativePath, item.size, null, rootName);
+      }
+
+      let renamedAlbum = (meta && meta.album && meta.album !== 'Unknown Album' && !SCRAPER_REGEX.test(meta.album.trim()))
+        ? meta.album
+        : existing.album;
+      if (!renamedAlbum || renamedAlbum === 'Unknown Album' || SCRAPER_REGEX.test(renamedAlbum.trim())) {
+        renamedAlbum = rootName;
       }
 
       const updated = Object.assign({}, existing, {
@@ -154,11 +170,9 @@ export class FilesystemReconciler {
         size: item.size,
         rootId: rootId,
         title: (meta && meta.title && meta.title !== 'Unknown Track') ? meta.title : existing.title,
-        artist: (meta && meta.artist && meta.artist !== 'Unknown Artist') ? meta.artist : existing.artist,
-        albumArtist: (meta && meta.albumArtist) || existing.albumArtist || meta?.artist || existing.artist,
-        album: (meta && meta.album && meta.album !== 'Unknown Album')
-          ? meta.album
-          : (existing.album === 'yt-dlp' ? (/songs/i.test(newRelativePath) ? 'Songs' : 'Unknown Album') : existing.album),
+        artist: (meta && meta.artist && meta.artist !== 'Unknown Artist' && !SCRAPER_REGEX.test(meta.artist.trim())) ? meta.artist : existing.artist,
+        albumArtist: (meta && meta.albumArtist && !SCRAPER_REGEX.test(meta.albumArtist.trim())) ? meta.albumArtist : (existing.albumArtist || meta?.artist || existing.artist),
+        album: renamedAlbum,
         isMissing: 0,
         handle: item.handle || existing.handle || null
       });
@@ -199,21 +213,28 @@ export class FilesystemReconciler {
         const file = item.file || (item.handle && typeof item.handle.getFile === 'function' ? await item.handle.getFile() : null);
         if (file) {
           const headerSlice = await file.slice(0, 131072).arrayBuffer();
-          meta = extractMetadataFromChunk(headerSlice, item.filename, item.relativePath, item.size);
+          meta = extractMetadataFromChunk(headerSlice, item.filename, item.relativePath, item.size, null, rootName);
         }
       } catch (err) {
         console.error(`[Reconciler] Error reading file for modified track ${item.relativePath}: ${err?.message}`);
       }
 
       if (!meta) {
-        meta = extractMetadataFromChunk(new Uint8Array(0), item.filename, item.relativePath, item.size);
+        meta = extractMetadataFromChunk(new Uint8Array(0), item.filename, item.relativePath, item.size, null, rootName);
+      }
+
+      let updatedAlbum = (meta && meta.album && meta.album !== 'Unknown Album' && !SCRAPER_REGEX.test(meta.album.trim()))
+        ? meta.album
+        : existing.album;
+      if (!updatedAlbum || updatedAlbum === 'Unknown Album' || SCRAPER_REGEX.test(updatedAlbum.trim())) {
+        updatedAlbum = rootName;
       }
 
       const updated = Object.assign({}, existing, {
         title: (meta && meta.title) || existing.title,
-        artist: (meta && meta.artist) || existing.artist,
-        albumArtist: (meta && (meta.albumArtist || meta.artist)) || existing.albumArtist || (meta && meta.artist) || existing.artist,
-        album: (meta && meta.album) || existing.album,
+        artist: (meta && meta.artist && !SCRAPER_REGEX.test(meta.artist.trim())) ? meta.artist : existing.artist,
+        albumArtist: (meta && (meta.albumArtist || meta.artist) && !SCRAPER_REGEX.test((meta.albumArtist || meta.artist).trim())) ? (meta.albumArtist || meta.artist) : (existing.albumArtist || existing.artist),
+        album: updatedAlbum,
         genre: (meta && meta.genre) !== undefined && meta.genre !== null ? meta.genre : existing.genre,
         year: (meta && meta.year) !== undefined && meta.year !== null ? meta.year : existing.year,
         trackNumber: (meta && meta.trackNumber) !== undefined && meta.trackNumber !== null ? meta.trackNumber : existing.trackNumber,
@@ -249,14 +270,19 @@ export class FilesystemReconciler {
         const file = newItem.file || (newItem.handle && typeof newItem.handle.getFile === 'function' ? await newItem.handle.getFile() : null);
         if (file) {
           const headerSlice = await file.slice(0, 131072).arrayBuffer();
-          meta = extractMetadataFromChunk(headerSlice, newItem.filename, newItem.relativePath, newItem.size);
+          meta = extractMetadataFromChunk(headerSlice, newItem.filename, newItem.relativePath, newItem.size, null, rootName);
         }
       } catch (err) {
         console.error(`[Reconciler] Error reading file for new track ${newItem.relativePath}: ${err?.message}`);
       }
 
       if (!meta) {
-        meta = extractMetadataFromChunk(new Uint8Array(0), newItem.filename, newItem.relativePath, newItem.size);
+        meta = extractMetadataFromChunk(new Uint8Array(0), newItem.filename, newItem.relativePath, newItem.size, null, rootName);
+      }
+
+      let newAlbum = meta.album;
+      if (!newAlbum || newAlbum === 'Unknown Album' || SCRAPER_REGEX.test(newAlbum.trim())) {
+        newAlbum = rootName;
       }
 
       const trackId = generateDeterministicTrackId(newItem.relativePath, newItem.size, newItem.mtime);
@@ -270,7 +296,7 @@ export class FilesystemReconciler {
         title: meta.title,
         artist: meta.artist,
         albumArtist: meta.albumArtist || meta.artist,
-        album: meta.album,
+        album: newAlbum,
         genre: meta.genre,
         year: meta.year,
         trackNumber: meta.trackNumber,
@@ -360,7 +386,11 @@ export const reconciler = {
       opts = cb;
       cb = null;
     }
-    const rootId = 'root_' + (dirHandle.name || 'default');
+    let handleName = (dirHandle.name || 'Songs').trim();
+    if (!handleName || /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp|default)$/i.test(handleName)) {
+      handleName = 'Songs';
+    }
+    const rootId = 'root_' + handleName;
     await db.saveDirectoryHandle(rootId, dirHandle);
     const scannedItems = await scanDirectoryHandle(dirHandle);
     const activeHandles = (typeof db.getAllDirectoryHandles === 'function' ? await db.getAllDirectoryHandles().catch(() => []) : []) || [];
@@ -368,10 +398,9 @@ export const reconciler = {
     knownRootIds.add(rootId);
 
     const allTracks = (await db.getAllTracks()) || [];
-    let existingTracks = allTracks.filter((t) => t.rootId === rootId);
-    if (existingTracks.length === 0 && allTracks.length > 0) {
-      existingTracks = allTracks.filter((t) => !t.rootId || !knownRootIds.has(t.rootId) || t.rootId === 'root_default');
-    }
+    let existingTracks = allTracks.filter(
+      (t) => !t.rootId || t.rootId === rootId || !knownRootIds.has(t.rootId) || t.rootId === 'root_default' || /^(root_yt-dlp|root_session_files)$/i.test(t.rootId)
+    );
     const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
     const purgeMissing = opts ? opts.purgeMissing !== false : true;
     const finalOpts = Object.assign({}, opts, { purgeMissing });
@@ -408,7 +437,10 @@ export const reconciler = {
         });
       }
     }
-    const rootFolderName = (fileList[0]?.webkitRelativePath ? fileList[0].webkitRelativePath.split('/')[0] : 'Songs') || 'Songs';
+    let rootFolderName = (fileList[0]?.webkitRelativePath ? fileList[0].webkitRelativePath.split('/')[0] : 'Songs') || 'Songs';
+    if (/^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i.test(rootFolderName.trim())) {
+      rootFolderName = 'Songs';
+    }
     try {
       if (typeof db.saveRoot === 'function') {
         await db.saveRoot({ id: rootId, name: rootFolderName, dateAdded: Date.now() });
@@ -419,10 +451,9 @@ export const reconciler = {
     knownRootIds.add(rootId);
 
     const allTracks = (await db.getAllTracks()) || [];
-    let existingTracks = allTracks.filter((t) => t.rootId === rootId);
-    if (existingTracks.length === 0 && allTracks.length > 0) {
-      existingTracks = allTracks.filter((t) => !t.rootId || !knownRootIds.has(t.rootId) || t.rootId === 'root_default');
-    }
+    let existingTracks = allTracks.filter(
+      (t) => !t.rootId || t.rootId === rootId || !knownRootIds.has(t.rootId) || t.rootId === 'root_default' || /^(root_yt-dlp)$/i.test(t.rootId)
+    );
     const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
     const purgeMissing = opts ? opts.purgeMissing !== false : true;
     const finalOpts = Object.assign({}, opts, { purgeMissing });

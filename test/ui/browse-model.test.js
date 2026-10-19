@@ -162,6 +162,39 @@ describe('Browse Model - Library & Radio Query Shaping', () => {
     assert.equal(artistRows.some((r) => r.primary === 'Phantoms'), false);
   });
 
+  it('normalizes scraper folders (yt-dlp) and Unknown Album to parent folder or Songs in albums and drill views', () => {
+    const tracksWithScraper = [
+      { id: 't1', title: 'Song 1', artist: 'Artist 1', album: 'yt-dlp', rootId: 'root_Songs', duration: 180 },
+      { id: 't2', title: 'Song 2', artist: 'yt-dlp', album: 'Unknown Album', rootId: 'root_Music', duration: 200 },
+      { id: 't3', title: 'Song 3', artist: 'Artist 3', album: null, rootId: 'root_default', duration: 220 }
+    ];
+
+    const albumRows = buildLibraryRows({
+      mode: 'albums',
+      tracks: tracksWithScraper
+    });
+
+    // None of the album rows should be named 'yt-dlp' or 'Unknown Album'
+    assert.equal(albumRows.some((r) => r.primary === 'yt-dlp'), false);
+    assert.equal(albumRows.some((r) => r.primary === 'Unknown Album'), false);
+
+    // root_Songs and root_default should resolve to Songs; root_Music should resolve to Music
+    const songsAlbum = albumRows.find((r) => r.primary === 'Songs');
+    assert.ok(songsAlbum, 'Must have Songs album row');
+    assert.equal(songsAlbum.payload.tracks.length, 2);
+
+    const musicAlbum = albumRows.find((r) => r.primary === 'Music');
+    assert.ok(musicAlbum, 'Must have Music album row');
+    assert.equal(musicAlbum.secondary, 'Unknown Artist', 'Scraper artist must normalize to Unknown Artist');
+
+    // Drill down into Songs album
+    const drilled = buildLibraryRows({
+      tracks: tracksWithScraper,
+      drill: { kind: 'album', name: 'Songs' }
+    });
+    assert.equal(drilled.length, 2);
+  });
+
   it('filterStations filters by genre and favorites chip', () => {
     const favs = filterStations(FIXTURE_STATIONS, { genre: 'Favorites' });
     assert.equal(favs.length, 2);

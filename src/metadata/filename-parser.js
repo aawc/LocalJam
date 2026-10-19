@@ -3,8 +3,11 @@
  * Derives clean title, artist, album, and track number from filenames and folder structures when tags are missing.
  */
 
-export function parseFilenameMetadata(filename, relativePath = '') {
-  if (!filename) return { title: 'Unknown Track', artist: 'Unknown Artist', album: 'Unknown Album', trackNumber: null };
+export function parseFilenameMetadata(filename, relativePath = '', defaultAlbum = 'Songs') {
+  const fallbackAlbum = (defaultAlbum && !/^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i.test(defaultAlbum.trim()))
+    ? defaultAlbum.trim()
+    : 'Songs';
+  if (!filename) return { title: 'Unknown Track', artist: 'Unknown Artist', album: fallbackAlbum, trackNumber: null };
 
   // Strip extension
   const dotIndex = filename.lastIndexOf('.');
@@ -41,6 +44,10 @@ export function parseFilenameMetadata(filename, relativePath = '') {
 
   if (album && IGNORED_DIRECTORY_REGEX.test(album)) album = null;
   if (artist && IGNORED_DIRECTORY_REGEX.test(artist)) artist = null;
+
+  if (!album) {
+    album = fallbackAlbum;
+  }
 
   // Pattern 1: "01 - Artist - Title" or "01. Artist - Title"
   let match = /^(\d{1,3})\s*[-._]\s*(.+?)\s*[-–—]\s*(.+)$/.exec(baseName);
@@ -79,7 +86,7 @@ export function parseFilenameMetadata(filename, relativePath = '') {
     title: title || 'Unknown Track',
     artist: artist || 'Unknown Artist',
     albumArtist: artist || 'Unknown Artist',
-    album: album || 'Unknown Album',
+    album: album || fallbackAlbum,
     trackNumber: trackNumber || null,
     trackTotal: null,
     discNumber: null,

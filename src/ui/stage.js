@@ -19,7 +19,7 @@ import { toggleFavoriteStation, getStationFallbackArtwork, formatBitrate } from 
 import { escapeHtml } from '../utils/sanitize.js';
 import { attachGestures } from './gestures.js';
 import { hasFileSystemAccess as defaultHasFSAA } from './library-source.js';
-import { formatDuration } from './browse-model.js';
+import { formatDuration, resolveTrackAlbum, resolveTrackArtist } from './browse-model.js';
 
 /**
  * Creates the L0 Stage viewport component.
@@ -678,7 +678,9 @@ export function createStage(deps) {
         isStarred = Boolean(station.isFavorite);
       } else if (!isRadio && track) {
         titleEl.textContent = track.title || track.filename || 'Unknown Title';
-        subtitleEl.textContent = `${track.artist || 'Unknown Artist'} — ${track.album || 'Unknown Album'}`;
+        const displayAlbum = resolveTrackAlbum(track);
+        const displayArtist = resolveTrackArtist(track);
+        subtitleEl.textContent = `${displayArtist} — ${displayAlbum}`;
         isStarred = Boolean(track.isFavorite);
         if (db && typeof db.isFavorite === 'function') {
           db.isFavorite(track.id).then((fav) => {

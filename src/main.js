@@ -355,29 +355,45 @@ export async function initApp() {
       if (typeof db.getAllTracks === 'function') {
         const allTracks = await db.getAllTracks();
         const tracksToUpdate = [];
-        for (const t of allTracks) {
-          if (t && (t.album === 'yt-dlp' || t.artist === 'yt-dlp' || (!t.album && t.relativePath && /songs/i.test(t.relativePath)))) {
-            const parsed = parseFilenameMetadata(t.filename, t.relativePath);
-            let targetAlbum = parsed.album;
-            if (targetAlbum === 'yt-dlp' || !targetAlbum || targetAlbum === 'Unknown Album') {
-              targetAlbum = (t.relativePath && /songs/i.test(t.relativePath)) ? 'Songs' : 'Unknown Album';
-            }
-            let targetArtist = parsed.artist;
-            if (targetArtist === 'yt-dlp' || !targetArtist) {
-              targetArtist = 'Unknown Artist';
-            }
-            let changed = false;
-            if (targetAlbum && targetAlbum !== t.album) {
-              t.album = targetAlbum;
-              changed = true;
-            }
-            if (targetArtist && targetArtist !== t.artist) {
-              t.artist = targetArtist;
-              changed = true;
-            }
-            if (changed) tracksToUpdate.push(t);
+
+        let defaultRootName = 'Songs';
+        try {
+          const roots = (typeof db.getRoots === 'function' ? await db.getRoots() : []) || [];
+          const validRoot = roots.find((r) => r.name && !/^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp|default)$/i.test(r.name));
+          if (validRoot && validRoot.name) {
+            defaultRootName = validRoot.name;
           }
+        } catch (_) {}
+
+        for (const t of allTracks) {
+          if (!t) continue;
+
+          // Normalization of scraper albums and missing albums to 'Songs'
+          const trackRoot = (t.rootId && !/^(root_default|root_session_files|root_yt-dlp)$/i.test(t.rootId))
+            ? t.rootId.replace(/^root_/, '')
+            : defaultRootName;
+          const expectedAlbum = (/^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i.test(trackRoot)) ? 'Songs' : trackRoot;
+
+          let changed = false;
+          if (!t.album || t.album === 'Unknown Album' || /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i.test(t.album)) {
+            t.album = expectedAlbum;
+            changed = true;
+          }
+          if (t.artist && /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i.test(t.artist)) {
+            t.artist = 'Unknown Artist';
+            changed = true;
+          }
+          if (t.albumArtist && /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i.test(t.albumArtist)) {
+            t.albumArtist = t.artist || 'Unknown Artist';
+            changed = true;
+          }
+          if (t.rootId === 'root_yt-dlp' || t.rootId === 'root_default' || !t.rootId) {
+            t.rootId = 'root_' + expectedAlbum;
+            changed = true;
+          }
+          if (changed) tracksToUpdate.push(t);
         }
+
         if (tracksToUpdate.length > 0 && typeof db.putTracksBatch === 'function') {
           await db.putTracksBatch(tracksToUpdate);
         }

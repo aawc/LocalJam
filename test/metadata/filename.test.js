@@ -48,6 +48,7 @@ test('Filename Heuristic Parser Suite', async (t) => {
 
   await t.test('Does not assign yt-dlp as album or artist when single-level folder is yt-dlp', () => {
     const meta = parseFilenameMetadata('Speak to Me.mp3', 'yt-dlp/Speak to Me.mp3');
+    assert.equal(meta.album, 'Songs', 'Album must default to Songs');
     assert.notEqual(meta.album, 'yt-dlp', 'Album must never be yt-dlp');
     assert.notEqual(meta.artist, 'yt-dlp', 'Artist must never be yt-dlp');
   });
@@ -62,5 +63,13 @@ test('Master Metadata Chunk Engine Suite', async (t) => {
     assert.equal(result.album, 'Discovery');
     assert.equal(result.trackNumber, 1);
     assert.equal(result.fileSize, 5242880);
+  });
+
+  await t.test('Sanitizes scraper album and artist names to Songs and Unknown Artist', () => {
+    const emptyChunk = new Uint8Array(1024);
+    const result = extractMetadataFromChunk(emptyChunk, 'Track.mp3', 'yt-dlp/Track.mp3', 1024, null, 'Songs');
+    assert.equal(result.album, 'Songs', 'Album must resolve to Songs');
+    assert.notEqual(result.album, 'yt-dlp');
+    assert.notEqual(result.artist, 'yt-dlp');
   });
 });

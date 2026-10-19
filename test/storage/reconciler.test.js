@@ -370,4 +370,108 @@ test('Filesystem 3-Way Reconciler Suite', async (t) => {
     assert.equal(mockDb.tracks.has('trk_root_a'), true, 'trk_root_a must be preserved in database');
     assert.equal(mockDb.tracks.has('trk_root_b'), true, 'trk_root_b must be preserved in database');
   });
+
+  await t.test('applyDiff assigns rootName/Songs as album for newly added scraper tracks', async () => {
+    const mockDb = new MockDatabase();
+    const diff = {
+      toAdd: [
+        { filename: 'track1.mp3', size: 1000, mtime: 1000, relativePath: 'yt-dlp/track1.mp3' }
+      ],
+      toUpdate: [],
+      toRename: [],
+      toMarkMissing: []
+    };
+
+    await FilesystemReconciler.applyDiff(mockDb, 'root_Songs', diff);
+    const added = Array.from(mockDb.tracks.values())[0];
+    assert.ok(added);
+    assert.equal(added.album, 'Songs', 'Album must resolve to Songs, never yt-dlp');
+    assert.notEqual(added.artist, 'yt-dlp', 'Artist must never be yt-dlp');
+  });
+
+  await t.test('applyDiff toRename and toUpdate preserve string types for artist and albumArtist', async () => {
+    const mockDb = new MockDatabase();
+    const existingRename = {
+      id: 'trk_renamed',
+      filename: 'old.mp3',
+      relativePath: 'old.mp3',
+      rootId: 'root_Songs',
+      title: 'Old Title',
+      artist: 'Valid Artist',
+      albumArtist: 'Valid Album Artist',
+      album: 'Old Album',
+      size: 1000,
+      mtime: 1000,
+      isMissing: 0
+    };
+    const existingUpdate = {
+      id: 'trk_updated',
+      filename: 'mod.mp3',
+      relativePath: 'mod.mp3',
+      rootId: 'root_Songs',
+      title: 'Mod Title',
+      artist: 'yt-dlp',
+      albumArtist: 'yt-dlp',
+      album: 'yt-dlp',
+      size: 2000,
+      mtime: 1000,
+      isMissing: 0
+    };
+    mockDb.tracks.set(existingRename.id, existingRename);
+    mockDb.tracks.set(existingUpdate.id, existingUpdate);
+
+    const diff = {
+      toAdd: [],
+      toRename: [
+        {
+          existing: existingRename,
+          item: {
+            filename: 'renamed.mp3',
+            relativePath: 'renamed.mp3',
+            size: 1000,
+            mtime: 1000,
+            file: {
+              name: 'renamed.mp3',
+              size: 1000,
+              slice: () => ({ arrayBuffer: async () => new ArrayBuffer(0) })
+            }
+          },
+          newRelativePath: 'renamed.mp3'
+        }
+      ],
+      toUpdate: [
+        {
+          existing: existingUpdate,
+          item: {
+            filename: 'mod.mp3',
+            relativePath: 'mod.mp3',
+            size: 2500,
+            mtime: 2000,
+            file: {
+              name: 'mod.mp3',
+              size: 2500,
+              slice: () => ({ arrayBuffer: async () => new ArrayBuffer(0) })
+            }
+          }
+        }
+      ],
+      toMarkMissing: []
+    };
+
+    await FilesystemReconciler.applyDiff(mockDb, 'root_Songs', diff);
+    const renamed = mockDb.tracks.get('trk_renamed');
+    const updated = mockDb.tracks.get('trk_updated');
+
+    assert.ok(renamed);
+    assert.equal(typeof renamed.artist, 'string');
+    assert.equal(typeof renamed.albumArtist, 'string');
+    assert.equal(renamed.artist, 'Valid Artist');
+
+    assert.ok(updated);
+    assert.equal(typeof updated.artist, 'string');
+    assert.equal(typeof updated.albumArtist, 'string');
+    assert.notEqual(updated.artist, 'yt-dlp', 'Scraper artist must be sanitized');
+    assert.notEqual(updated.albumArtist, 'yt-dlp', 'Scraper albumArtist must be sanitized');
+    assert.equal(updated.album, 'Songs', 'Album must normalize to Songs');
+  });
 });

@@ -23,7 +23,7 @@ export const CHUNK_SIZE = 128 * 1024; // 128 KB chunk for safe memory consumptio
  * @param {number} fileSize - Total file size in bytes
  * @param {Uint8Array} [tailBuffer] - Optional trailing 128 bytes for ID3v1
  */
-export function extractMetadataFromChunk(headerBuffer, filename, relativePath = '', fileSize = 0, tailBuffer = null) {
+export function extractMetadataFromChunk(headerBuffer, filename, relativePath = '', fileSize = 0, tailBuffer = null, rootName = 'Songs') {
   const bytes = headerBuffer instanceof Uint8Array ? headerBuffer : new Uint8Array(headerBuffer);
   let meta = null;
 
@@ -78,13 +78,30 @@ export function extractMetadataFromChunk(headerBuffer, filename, relativePath = 
   }
 
   // Fallback to smart filename heuristics if metadata tags are absent or missing title/artist
-  const fallback = parseFilenameMetadata(filename, relativePath);
+  const fallback = parseFilenameMetadata(filename, relativePath, rootName);
+
+  const SCRAPER_REGEX = /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i;
+
+  let rawAlbum = (meta && meta.album) || fallback.album;
+  if (!rawAlbum || rawAlbum === 'Unknown Album' || SCRAPER_REGEX.test(rawAlbum.trim())) {
+    rawAlbum = (rootName && !SCRAPER_REGEX.test(rootName.trim())) ? rootName.trim() : 'Songs';
+  }
+
+  let rawArtist = (meta && meta.artist) || fallback.artist;
+  if (!rawArtist || SCRAPER_REGEX.test(rawArtist.trim())) {
+    rawArtist = 'Unknown Artist';
+  }
+
+  let rawAlbumArtist = (meta && meta.albumArtist) || (meta && meta.artist) || fallback.albumArtist;
+  if (!rawAlbumArtist || SCRAPER_REGEX.test(rawAlbumArtist.trim())) {
+    rawAlbumArtist = rawArtist;
+  }
 
   return {
     title: (meta && meta.title) || fallback.title,
-    artist: (meta && meta.artist) || fallback.artist,
-    albumArtist: (meta && meta.albumArtist) || (meta && meta.artist) || fallback.albumArtist,
-    album: (meta && meta.album) || fallback.album,
+    artist: rawArtist,
+    albumArtist: rawAlbumArtist,
+    album: rawAlbum,
     genre: (meta && meta.genre) || fallback.genre,
     year: (meta && meta.year) || fallback.year,
     trackNumber: (meta && meta.trackNumber) || fallback.trackNumber,
@@ -106,8 +123,9 @@ export function extractMetadataFromChunk(headerBuffer, filename, relativePath = 
  * High-level helper to extract metadata from a standard browser File object using chunked slicing
  * @param {File} file
  * @param {string} [relativePath]
+ * @param {string} [rootName]
  */
-export async function parseFileMetadata(file, relativePath = '') {
+export async function parseFileMetadata(file, relativePath = '', rootName = 'Songs') {
   if (!file) throw new Error('File parameter is required');
 
   // Read first 128 KB slice
@@ -125,6 +143,7 @@ export async function parseFileMetadata(file, relativePath = '') {
     file.name,
     relativePath || file.webkitRelativePath || file.name,
     file.size,
-    tailBuffer
+    tailBuffer,
+    rootName
   );
 }

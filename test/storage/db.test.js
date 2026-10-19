@@ -44,7 +44,9 @@ function createMockIDBFactory() {
                 indexNames: { contains: () => false },
                 put(record) {
                   const key = record.id || record.artworkId || record.trackId || record.key || record.rootId || String(map.size + 1);
-                  map.set(key, JSON.parse(JSON.stringify(record)));
+                  const cloned = JSON.parse(JSON.stringify(record));
+                  if (record.handle) cloned.handle = record.handle;
+                  map.set(key, cloned);
                   const req = { onsuccess: null, onerror: null, result: key };
                   queueMicrotask(() => {
                     if (req.onsuccess) req.onsuccess({ target: req });
@@ -55,6 +57,7 @@ function createMockIDBFactory() {
                 add(record) {
                   const id = map.size + 1;
                   const item = { id, ...JSON.parse(JSON.stringify(record)) };
+                  if (record.handle) item.handle = record.handle;
                   map.set(id, item);
                   const req = { onsuccess: null, onerror: null, result: id };
                   queueMicrotask(() => {
@@ -64,7 +67,9 @@ function createMockIDBFactory() {
                   return req;
                 },
                 get(key) {
-                  const item = map.get(key) ? JSON.parse(JSON.stringify(map.get(key))) : undefined;
+                  const raw = map.get(key);
+                  const item = raw ? JSON.parse(JSON.stringify(raw)) : undefined;
+                  if (raw && raw.handle && item) item.handle = raw.handle;
                   const req = { onsuccess: null, onerror: null, result: item };
                   queueMicrotask(() => {
                     if (req.onsuccess) req.onsuccess({ target: req });
@@ -72,7 +77,11 @@ function createMockIDBFactory() {
                   return req;
                 },
                 getAll() {
-                  const items = Array.from(map.values()).map((v) => JSON.parse(JSON.stringify(v)));
+                  const items = Array.from(map.values()).map((v) => {
+                    const copy = JSON.parse(JSON.stringify(v));
+                    if (v.handle) copy.handle = v.handle;
+                    return copy;
+                  });
                   const req = { onsuccess: null, onerror: null, result: items };
                   queueMicrotask(() => {
                     if (req.onsuccess) req.onsuccess({ target: req });
@@ -470,6 +479,51 @@ test('LocalJamDatabase - deleteTracksBatch and purgeMissingTracks', async (t) =>
     const remaining = await db.getAllTracks();
     const remainingIds = remaining.map((t) => t.id).sort();
     assert.deepEqual(remainingIds, ['trk_b2', 'trk_m1', 'trk_m4']);
+  });
+
+  await t.test('purgeMissingTracks purges tracks with handle throwing NotFoundError while preserving NotAllowedError', async () => {
+    await db.putTracksBatch([
+      {
+        id: 'trk_gone',
+        title: 'Gone Track',
+        handle: {
+          async getFile() {
+            const err = new Error('File not found');
+            err.name = 'NotFoundError';
+            throw err;
+          }
+        },
+        isMissing: 0
+      },
+      {
+        id: 'trk_present',
+        title: 'Present Track',
+        handle: {
+          async getFile() {
+            return { size: 1000 };
+          }
+        },
+        isMissing: 0
+      },
+      {
+        id: 'trk_prompt',
+        title: 'Permission Prompt Track',
+        handle: {
+          async getFile() {
+            const err = new Error('Permission prompt needed');
+            err.name = 'NotAllowedError';
+            throw err;
+          }
+        },
+        isMissing: 0
+      }
+    ]);
+
+    const purged = await db.purgeMissingTracks();
+    assert.equal(purged, 1, 'Only NotFoundError track should be purged');
+    assert.equal(await db.getTrack('trk_gone'), null);
+    assert.ok(await db.getTrack('trk_present'));
+    assert.ok(await db.getTrack('trk_prompt'), 'Track with NotAllowedError must NOT be purged');
   });
 });
 
