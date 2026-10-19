@@ -15,6 +15,7 @@ import { APP_VERSION } from '../../version.js';
 import { setTheme } from '../theme.js';
 import { escapeHtml } from '../../utils/sanitize.js';
 import { attachGestures } from '../gestures.js';
+import { requestNotificationPermission } from './update-banner.js';
 
 /**
  * The verified object-store list from §4.3.1.
@@ -148,6 +149,13 @@ export function createOverflowMenu(deps = {}) {
     return `[${Math.round(volume * 100)}%]`;
   }
 
+  function getAlertsStateText() {
+    if (typeof Notification === 'undefined') return '[NOT SUPPORTED]';
+    if (Notification.permission === 'granted') return '[ALERTS: ON]';
+    if (Notification.permission === 'denied') return '[ALERTS: BLOCKED]';
+    return '[ENABLE ALERTS]';
+  }
+
   function renderMarkup() {
     contentEl.innerHTML = `
       <div class="overflow-list" role="menu">
@@ -216,6 +224,15 @@ export function createOverflowMenu(deps = {}) {
         </div>
         <span class="overflow-state overflow-state-badge">[THEME: ${currentTheme.toUpperCase()}]</span>
       </button>
+
+      <button type="button" class="overflow-row" data-action="alerts-toggle" role="menuitem">
+        <div class="overflow-primary">
+          <span class="overflow-icon" aria-hidden="true">🔔</span>
+          <span class="overflow-label">Update alerts</span>
+        </div>
+        <span class="overflow-state overflow-state-badge" id="overflow-alerts-badge">${getAlertsStateText()}</span>
+      </button>
+
       <div class="overflow-divider" role="separator"></div>
       <button type="button" class="overflow-row" data-action="feedback" role="menuitem">
           <span class="overflow-label">Diagnostics &amp; Feedback</span>
@@ -341,6 +358,11 @@ export function createOverflowMenu(deps = {}) {
       themeBtn.addEventListener('click', cycleTheme);
     }
 
+    const alertsBtn = contentEl.querySelector('[data-action="alerts-toggle"]');
+    if (alertsBtn) {
+      alertsBtn.addEventListener('click', handleAlertsToggle);
+    }
+
     const feedbackBtn = contentEl.querySelector('[data-action="feedback"]');
     if (feedbackBtn) {
       feedbackBtn.addEventListener('click', () => {
@@ -352,6 +374,30 @@ export function createOverflowMenu(deps = {}) {
     const resetBtn = contentEl.querySelector('[data-action="reset"]');
     if (resetBtn) {
       resetBtn.addEventListener('click', handleReset);
+    }
+  }
+
+  async function handleAlertsToggle() {
+    if (typeof Notification === 'undefined') {
+      if (typeof onToast === 'function') onToast('[NOTIFICATIONS NOT SUPPORTED]');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      if (typeof onToast === 'function') onToast('[UPDATE ALERTS: ACTIVE]');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      if (typeof onToast === 'function') onToast('[ALERTS: BLOCKED IN BROWSER]');
+      return;
+    }
+    const perm = await requestNotificationPermission();
+    const badge = contentEl.querySelector('#overflow-alerts-badge');
+    if (perm === 'granted') {
+      if (badge) badge.textContent = '[ALERTS: ON]';
+      if (typeof onToast === 'function') onToast('[UPDATE ALERTS: ENABLED]');
+    } else if (perm === 'denied') {
+      if (badge) badge.textContent = '[ALERTS: BLOCKED]';
+      if (typeof onToast === 'function') onToast('[ALERTS: BLOCKED IN BROWSER]');
     }
   }
 

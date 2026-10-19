@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import {
   createUpdateBanner,
   checkRemoteVersion,
-  initUpdateChecker
+  initUpdateChecker,
+  dispatchNativeUpdateNotification,
+  requestNotificationPermission
 } from "../../src/ui/components/update-banner.js";
 
 test("Update Detection & Refresh Prompt Suite", async (t) => {
@@ -675,7 +677,252 @@ test("Update Detection & Refresh Prompt Suite", async (t) => {
     checker.setRegistration(mockReg);
     assert.equal(notifiedVer, null, "Must not trigger notification after checker is destroyed");
   });
+
+  await t.test("dispatchNativeUpdateNotification dispatches via registration.showNotification when permitted", async () => {
+    const prevNotif = globalThis.Notification;
+    const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const prevSession = globalThis.sessionStorage;
+    try {
+      let dispatchedTitle = null;
+      let dispatchedOptions = null;
+      const store = {};
+      globalThis.sessionStorage = {
+        getItem: (k) => store[k] || null,
+        setItem: (k, v) => { store[k] = v; }
+      };
+
+      globalThis.Notification = {
+        permission: "granted"
+      };
+
+      const mockReg = {
+        showNotification: async (title, opts) => {
+          dispatchedTitle = title;
+          dispatchedOptions = opts;
+          return true;
+        }
+      };
+
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          serviceWorker: {
+            getRegistration: async () => mockReg
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
+      const res = await dispatchNativeUpdateNotification("v2026.10.138", { registration: mockReg });
+      assert.equal(res, true, "Must return true on successful dispatch");
+      assert.equal(dispatchedTitle, "LocalJam Update Ready");
+      assert.ok(dispatchedOptions.body.includes("v2026.10.138"));
+      assert.equal(dispatchedOptions.tag, "localjam-update");
+      assert.equal(dispatchedOptions.renotify, true);
+
+      // Repeat call for same version should be deduplicated in session
+      const repeatRes = await dispatchNativeUpdateNotification("v2026.10.138", { registration: mockReg });
+      assert.equal(repeatRes, false, "Must suppress duplicate native notification in same session");
+    } finally {
+      globalThis.Notification = prevNotif;
+      if (prevNavDescriptor) {
+        Object.defineProperty(globalThis, "navigator", prevNavDescriptor);
+      }
+      globalThis.sessionStorage = prevSession;
+    }
+  });
+
+  await t.test("dispatchNativeUpdateNotification falls back to Window Notification when showNotification unavailable", async () => {
+    const prevNotif = globalThis.Notification;
+    const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const prevSession = globalThis.sessionStorage;
+    try {
+      let createdTitle = null;
+      let createdOptions = null;
+      const store = {};
+      globalThis.sessionStorage = {
+        getItem: (k) => store[k] || null,
+        setItem: (k, v) => { store[k] = v; }
+      };
+
+      function MockNotification(title, opts) {
+        createdTitle = title;
+        createdOptions = opts;
+        this.close = () => {};
+      }
+      MockNotification.permission = "granted";
+      globalThis.Notification = MockNotification;
+
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          serviceWorker: {
+            getRegistration: async () => null // no registration
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
+      const res = await dispatchNativeUpdateNotification("v2026.10.139");
+      assert.equal(res, true);
+      assert.equal(createdTitle, "LocalJam Update Ready");
+      assert.ok(createdOptions.body.includes("v2026.10.139"));
+    } finally {
+      globalThis.Notification = prevNotif;
+      if (prevNavDescriptor) {
+        Object.defineProperty(globalThis, "navigator", prevNavDescriptor);
+      }
+      globalThis.sessionStorage = prevSession;
+    }
+  });
+
+  await t.test("requestNotificationPermission correctly resolves status and triggers permission request", async () => {
+    const prevNotif = globalThis.Notification;
+    try {
+      // 1. Unsupported
+      delete globalThis.Notification;
+      const unsupported = await requestNotificationPermission();
+      assert.equal(unsupported, "unsupported");
+
+      // 2. Already granted
+      globalThis.Notification = { permission: "granted", requestPermission: async () => "granted" };
+      const granted = await requestNotificationPermission();
+      assert.equal(granted, "granted");
+
+      // 3. Already denied
+      globalThis.Notification = { permission: "denied", requestPermission: async () => "denied" };
+      const denied = await requestNotificationPermission();
+      assert.equal(denied, "denied");
+
+      // 4. Default -> requests permission
+      let requestCalled = false;
+      globalThis.Notification = {
+        permission: "default",
+        requestPermission: async () => {
+          requestCalled = true;
+          return "granted";
+        }
+      };
+      const requested = await requestNotificationPermission();
+      assert.equal(requestCalled, true);
+      assert.equal(requested, "granted");
+    } finally {
+      globalThis.Notification = prevNotif;
+    }
+  });
+
+  await t.test("createUpdateBanner displays and handles Notify Me button when permission is default", async () => {
+    const prevDoc = globalThis.document;
+    const prevNotif = globalThis.Notification;
+    try {
+      let toastMsg = null;
+      let alertBtnDisplay = null;
+      let clickListeners = {};
+
+      const alertBtnMock = {
+        style: { display: "none" },
+        addEventListener: (evt, fn) => {
+          clickListeners[evt] = fn;
+        }
+      };
+
+      globalThis.Notification = {
+        permission: "default",
+        requestPermission: async () => "granted"
+      };
+
+      globalThis.document = {
+        createElement: () => ({
+          id: "",
+          className: "",
+          style: { display: "none" },
+          innerHTML: "",
+          querySelector: (sel) => {
+            if (sel === "#update-banner-message") return { textContent: "" };
+            if (sel === "#btn-apply-update") return { addEventListener: () => {} };
+            if (sel === "#btn-enable-alerts") return alertBtnMock;
+            if (sel === "#btn-dismiss-update") return { addEventListener: () => {} };
+            return null;
+          },
+          setAttribute: () => {}
+        })
+      };
+
+      const banner = createUpdateBanner({
+        onToast: (msg) => { toastMsg = msg; }
+      });
+      banner.show("v2026.10.140");
+
+      assert.equal(alertBtnMock.style.display, "inline-flex", "Notify Me button must be displayed when permission is default");
+
+      // Click Notify Me
+      assert.ok(clickListeners["click"], "Must have click listener");
+      await clickListeners["click"]();
+
+      assert.equal(alertBtnMock.style.display, "none", "Notify Me button should hide once granted");
+      assert.equal(toastMsg, "[UPDATE ALERTS: ENABLED]", "Must announce alerts enabled via toast");
+    } finally {
+      globalThis.document = prevDoc;
+      globalThis.Notification = prevNotif;
+    }
+  });
+
+  await t.test("initUpdateChecker immediately queries navigator.serviceWorker.getRegistration when registration omitted", async () => {
+    const prevNavDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const prevFetch = globalThis.fetch;
+    try {
+      let notifiedVer = null;
+      let notifiedWrk = null;
+
+      const mockWaiting = { state: "installed", postMessage: () => {} };
+      const mockReg = {
+        waiting: mockWaiting,
+        installing: null,
+        addEventListener: () => {}
+      };
+
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({ version: "v2026.10.141" })
+      });
+
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          serviceWorker: {
+            addEventListener: () => {},
+            getRegistration: async () => mockReg,
+            ready: Promise.resolve(mockReg)
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
+      const checker = initUpdateChecker({
+        currentVersion: "v2026.10.137",
+        onUpdateReady: (ver, wrk) => {
+          notifiedVer = ver;
+          notifiedWrk = wrk;
+        },
+        pollIntervalMs: 0
+      });
+
+      // Allow microtask ticks for getRegistration and checkRemoteVersion resolution
+      await new Promise((r) => setTimeout(r, 20));
+
+      assert.ok(notifiedVer === "New Release" || notifiedVer === "v2026.10.141", `Version was ${notifiedVer}`);
+      assert.equal(notifiedWrk, mockWaiting);
+
+      checker.destroy();
+    } finally {
+      if (prevNavDescriptor) {
+        Object.defineProperty(globalThis, "navigator", prevNavDescriptor);
+      }
+      globalThis.fetch = prevFetch;
+    }
+  });
 });
+
 
 
 

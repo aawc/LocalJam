@@ -65,6 +65,8 @@ test('PWA - sw.js caches all declared app shell assets and excludes audio stream
   assert.ok(assetList.includes('./src/utils/sanitize.js'), 'Must precache ./src/utils/sanitize.js');
   assert.ok(!content.includes("then(() => self.skipWaiting())"), 'Must not automatically skipWaiting during install');
   assert.ok(content.includes("event.data.type === 'SKIP_WAITING'"), 'Must handle SKIP_WAITING message');
+  assert.ok(content.includes("event.data?.type === 'GET_VERSION'"), 'Must handle GET_VERSION message');
+  assert.ok(content.includes("addEventListener('notificationclick'"), 'Must handle notificationclick event');
   assert.ok(content.includes("self.clients.claim()"), 'Must claim clients on activate');
   assert.ok(
     content.includes("name.startsWith('localjam-') && name !== CACHE_NAME"),

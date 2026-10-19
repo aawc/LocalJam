@@ -182,6 +182,10 @@ export async function captureDiagnostics(deps = {}) {
       installingWorkerState: null,
       caches: []
     },
+    notifications: {
+      supported: typeof Notification !== 'undefined',
+      permission: typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+    },
     recentErrors: getDiagnosticErrors()
   };
 
@@ -351,6 +355,7 @@ ${notesSection}### Summary Metrics
 | **Audio Engine** | \`${diag.audio?.source || 'Local'}\` — \`${diag.audio?.playbackState || 'Stopped'}\` (AudioContext: \`${diag.audio?.audioContextState || 'idle'}\`) |
 | **Now Playing** | \`${nowPlaying}\` |
 | **Volume & EQ** | \`${diag.audio?.volume || '100%'}\` (Muted: \`${diag.audio?.muted ? 'Yes' : 'No'}\`, Preset: \`${diag.audio?.equalizer?.preset || 'Flat'}\`) |
+| **Update Alerts** | \`${diag.notifications?.supported ? `[${(diag.notifications.permission || 'default').toUpperCase()}]` : '[NOT SUPPORTED]'}\` |
 | **Browser / OS** | \`${diag.environment?.platform || 'unknown'}\` — \`${diag.environment?.screen || 'unknown'}\` |
 
 ### Environment Details

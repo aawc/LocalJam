@@ -216,4 +216,20 @@ describe('PWA Diagnostics & State Collector Suite', () => {
     });
     assert.equal(diagWithGetHandles.storage.storeCounts.roots, 3);
   });
+
+  it('captureDiagnostics and formatDiagnosticsMarkdown report Update Alerts state', async () => {
+    const prevNotif = globalThis.Notification;
+    try {
+      globalThis.Notification = { permission: 'granted' };
+      const diag = await captureDiagnostics({ db: null, audioEngine: null });
+      assert.equal(diag.notifications.supported, true);
+      assert.equal(diag.notifications.permission, 'granted');
+
+      const md = formatDiagnosticsMarkdown(diag);
+      assert.ok(md.includes('Update Alerts'), 'Markdown summary table must include Update Alerts');
+      assert.ok(md.includes('[GRANTED]'));
+    } finally {
+      globalThis.Notification = prevNotif;
+    }
+  });
 });

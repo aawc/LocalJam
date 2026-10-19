@@ -4,7 +4,115 @@
 
 import { APP_VERSION, isValidReleaseName, isValidSemanticTag } from "../../version.js";
 
-export function createUpdateBanner() {
+/**
+ * Requests native notification permission if supported and currently default.
+ * @returns {Promise<'granted'|'denied'|'default'|'unsupported'>}
+ */
+export async function requestNotificationPermission() {
+  if (typeof Notification === "undefined" || typeof Notification.requestPermission !== "function") {
+    return "unsupported";
+  }
+  if (Notification.permission !== "default") {
+    return Notification.permission;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    return permission || Notification.permission || "default";
+  } catch (err) {
+    console.warn("[UpdateBanner] Notification permission request error:", err?.message || err);
+    return Notification.permission || "default";
+  }
+}
+
+/**
+ * Dispatches a native browser/platform notification if permission is granted.
+ * @param {string} version
+ * @param {object} [options]
+ * @param {ServiceWorkerRegistration} [options.registration]
+ * @param {Function} [options.onApply]
+ * @returns {Promise<boolean>} True if notification was dispatched
+ */
+export async function dispatchNativeUpdateNotification(version, options = {}) {
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") {
+    return false;
+  }
+
+  // Prevent spamming repeat native notifications for the same version in this session
+  if (typeof sessionStorage !== "undefined") {
+    const lastNotifiedTs = Number(sessionStorage.getItem("localjam_native_notified_ts") || 0);
+    if (Date.now() - lastNotifiedTs < 5000) {
+      return false;
+    }
+    const sessionKey = `localjam_native_notified_${version || "latest"}`;
+    if (sessionStorage.getItem(sessionKey)) {
+      return false;
+    }
+    try {
+      sessionStorage.setItem(sessionKey, "1");
+      sessionStorage.setItem("localjam_native_notified_ts", Date.now().toString());
+    } catch (_) {}
+  }
+
+  const isNamed = version && version !== "New Release";
+  const title = "LocalJam Update Ready";
+  const body = isNamed
+    ? `A new version of LocalJam (${version}) is ready. Tap to refresh and apply.`
+    : "A new version of LocalJam is ready. Tap to refresh and apply.";
+  const icon = "./public/icons/icon-192.svg";
+  const badge = "./favicon.svg";
+
+  // 1. Prefer ServiceWorkerRegistration.showNotification if available
+  try {
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      let reg = options.registration || null;
+      if (!reg && typeof navigator.serviceWorker.getRegistration === "function") {
+        reg = await navigator.serviceWorker.getRegistration();
+      }
+      if (reg && typeof reg.showNotification === "function") {
+        await reg.showNotification(title, {
+          body,
+          icon,
+          badge,
+          tag: "localjam-update",
+          renotify: true,
+          data: { action: "apply-update", version: isNamed ? version : null }
+        });
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn("[UpdateBanner] SW showNotification fallback:", err?.message || err);
+  }
+
+  // 2. Fallback to Window Notification API
+  try {
+    const notif = new Notification(title, {
+      body,
+      icon,
+      badge,
+      tag: "localjam-update",
+      renotify: true
+    });
+    notif.onclick = () => {
+      if (typeof window !== "undefined" && typeof window.focus === "function") {
+        window.focus();
+      }
+      if (typeof options.onApply === "function") {
+        options.onApply();
+      }
+      if (typeof notif.close === "function") {
+        notif.close();
+      }
+    };
+    return true;
+  } catch (err) {
+    console.warn("[UpdateBanner] Window Notification fallback error:", err?.message || err);
+    return false;
+  }
+}
+
+export function createUpdateBanner(deps = {}) {
+  const { onToast } = deps;
   const container = document.createElement("div");
   container.id = "update-banner-container";
   container.className = "update-banner-container";
@@ -25,6 +133,7 @@ export function createUpdateBanner() {
       </div>
       <div class="update-banner-actions">
         <button id="btn-apply-update" class="btn btn-primary btn-sm">Refresh Now</button>
+        <button id="btn-enable-alerts" class="btn btn-secondary btn-sm" style="display: none;" aria-label="Enable native update alerts">Notify Me</button>
         <button id="btn-dismiss-update" class="btn btn-secondary btn-sm" aria-label="Dismiss update notification">Later</button>
       </div>
     </div>
@@ -32,6 +141,7 @@ export function createUpdateBanner() {
 
   const msgEl = container.querySelector("#update-banner-message");
   const applyBtn = container.querySelector("#btn-apply-update");
+  const alertBtn = container.querySelector("#btn-enable-alerts");
   const dismissBtn = container.querySelector("#btn-dismiss-update");
 
   let waitingWorker = null;
@@ -51,9 +161,21 @@ export function createUpdateBanner() {
       currentBannerVersion = newVersion;
     }
 
+    // If currentBannerVersion is generic "New Release", attempt to resolve concrete version in background
+    if (currentBannerVersion === "New Release") {
+      checkRemoteVersion().then((resolved) => {
+        if (resolved && currentBannerVersion === "New Release") {
+          currentBannerVersion = resolved;
+          if (msgEl) {
+            msgEl.textContent = `A new version of LocalJam (${resolved}) is ready.`;
+          }
+        }
+      }).catch(() => {});
+    }
+
     if (typeof sessionStorage !== "undefined") {
       const dismissed = sessionStorage.getItem("localjam_dismissed_version");
-      if (dismissed === currentBannerVersion) {
+      if (dismissed && dismissed === currentBannerVersion && currentBannerVersion !== "New Release") {
         return;
       }
       const applied = sessionStorage.getItem("localjam_applied_update");
@@ -75,7 +197,23 @@ export function createUpdateBanner() {
         ? `A new version of LocalJam (${currentBannerVersion}) is ready.`
         : `A new version of LocalJam is ready.`;
     }
+
+    // Toggle "Notify Me" button visibility based on permission state
+    if (alertBtn && alertBtn.style) {
+      if (typeof Notification !== "undefined" && Notification.permission === "default") {
+        alertBtn.style.display = "inline-flex";
+      } else {
+        alertBtn.style.display = "none";
+      }
+    }
+
     container.style.display = "block";
+
+    // Attempt native browser notification if permission is already granted
+    dispatchNativeUpdateNotification(currentBannerVersion, {
+      registration: null,
+      onApply: applyUpdate
+    }).catch(() => {});
   }
 
   function hide() {
@@ -198,6 +336,26 @@ export function createUpdateBanner() {
     });
   }
 
+  if (alertBtn && typeof alertBtn.addEventListener === "function") {
+    alertBtn.addEventListener("click", async () => {
+      const perm = await requestNotificationPermission();
+      if (perm === "granted") {
+        if (alertBtn.style) alertBtn.style.display = "none";
+        if (typeof onToast === "function") {
+          onToast("[UPDATE ALERTS: ENABLED]");
+        }
+        dispatchNativeUpdateNotification(currentBannerVersion, {
+          onApply: applyUpdate
+        }).catch(() => {});
+      } else if (perm === "denied") {
+        if (alertBtn.style) alertBtn.style.display = "none";
+        if (typeof onToast === "function") {
+          onToast("[ALERTS: BLOCKED IN BROWSER]");
+        }
+      }
+    });
+  }
+
   if (dismissBtn) {
     dismissBtn.addEventListener("click", () => {
       hide();
@@ -289,6 +447,11 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
 
     if (reg.waiting) {
       notifyUpdate("New Release", reg.waiting);
+      checkRemoteVersion(activeVersion).then((resolved) => {
+        if (resolved && !isDestroyed) {
+          notifyUpdate(resolved, reg.waiting);
+        }
+      }).catch(() => {});
     }
     if (reg.installing) {
       const currentInstalling = reg.installing;
@@ -297,6 +460,11 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
         const hasController = typeof navigator !== "undefined" && navigator.serviceWorker ? navigator.serviceWorker.controller : true;
         if (currentInstalling.state === "installed" && hasController) {
           notifyUpdate("New Release", currentInstalling);
+          checkRemoteVersion(activeVersion).then((resolved) => {
+            if (resolved && !isDestroyed) {
+              notifyUpdate(resolved, currentInstalling);
+            }
+          }).catch(() => {});
         }
       });
     }
@@ -312,6 +480,11 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
           const hasController = typeof navigator !== "undefined" && navigator.serviceWorker ? navigator.serviceWorker.controller : true;
           if (installing.state === "installed" && hasController) {
             notifyUpdate("New Release", installing);
+            checkRemoteVersion(activeVersion).then((resolved) => {
+              if (resolved && !isDestroyed) {
+                notifyUpdate(resolved, installing);
+              }
+            }).catch(() => {});
           }
         });
       });
@@ -320,6 +493,38 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
 
   if (registration) {
     bindRegistration(registration);
+  } else if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+    if (typeof navigator.serviceWorker.getRegistration === "function") {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (reg && !activeRegistration && !isDestroyed) {
+          bindRegistration(reg);
+        }
+      }).catch(() => {});
+    }
+    if (navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then((reg) => {
+        if (reg && !isDestroyed) {
+          bindRegistration(reg);
+        }
+      }).catch(() => {});
+    }
+  }
+
+  let swMessageListener = null;
+  if (
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    typeof navigator.serviceWorker.addEventListener === "function"
+  ) {
+    swMessageListener = (event) => {
+      if (isDestroyed) return;
+      if (event.data?.type === "VERSION" && event.data.version) {
+        if (event.data.version !== activeVersion) {
+          notifyUpdate(event.data.version, activeRegistration?.waiting || null);
+        }
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", swMessageListener);
   }
 
   // 2. Periodic, window focus, and visibility change remote version check
@@ -390,6 +595,15 @@ export function initUpdateChecker({ registration, onUpdateReady, pollIntervalMs 
     }
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", onVisibilityChange);
+    }
+    if (
+      swMessageListener &&
+      typeof navigator !== "undefined" &&
+      navigator.serviceWorker &&
+      typeof navigator.serviceWorker.removeEventListener === "function"
+    ) {
+      navigator.serviceWorker.removeEventListener("message", swMessageListener);
+      swMessageListener = null;
     }
   };
 

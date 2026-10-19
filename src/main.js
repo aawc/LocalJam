@@ -582,7 +582,12 @@ export async function initApp() {
     });
 
     // 7. Cold-Start Playback State Hydration (Ready/Paused in 1-Tap)
-    await hydratePlaybackState();
+    try {
+      await hydratePlaybackState();
+    } catch (hydrateErr) {
+      console.warn('[LocalJam] Playback hydration failure (continuing bootstrap):', hydrateErr?.message || hydrateErr);
+      recordDiagnosticError(hydrateErr, 'Playback hydration failure');
+    }
 
     // 8. Debounced State Persistence (500ms)
     let persistTimer = null;
@@ -611,12 +616,27 @@ export async function initApp() {
     });
 
     // 10. Update Banner & Service Worker Lifecycle
-    const updateBanner = createUpdateBanner();
+    const updateBanner = createUpdateBanner({
+      onToast: (msg) => showToast(msg)
+    });
     document.body.appendChild(updateBanner.element);
 
     const handleUpdateReady = (newVersion, worker) => {
-      updateBanner.show(newVersion, worker);
+      if (updateBanner && typeof updateBanner.show === 'function') {
+        updateBanner.show(newVersion, worker);
+      }
     };
+
+    // Listen for notification-initiated update actions from Service Worker
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof navigator.serviceWorker.addEventListener === 'function') {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'APPLY_UPDATE') {
+          if (updateBanner && typeof updateBanner.apply === 'function') {
+            updateBanner.apply();
+          }
+        }
+      });
+    }
 
     // Initialize update checker immediately so version polling and visibility listeners start without delay
     const updateCheckerInstance = initUpdateChecker({

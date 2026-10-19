@@ -595,4 +595,42 @@ describe('Overflow Menu Component (L2)', () => {
     const rescanBtn = menu.element.querySelector('[data-action="rescan"]');
     assert.ok(rescanBtn.innerHTML.includes('[5 tracks (3 missing)]'));
   });
+
+  it('renders Update alerts row and handles permission request toggle', async () => {
+    const prevNotif = globalThis.Notification;
+    try {
+      let toastMsg = '';
+      globalThis.Notification = {
+        permission: 'default',
+        requestPermission: async () => 'granted'
+      };
+
+      const menu = createOverflowMenu({
+        onToast: (msg) => { toastMsg = msg; }
+      });
+      container.appendChild(menu.element);
+      menu.onOpen();
+
+      const alertsBtn = menu.element.querySelector('[data-action="alerts-toggle"]');
+      assert.ok(alertsBtn, 'Update alerts button must exist');
+      assert.ok(alertsBtn.innerHTML.includes('[ENABLE ALERTS]'), 'Initial state must be [ENABLE ALERTS]');
+
+      // Click to request permission
+      alertsBtn.dispatchEvent(new Event('click'));
+      await new Promise((r) => setTimeout(r, 10));
+
+      assert.ok(alertsBtn.innerHTML.includes('[ALERTS: ON]'), 'Must update badge to [ALERTS: ON]');
+      assert.equal(toastMsg, '[UPDATE ALERTS: ENABLED]');
+
+      // Subsequent click when already granted announces active status
+      toastMsg = '';
+      globalThis.Notification.permission = 'granted';
+      alertsBtn.dispatchEvent(new Event('click'));
+      await new Promise((r) => setTimeout(r, 10));
+      assert.equal(toastMsg, '[UPDATE ALERTS: ACTIVE]');
+    } finally {
+      globalThis.Notification = prevNotif;
+    }
+  });
 });
+

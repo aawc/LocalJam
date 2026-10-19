@@ -105,6 +105,37 @@ self.addEventListener('message', (event) => {
   ) {
     self.skipWaiting();
   }
+  if (event.data?.type === 'GET_VERSION') {
+    const ver = CACHE_NAME.replace('localjam-', '');
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ type: 'VERSION', version: ver });
+    } else if (event.source && typeof event.source.postMessage === 'function') {
+      event.source.postMessage({ type: 'VERSION', version: ver });
+    }
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  if (event.notification && typeof event.notification.close === 'function') {
+    event.notification.close();
+  }
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          await client.focus();
+          if (typeof client.postMessage === 'function') {
+            client.postMessage({ type: 'APPLY_UPDATE' });
+          }
+          return;
+        }
+      }
+      if (self.clients.openWindow) {
+        return await self.clients.openWindow('./');
+      }
+    })()
+  );
 });
 
 self.addEventListener('fetch', (event) => {
