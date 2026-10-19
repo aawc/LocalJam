@@ -270,4 +270,104 @@ test('Filesystem 3-Way Reconciler Suite', async (t) => {
       db.putTracksBatch = originalPutBatch;
     }
   });
+
+  await t.test('applyDiff re-extracts metadata and normalizes yt-dlp album during track rename/move', async () => {
+    const mockDb = new MockDatabase();
+    const existing = {
+      id: 'trk_legacy',
+      title: 'Old Title',
+      artist: 'yt-dlp',
+      album: 'yt-dlp',
+      relativePath: 'yt-dlp/01 - Pink Floyd - Speak to Me.mp3',
+      filename: '01 - Pink Floyd - Speak to Me.mp3',
+      size: 5000,
+      mtime: 1000,
+      isMissing: 0
+    };
+    mockDb.tracks.set(existing.id, existing);
+
+    const diff = {
+      toAdd: [],
+      toUpdate: [],
+      toRename: [{
+        item: {
+          filename: '01 - Pink Floyd - Speak to Me.mp3',
+          size: 5000,
+          mtime: 1000
+        },
+        existing,
+        newRelativePath: 'Songs/yt-dlp/01 - Pink Floyd - Speak to Me.mp3'
+      }],
+      toMarkMissing: [],
+      unmodified: []
+    };
+
+    await FilesystemReconciler.applyDiff(mockDb, 'root_songs', diff);
+
+    const updated = mockDb.tracks.get('trk_legacy');
+    assert.ok(updated);
+    assert.equal(updated.relativePath, 'Songs/yt-dlp/01 - Pink Floyd - Speak to Me.mp3');
+    assert.equal(updated.title, 'Speak to Me');
+    assert.equal(updated.artist, 'Pink Floyd');
+    assert.equal(updated.album, 'Songs', 'Album should be normalized from Songs directory hierarchy');
+    assert.equal(updated.rootId, 'root_songs');
+  });
+
+  await t.test('reconcileFileList defaults purgeMissing to true and purges deleted tracks', async () => {
+    const originalGetAll = db.getAllTracks;
+    const originalPutBatch = db.putTracksBatch;
+    const originalDeleteBatch = db.deleteTracksBatch;
+    try {
+      const deletedIds = [];
+      db.getAllTracks = async () => [
+        { id: 'trk_to_delete', relativePath: 'Missing.mp3', filename: 'Missing.mp3', size: 9999, rootId: 'root_session_files', isMissing: 0 }
+      ];
+      db.putTracksBatch = async () => {};
+      db.deleteTracksBatch = async (ids) => {
+        deletedIds.push(...ids);
+        return ids.length;
+      };
+
+      const mockFile = (name, size = 1000) => ({
+        name,
+        size,
+        lastModified: 1000,
+        webkitRelativePath: `Songs/${name}`,
+        slice: () => ({ arrayBuffer: async () => new ArrayBuffer(0) })
+      });
+
+      const files = [mockFile('Present.mp3', 2000)];
+      await reconciler.reconcileFileList(files);
+
+      assert.deepEqual(deletedIds, ['trk_to_delete'], 'Must purge missing tracks by default');
+    } finally {
+      db.getAllTracks = originalGetAll;
+      db.putTracksBatch = originalPutBatch;
+      db.deleteTracksBatch = originalDeleteBatch;
+    }
+  });
+
+  await t.test('computeDiff and applyDiff preserve tracks from other roots during multi-root reconciliation', async () => {
+    const existing = [
+      { id: 'trk_root_a', filename: 'songA.mp3', size: 1000, mtime: 1000, relativePath: 'songA.mp3', rootId: 'root_A', isMissing: 0 },
+      { id: 'trk_root_b', filename: 'songB.mp3', size: 2000, mtime: 2000, relativePath: 'songB.mp3', rootId: 'root_B', isMissing: 0 }
+    ];
+    const scannedInB = [
+      // Only songB is present in root_B
+      { filename: 'songB.mp3', size: 2000, mtime: 2000, relativePath: 'songB.mp3' }
+    ];
+
+    const diff = FilesystemReconciler.computeDiff(scannedInB, existing, 'root_B');
+    assert.equal(diff.toMarkMissing.length, 0, 'Tracks from root_A must NOT be marked missing when reconciling root_B');
+    assert.equal(diff.unmodified.length, 1);
+    assert.equal(diff.unmodified[0].existing.id, 'trk_root_b');
+
+    const mockDb = new MockDatabase();
+    mockDb.tracks.set('trk_root_a', existing[0]);
+    mockDb.tracks.set('trk_root_b', existing[1]);
+
+    await FilesystemReconciler.applyDiff(mockDb, 'root_B', diff, null, { purgeMissing: true });
+    assert.equal(mockDb.tracks.has('trk_root_a'), true, 'trk_root_a must be preserved in database');
+    assert.equal(mockDb.tracks.has('trk_root_b'), true, 'trk_root_b must be preserved in database');
+  });
 });

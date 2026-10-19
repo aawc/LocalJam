@@ -38,6 +38,19 @@ test('Filename Heuristic Parser Suite', async (t) => {
     assert.equal(meta.artist, 'Solar Fields');
     assert.equal(meta.title, 'Sol');
   });
+
+  await t.test('Ignores utility and downloader scratch directories (yt-dlp) from path hierarchy', () => {
+    const meta = parseFilenameMetadata('01 - Pink Floyd - Speak to Me.mp3', 'Songs/yt-dlp/01 - Pink Floyd - Speak to Me.mp3');
+    assert.equal(meta.artist, 'Pink Floyd');
+    assert.equal(meta.album, 'Songs', 'Must ignore yt-dlp segment and resolve parent folder Songs as album');
+    assert.equal(meta.title, 'Speak to Me');
+  });
+
+  await t.test('Does not assign yt-dlp as album or artist when single-level folder is yt-dlp', () => {
+    const meta = parseFilenameMetadata('Speak to Me.mp3', 'yt-dlp/Speak to Me.mp3');
+    assert.notEqual(meta.album, 'yt-dlp', 'Album must never be yt-dlp');
+    assert.notEqual(meta.artist, 'yt-dlp', 'Artist must never be yt-dlp');
+  });
 });
 
 test('Master Metadata Chunk Engine Suite', async (t) => {

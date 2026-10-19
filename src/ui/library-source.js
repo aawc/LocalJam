@@ -32,10 +32,12 @@ export function hasFileSystemAccess() {
  */
 export async function pickFolder(opts = {}) {
   const reconciler = opts.reconciler || defaultReconciler;
+  const purgeMissing = opts.purgeMissing !== false;
+  const reconcilerOpts = Object.assign({}, opts, { purgeMissing });
 
   if (opts.fileList) {
     try {
-      const result = await reconciler.reconcileFileList(opts.fileList, opts.onProgress, opts);
+      const result = await reconciler.reconcileFileList(opts.fileList, opts.onProgress, reconcilerOpts);
       if (typeof opts.onResult === 'function') opts.onResult(result);
       return Boolean(result && (result.scannedCount > 0 || (result.diff && (result.diff.toAdd?.length > 0 || result.diff.added?.length > 0))));
     } catch (err) {
@@ -57,7 +59,7 @@ export async function pickFolder(opts = {}) {
     }
 
     try {
-      const result = await reconciler.reconcileDirectoryHandle(dirHandle, opts.onProgress, opts);
+      const result = await reconciler.reconcileDirectoryHandle(dirHandle, opts.onProgress, reconcilerOpts);
       if (typeof opts.onResult === 'function') opts.onResult(result);
       return Boolean(result && (result.scannedCount > 0 || (result.diff && (result.diff.toAdd?.length > 0 || result.diff.added?.length > 0))));
     } catch (err) {
@@ -90,7 +92,7 @@ export async function pickFolder(opts = {}) {
             return;
           }
 
-          const result = await reconciler.reconcileFileList(files, opts.onProgress, opts);
+          const result = await reconciler.reconcileFileList(files, opts.onProgress, reconcilerOpts);
           if (typeof opts.onResult === 'function') opts.onResult(result);
           resolve(Boolean(result && (result.scannedCount > 0 || (result.diff && (result.diff.toAdd?.length > 0 || result.diff.added?.length > 0)))));
         } catch (err) {

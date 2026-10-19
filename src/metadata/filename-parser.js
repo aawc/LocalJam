@@ -18,10 +18,19 @@ export function parseFilenameMetadata(filename, relativePath = '') {
   let album = null;
   let title = null;
 
+  // Utility/downloader scratch folders that should never be treated as albums or artists
+  const IGNORED_DIRECTORY_REGEX = /^(yt-dlp|youtube-dl|ytdl|tmp|temp|\.cache|\.tmp)$/i;
+
   // Infer Artist & Album from directory hierarchy if path is available
   // e.g. "Pink Floyd/The Dark Side of the Moon/01 - Speak to Me.mp3"
+  // or "Songs/yt-dlp/01 - Speak to Me.mp3" -> album: "Songs"
   if (relativePath) {
-    const segments = relativePath.split(/[/\\]/).filter(Boolean);
+    const rawSegments = relativePath.split(/[/\\]/).filter(Boolean);
+    const filenameSegment = rawSegments[rawSegments.length - 1];
+    const dirSegments = rawSegments.slice(0, rawSegments.length - 1).filter(
+      (seg) => !IGNORED_DIRECTORY_REGEX.test(seg.trim())
+    );
+    const segments = [...dirSegments, filenameSegment];
     if (segments.length >= 3) {
       artist = cleanName(segments[segments.length - 3]);
       album = cleanName(segments[segments.length - 2]);
@@ -29,6 +38,9 @@ export function parseFilenameMetadata(filename, relativePath = '') {
       album = cleanName(segments[0]);
     }
   }
+
+  if (album && IGNORED_DIRECTORY_REGEX.test(album)) album = null;
+  if (artist && IGNORED_DIRECTORY_REGEX.test(artist)) artist = null;
 
   // Pattern 1: "01 - Artist - Title" or "01. Artist - Title"
   let match = /^(\d{1,3})\s*[-._]\s*(.+?)\s*[-–—]\s*(.+)$/.exec(baseName);

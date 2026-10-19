@@ -137,6 +137,23 @@ describe('Library Source Abstraction', () => {
     assert.deepEqual(progressReported, { parsedCount: 5 });
   });
 
+  it('pickFolder defaults purgeMissing to true in reconciler options', async () => {
+    const mockHandle = { name: 'LocalMusic' };
+    globalThis.window.showDirectoryPicker = async () => mockHandle;
+
+    let receivedOpts = null;
+    const mockReconciler = {
+      reconcileDirectoryHandle: async (handle, onProgress, opts) => {
+        receivedOpts = opts;
+        return { scannedCount: 1 };
+      }
+    };
+
+    await pickFolder({ reconciler: mockReconciler });
+    assert.ok(receivedOpts, 'Reconciler options must be passed');
+    assert.equal(receivedOpts.purgeMissing, true, 'purgeMissing must default to true');
+  });
+
   it('rescan calls db.getAllDirectoryHandles and invokes reconciler for each stored root without showDirectoryPicker', async () => {
     let showPickerCalled = false;
     globalThis.window.showDirectoryPicker = async () => {

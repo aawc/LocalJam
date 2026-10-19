@@ -1076,5 +1076,95 @@ test('Shell Overflow - onRescan purges missing tracks and updates library state'
   }
 });
 
+test('Shell Bootstrap - initApp runs startup library hygiene purging missing tracks and normalizing yt-dlp albums', async () => {
+  setupMockDom();
+
+  const timerIds = [];
+  const originalSetInterval = globalThis.setInterval;
+  const originalSetTimeout = globalThis.setTimeout;
+  globalThis.setInterval = (fn, ms) => {
+    const t = originalSetInterval(fn, ms);
+    timerIds.push({ timer: t, type: 'interval' });
+    return t;
+  };
+  globalThis.setTimeout = (fn, ms) => {
+    const t = originalSetTimeout(fn, ms);
+    timerIds.push({ timer: t, type: 'timeout' });
+    return t;
+  };
+
+  const originalFetch = globalThis.fetch;
+  const originalDbInit = db.init;
+  const originalGetPlaybackState = db.getPlaybackState;
+  const originalGetAllTracks = db.getAllTracks;
+  const originalPurgeMissingTracks = db.purgeMissingTracks;
+  const originalPutTracksBatch = db.putTracksBatch;
+  const originalGetStations = db.getStations;
+
+  let purgeCalled = false;
+  let updatedBatch = null;
+
+  const initialTracks = [
+    {
+      id: 'trk_legacy',
+      title: 'Speak to Me',
+      artist: 'Pink Floyd',
+      album: 'yt-dlp',
+      filename: '01 - Speak to Me.mp3',
+      relativePath: 'Songs/yt-dlp/01 - Speak to Me.mp3',
+      isMissing: 0
+    }
+  ];
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({ version: 'v2026.10.137' })
+  });
+
+  db.init = async () => {};
+  db.getPlaybackState = async () => null;
+  db.getAllTracks = async () => initialTracks;
+  db.getStations = async () => [];
+  db.purgeMissingTracks = async () => {
+    purgeCalled = true;
+    return 0;
+  };
+  db.putTracksBatch = async (batch) => {
+    updatedBatch = batch;
+  };
+
+  document.body.innerHTML = `
+    <div id="stage-root"></div>
+    <div id="layer-root"></div>
+    <div id="toast-root"></div>
+    <div id="aria-live-region"></div>
+  `;
+
+  try {
+    await initApp();
+
+    assert.equal(purgeCalled, true, 'db.purgeMissingTracks must be called on app startup');
+    assert.ok(updatedBatch, 'putTracksBatch must be called to normalize yt-dlp album');
+    assert.equal(updatedBatch.length, 1);
+    assert.equal(updatedBatch[0].album, 'Songs', 'yt-dlp album must be normalized to parent folder Songs');
+  } finally {
+    for (const t of timerIds) {
+      if (t.type === 'interval') clearInterval(t.timer);
+      else clearTimeout(t.timer);
+    }
+    globalThis.setInterval = originalSetInterval;
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.fetch = originalFetch;
+    db.init = originalDbInit;
+    db.getPlaybackState = originalGetPlaybackState;
+    db.getAllTracks = originalGetAllTracks;
+    db.getStations = originalGetStations;
+    db.purgeMissingTracks = originalPurgeMissingTracks;
+    db.putTracksBatch = originalPutTracksBatch;
+    layers.destroy();
+    teardownMockDom();
+  }
+});
+
 
 

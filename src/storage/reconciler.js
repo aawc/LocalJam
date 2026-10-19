@@ -91,8 +91,8 @@ export class FilesystemReconciler {
       }
     }
 
-    // DB tracks still unmatched are marked as missing
-    const toMarkMissing = missingDbTracks.filter((t) => !matchedDbIds.has(t.id));
+    // DB tracks still unmatched are marked as missing (strictly scoped to this root or legacy unassigned tracks)
+    const toMarkMissing = missingDbTracks.filter((t) => (!t.rootId || t.rootId === rootId) && !matchedDbIds.has(t.id));
 
     return {
       unmodified,
@@ -133,11 +133,32 @@ export class FilesystemReconciler {
 
     // 1. Process renames
     for (const { item, existing, newRelativePath } of diff.toRename) {
+      let meta = null;
+      try {
+        const file = item.file || (item.handle && typeof item.handle.getFile === 'function' ? await item.handle.getFile() : null);
+        if (file) {
+          const headerSlice = await file.slice(0, 131072).arrayBuffer();
+          meta = extractMetadataFromChunk(headerSlice, item.filename, newRelativePath, item.size);
+        }
+      } catch (err) {
+        console.warn(`[Reconciler] Error re-extracting metadata for renamed track ${item.filename}: ${err?.message}`);
+      }
+      if (!meta) {
+        meta = extractMetadataFromChunk(new Uint8Array(0), item.filename, newRelativePath, item.size);
+      }
+
       const updated = Object.assign({}, existing, {
         relativePath: newRelativePath,
         filename: item.filename,
         mtime: item.mtime,
         size: item.size,
+        rootId: rootId,
+        title: (meta && meta.title && meta.title !== 'Unknown Track') ? meta.title : existing.title,
+        artist: (meta && meta.artist && meta.artist !== 'Unknown Artist') ? meta.artist : existing.artist,
+        albumArtist: (meta && meta.albumArtist) || existing.albumArtist || meta?.artist || existing.artist,
+        album: (meta && meta.album && meta.album !== 'Unknown Album')
+          ? meta.album
+          : (existing.album === 'yt-dlp' ? (/songs/i.test(newRelativePath) ? 'Songs' : 'Unknown Album') : existing.album),
         isMissing: 0,
         handle: item.handle || existing.handle || null
       });
@@ -342,13 +363,23 @@ export const reconciler = {
     const rootId = 'root_' + (dirHandle.name || 'default');
     await db.saveDirectoryHandle(rootId, dirHandle);
     const scannedItems = await scanDirectoryHandle(dirHandle);
-    const existingTracks = (await db.getAllTracks()).filter((t) => t.rootId === rootId);
+    const activeHandles = (typeof db.getAllDirectoryHandles === 'function' ? await db.getAllDirectoryHandles().catch(() => []) : []) || [];
+    const knownRootIds = new Set(activeHandles.map((h) => h.id).filter(Boolean));
+    knownRootIds.add(rootId);
+
+    const allTracks = (await db.getAllTracks()) || [];
+    let existingTracks = allTracks.filter((t) => t.rootId === rootId);
+    if (existingTracks.length === 0 && allTracks.length > 0) {
+      existingTracks = allTracks.filter((t) => !t.rootId || !knownRootIds.has(t.rootId) || t.rootId === 'root_default');
+    }
     const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
+    const purgeMissing = opts ? opts.purgeMissing !== false : true;
+    const finalOpts = Object.assign({}, opts, { purgeMissing });
     await FilesystemReconciler.applyDiff(db, rootId, diff, (processed, total, status) => {
       if (cb) {
         cb({ processed, total, status, parsedCount: scannedItems.length });
       }
-    }, opts);
+    }, finalOpts);
     return { scannedCount: scannedItems.length, diff };
   },
 
@@ -377,13 +408,29 @@ export const reconciler = {
         });
       }
     }
-    const existingTracks = (await db.getAllTracks()).filter((t) => t.rootId === rootId);
+    const rootFolderName = (fileList[0]?.webkitRelativePath ? fileList[0].webkitRelativePath.split('/')[0] : 'Songs') || 'Songs';
+    try {
+      if (typeof db.saveRoot === 'function') {
+        await db.saveRoot({ id: rootId, name: rootFolderName, dateAdded: Date.now() });
+      }
+    } catch (_) {}
+    const activeHandles = (typeof db.getAllDirectoryHandles === 'function' ? await db.getAllDirectoryHandles().catch(() => []) : []) || [];
+    const knownRootIds = new Set(activeHandles.map((h) => h.id).filter(Boolean));
+    knownRootIds.add(rootId);
+
+    const allTracks = (await db.getAllTracks()) || [];
+    let existingTracks = allTracks.filter((t) => t.rootId === rootId);
+    if (existingTracks.length === 0 && allTracks.length > 0) {
+      existingTracks = allTracks.filter((t) => !t.rootId || !knownRootIds.has(t.rootId) || t.rootId === 'root_default');
+    }
     const diff = FilesystemReconciler.computeDiff(scannedItems, existingTracks, rootId);
+    const purgeMissing = opts ? opts.purgeMissing !== false : true;
+    const finalOpts = Object.assign({}, opts, { purgeMissing });
     await FilesystemReconciler.applyDiff(db, rootId, diff, (processed, total, status) => {
       if (cb) {
         cb({ processed, total, status, parsedCount: scannedItems.length });
       }
-    }, opts);
+    }, finalOpts);
     return { scannedCount: scannedItems.length, diff };
   },
 

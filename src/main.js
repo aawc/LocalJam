@@ -20,6 +20,7 @@ import { createFeedbackModal } from './ui/components/feedback-modal.js';
 import { createUpdateBanner, initUpdateChecker } from './ui/components/update-banner.js';
 import { APP_VERSION } from './version.js';
 import { recordDiagnosticError } from './utils/diagnostics.js';
+import { parseFilenameMetadata } from './metadata/filename-parser.js';
 import { initTheme } from './ui/theme.js';
 
 let lastStation = null;
@@ -346,6 +347,45 @@ export async function initApp() {
     await db.init();
     await initTheme(db);
 
+    // 1.5. Startup library hygiene: purge missing tracks & normalize legacy folder/scraper names
+    try {
+      if (typeof db.purgeMissingTracks === 'function') {
+        await db.purgeMissingTracks();
+      }
+      if (typeof db.getAllTracks === 'function') {
+        const allTracks = await db.getAllTracks();
+        const tracksToUpdate = [];
+        for (const t of allTracks) {
+          if (t && (t.album === 'yt-dlp' || t.artist === 'yt-dlp' || (!t.album && t.relativePath && /songs/i.test(t.relativePath)))) {
+            const parsed = parseFilenameMetadata(t.filename, t.relativePath);
+            let targetAlbum = parsed.album;
+            if (targetAlbum === 'yt-dlp' || !targetAlbum || targetAlbum === 'Unknown Album') {
+              targetAlbum = (t.relativePath && /songs/i.test(t.relativePath)) ? 'Songs' : 'Unknown Album';
+            }
+            let targetArtist = parsed.artist;
+            if (targetArtist === 'yt-dlp' || !targetArtist) {
+              targetArtist = 'Unknown Artist';
+            }
+            let changed = false;
+            if (targetAlbum && targetAlbum !== t.album) {
+              t.album = targetAlbum;
+              changed = true;
+            }
+            if (targetArtist && targetArtist !== t.artist) {
+              t.artist = targetArtist;
+              changed = true;
+            }
+            if (changed) tracksToUpdate.push(t);
+          }
+        }
+        if (tracksToUpdate.length > 0 && typeof db.putTracksBatch === 'function') {
+          await db.putTracksBatch(tracksToUpdate);
+        }
+      }
+    } catch (hygieneErr) {
+      console.warn('[LocalJam] Startup library hygiene warning:', hygieneErr?.message || hygieneErr);
+    }
+
     // 2. Mount Toast Notification Host into #toast-root
     const toastRoot = document.getElementById('toast-root');
     if (toastRoot) {
@@ -404,6 +444,23 @@ export async function initApp() {
     }));
 
     let browseSheetInstance = null;
+    let stageInstance = null;
+
+    const handlePickFolder = async () => {
+      const picked = await pickFolder({ purgeMissing: true });
+      if (picked) {
+        if (db && typeof db.purgeMissingTracks === 'function') {
+          await db.purgeMissingTracks().catch(() => {});
+        }
+        if (browseSheetInstance && typeof browseSheetInstance.refresh === 'function') {
+          await browseSheetInstance.refresh().catch(() => {});
+        }
+        if (audioEngine && typeof audioEngine.notifyState === 'function') {
+          audioEngine.notifyState();
+        }
+      }
+      return picked;
+    };
 
     layers.register('browse', () => {
       browseSheetInstance = createBrowseSheet({
@@ -417,7 +474,7 @@ export async function initApp() {
           lastStation = station;
           audioEngine.playRadio(station);
         },
-        onPickFolder: async () => pickFolder(),
+        onPickFolder: handlePickFolder,
         onOpenFeedback: () => layers.open('feedback'),
         onToast: (msg) => showToast(msg),
         onClose: () => layers.close()
@@ -425,13 +482,11 @@ export async function initApp() {
       return browseSheetInstance;
     });
 
-    let stageInstance = null;
-
     layers.register('overflow', () => createOverflowMenu({
       onOpenEq: () => layers.open('eq'),
       onOpenNotes: () => layers.open('notes'),
       onOpenFeedback: () => layers.open('feedback'),
-      onPickFolder: async () => pickFolder(),
+      onPickFolder: handlePickFolder,
       onRescan: async () => {
         const rescanResult = await rescan({ purgeMissing: true });
         const purgedDb = (db && typeof db.purgeMissingTracks === 'function')
@@ -487,8 +542,8 @@ export async function initApp() {
         onOpenBrowse: (tab) => layers.open('browse', { tab }),
         onOpenOverflow: () => layers.open('overflow'),
         onOpenFeedback: () => layers.open('feedback'),
-        onPickFolder: async () => pickFolder(),
-        onToggleSource: async () => togglePlaybackSource({ onOpenBrowse: (tab) => layers.open('browse', { tab }) }),
+        onPickFolder: handlePickFolder,
+        onToggleSource: async () => togglePlaybackSource({ onPickFolder: handlePickFolder, onOpenBrowse: (tab) => layers.open('browse', { tab }) }),
         onToast: (msg) => showToast(msg)
       });
       stageRoot.appendChild(stageInstance.element);
@@ -500,7 +555,7 @@ export async function initApp() {
       queueManager,
       layers,
       onToast: (msg) => showToast(msg),
-      onToggleSource: () => togglePlaybackSource({ onOpenBrowse: (tab) => layers.open('browse', { tab }) }),
+      onToggleSource: () => togglePlaybackSource({ onPickFolder: handlePickFolder, onOpenBrowse: (tab) => layers.open('browse', { tab }) }),
       onToggleVisualizer: () => {
         if (stageInstance) {
           const isViz = typeof stageInstance.isVisualizerEnabled === 'function'
