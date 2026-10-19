@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { hydratePlaybackState, togglePlaybackSource, savePlaybackState, initApp } from '../../src/main.js';
+import { AudioEngine } from '../../src/player/audio-engine.js';
 import { setupMockDom, teardownMockDom } from '../helpers/mock-dom.js';
 import { db } from '../../src/storage/db.js';
 import { layers } from '../../src/ui/layers.js';
@@ -255,6 +256,78 @@ test('Shell Hydration - fallback to first curated station if no saved state and 
   assert.equal(mockAudioEngine.currentStation?.id, 'fallback-radio');
   assert.equal(mockAudioEngine.isRadio, true);
   assert.equal(mockAudioEngine.isPlaying, false);
+});
+
+test('Shell Hydration - hydratePlaybackState handles real AudioEngine and getter-only prototype without TypeError', async () => {
+  const mockTrack = {
+    id: 'trk-prototype-test',
+    title: 'Hydration Safety',
+    duration: 300
+  };
+
+  const mockDb = {
+    async getPlaybackState() {
+      return {
+        isRadio: false,
+        trackId: 'trk-prototype-test',
+        currentTime: 45.2,
+        duration: 300,
+        volume: 0.7,
+        muted: false
+      };
+    },
+    async getAllTracks() {
+      return [mockTrack];
+    }
+  };
+
+  const mockQueueManager = {
+    shuffle: false,
+    repeat: 'off',
+    setQueue() {}
+  };
+
+  // 1. Verify with real AudioEngine instance
+  const realEngine = new AudioEngine();
+  const resultReal = await hydratePlaybackState({
+    db: mockDb,
+    audioEngine: realEngine,
+    queueManager: mockQueueManager
+  });
+
+  assert.equal(resultReal.type, 'track');
+  assert.equal(realEngine.currentTime, 45.2, 'Real AudioEngine currentTime should be hydrated');
+  assert.equal(realEngine.duration, 300, 'Real AudioEngine duration should be hydrated');
+
+  // 2. Verify with an object having getter-only prototype (defensive try/catch check)
+  const getterOnlyProto = {};
+  Object.defineProperty(getterOnlyProto, 'currentTime', {
+    get() { return 10; },
+    configurable: true
+  });
+  Object.defineProperty(getterOnlyProto, 'duration', {
+    get() { return 100; },
+    configurable: true
+  });
+
+  const strictGetterEngine = Object.create(getterOnlyProto);
+  strictGetterEngine.isRadio = false;
+  strictGetterEngine.isPlaying = true;
+  strictGetterEngine.currentTrack = null;
+  strictGetterEngine.currentStation = null;
+  strictGetterEngine.volume = 1.0;
+  strictGetterEngine.muted = false;
+  strictGetterEngine.notifyState = () => {};
+
+  // This must not throw TypeError: Cannot set property currentTime of #<Object> which has only a getter
+  const resultStrict = await hydratePlaybackState({
+    db: mockDb,
+    audioEngine: strictGetterEngine,
+    queueManager: mockQueueManager
+  });
+
+  assert.equal(resultStrict.type, 'track');
+  assert.equal(strictGetterEngine.isPlaying, false);
 });
 
 test('Shell Source Switching - togglePlaybackSource switches radio to local track', async () => {

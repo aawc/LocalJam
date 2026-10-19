@@ -153,12 +153,12 @@ export async function hydratePlaybackState(deps = {}) {
     engine.currentStation = null;
     lastTrack = targetTrack;
     if (savedState && typeof savedState.currentTime === 'number') {
-      engine.currentTime = savedState.currentTime;
+      try { engine.currentTime = savedState.currentTime; } catch (_) {}
     }
     if (savedState && typeof savedState.duration === 'number') {
-      engine.duration = savedState.duration;
+      try { engine.duration = savedState.duration; } catch (_) {}
     } else if (targetTrack.duration) {
-      engine.duration = targetTrack.duration;
+      try { engine.duration = targetTrack.duration; } catch (_) {}
     }
     if (queue && availableTracks.length > 0 && typeof queue.setQueue === 'function') {
       queue.setQueue(availableTracks, targetIndex);

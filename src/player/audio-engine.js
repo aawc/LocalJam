@@ -34,6 +34,8 @@ export class AudioEngine {
     this.volume = 0.8;
     this.muted = false;
     this.crossfadeSeconds = 0;
+    this._savedTime = 0;
+    this._savedDuration = 0;
 
     /** @type {AudioContext|null} */
     this.audioCtx = null;
@@ -379,25 +381,44 @@ export class AudioEngine {
 
   get currentTime() {
     const audio = this.getActiveAudio();
-    return (audio && audio.currentTime) || 0;
+    if (audio) {
+      if (audio.currentTime > 0) return audio.currentTime;
+      if (audio.src && audio.src !== (typeof window !== 'undefined' ? window.location.href : '')) {
+        return audio.currentTime || 0;
+      }
+    }
+    return this._savedTime || 0;
+  }
+
+  set currentTime(val) {
+    this._savedTime = Math.max(0, Number.isFinite(val) ? val : 0);
+    const audio = this.getActiveAudio();
+    if (audio && !this.isRadio) {
+      try {
+        audio.currentTime = this._savedTime;
+      } catch (_) {}
+    }
   }
 
   get duration() {
     if (this.isRadio) return 0;
     const audio = this.getActiveAudio();
-    return (audio && audio.duration) || (this.currentTrack?.duration) || 0;
+    return (audio && audio.duration) || (this.currentTrack?.duration) || this._savedDuration || 0;
+  }
+
+  set duration(val) {
+    this._savedDuration = Math.max(0, Number.isFinite(val) ? val : 0);
   }
 
   notifyState() {
-    const audio = this.getActiveAudio();
     const state = {
       isPlaying: this.isPlaying,
       isRadio: this.isRadio,
       streamState: this.isRadio ? this.streamState : (this.isPlaying ? 'playing' : 'idle'),
       currentTrack: this.currentTrack,
       currentStation: this.currentStation,
-      currentTime: (audio && audio.currentTime) || 0,
-      duration: this.isRadio ? 0 : ((audio && audio.duration) || (this.currentTrack?.duration) || 0),
+      currentTime: this.currentTime,
+      duration: this.duration,
       volume: this.volume,
       muted: this.muted,
       repeat: queueManager.repeat,
@@ -420,6 +441,7 @@ export class AudioEngine {
    */
   async playTrack(track, startPosition = 0) {
     if (!track) return;
+    this._savedTime = startPosition || 0;
     this.clearAllRadioTimers();
     this.reconnectAttempts = 0;
     const currentGen = ++this.playbackGeneration;
@@ -824,7 +846,9 @@ export class AudioEngine {
         }
       }
       if (item && item.track) {
-        await this.playTrack(item.track);
+        const startPos = this._savedTime || 0;
+        this._savedTime = 0;
+        await this.playTrack(item.track, startPos);
       }
     }
   }
@@ -849,6 +873,7 @@ export class AudioEngine {
 
   stop() {
     this.pause();
+    this._savedTime = 0;
     this.clearAllRadioTimers();
     this.reconnectAttempts = 0;
     this.playbackGeneration++;
@@ -895,6 +920,7 @@ export class AudioEngine {
       const maxSeconds = (Number.isFinite(dur) && dur > 0) ? dur : Infinity;
       const target = Math.max(0, Number.isFinite(maxSeconds) ? Math.min(seconds, maxSeconds) : seconds);
       if (Number.isFinite(target)) {
+        this._savedTime = target;
         audio.currentTime = target;
         this.notifyState();
         this.syncMediaSessionPosition();

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { setupMockDom, teardownMockDom } from '../helpers/mock-dom.js';
 import { AudioEngine } from '../../src/player/audio-engine.js';
+import { queueManager } from '../../src/player/queue.js';
 
 test('Audio Engine State & Control Suite', async (t) => {
   await t.test('Initializes with default volume and inactive state', () => {
@@ -951,6 +952,158 @@ test('Audio Engine State & Control Suite', async (t) => {
       assert.equal(engine.isRadio, false, 'playTrack must switch isRadio to false');
     } finally {
       clock.restore();
+    }
+  });
+
+  await t.test('currentTime getter and setter operate correctly with and without active audio', () => {
+    const engine = new AudioEngine();
+    // 1. Without active audio element
+    engine.audioA = null;
+    engine.audioB = null;
+
+    engine.currentTime = 42.5;
+    assert.equal(engine.currentTime, 42.5, 'Getter should return _savedTime when no active audio');
+
+    // Clamping & validation
+    engine.currentTime = -10;
+    assert.equal(engine.currentTime, 0, 'Negative value should clamp to 0');
+
+    engine.currentTime = NaN;
+    assert.equal(engine.currentTime, 0, 'NaN should clamp to 0');
+
+    engine.currentTime = Infinity;
+    assert.equal(engine.currentTime, 0, 'Infinity should clamp to 0');
+
+    // 2. With active audio element
+    const mockAudio = { currentTime: 0, src: 'blob:test' };
+    engine.audioA = mockAudio;
+    engine.activePlayer = 'A';
+    engine.isRadio = false;
+
+    // Verify Defect 1: when mockAudio.currentTime = 0 with active src,
+    // engine.currentTime must return 0 (not falling back to _savedTime).
+    engine._savedTime = 55.5;
+    mockAudio.currentTime = 0;
+    assert.equal(engine.currentTime, 0, 'engine.currentTime must return 0 when active audio has src, not falling back to _savedTime');
+
+    engine.currentTime = 88.5;
+    assert.equal(mockAudio.currentTime, 88.5, 'Setter should update active audio.currentTime');
+    assert.equal(engine.currentTime, 88.5, 'Getter should return active audio.currentTime');
+
+    mockAudio.currentTime = 120;
+    assert.equal(engine.currentTime, 120, 'Getter should track active audio currentTime changes');
+
+    // When mockAudio.currentTime is reset back to 0 with valid src, it must return 0 even if _savedTime > 0
+    mockAudio.currentTime = 0;
+    engine._savedTime = 99.9;
+    assert.equal(engine.currentTime, 0, 'engine.currentTime must return 0 when mockAudio.currentTime is 0 with valid src');
+  });
+
+  await t.test('duration getter and setter operate correctly', () => {
+    const engine = new AudioEngine();
+    engine.audioA = null;
+    engine.audioB = null;
+
+    engine.duration = 195.4;
+    assert.equal(engine.duration, 195.4, 'Getter should return _savedDuration when no audio or track');
+
+    // Clamping
+    engine.duration = -20;
+    assert.equal(engine.duration, 0, 'Negative duration should clamp to 0');
+
+    engine.duration = NaN;
+    assert.equal(engine.duration, 0, 'NaN duration should clamp to 0');
+
+    // Radio returns 0 duration
+    engine.duration = 300;
+    engine.isRadio = true;
+    assert.equal(engine.duration, 0, 'Radio must always return 0 duration');
+    engine.isRadio = false;
+
+    // Track duration precedence over saved duration when audio has no duration
+    engine.currentTrack = { duration: 250 };
+    assert.equal(engine.duration, 250, 'Track duration should take precedence over _savedDuration');
+
+    // Active audio duration takes precedence
+    engine.audioA = { duration: 320 };
+    engine.activePlayer = 'A';
+    assert.equal(engine.duration, 320, 'Active audio duration should take highest precedence');
+  });
+
+  await t.test('engine.play() passes saved time to playTrack and resets saved time', async () => {
+    const engine = new AudioEngine();
+    engine.audioA = null;
+    engine.audioB = null;
+    engine.isRadio = false;
+
+    // Set saved time
+    engine.currentTime = 73.5;
+    assert.equal(engine.currentTime, 73.5);
+
+    let playedTrack = null;
+    let playedStartPosition = null;
+    engine.playTrack = async (track, startPosition) => {
+      playedTrack = track;
+      playedStartPosition = startPosition;
+    };
+
+    // Set up queue with a mock track
+    const mockTrack = { id: 'trk-cold', title: 'Cold Resume Track', duration: 200 };
+    queueManager.setQueue([mockTrack], 0);
+
+    await engine.play();
+
+    assert.deepEqual(playedTrack, mockTrack, 'play() should pass queue item track to playTrack');
+    assert.equal(playedStartPosition, 73.5, 'play() should pass saved start position to playTrack');
+    assert.equal(engine._savedTime, 0, '_savedTime must be reset to 0 after starting playback');
+  });
+
+  await t.test('_savedTime lifecycle across playTrack(), seek(), and stop()', async () => {
+    const { sessionRegistry } = await import('../../src/storage/session-registry.js');
+    const engine = new AudioEngine();
+    assert.equal(engine._savedTime, 0, '_savedTime initializes to 0');
+
+    engine.audioB = {
+      src: '',
+      currentTime: 0,
+      duration: 180,
+      play: async () => Promise.resolve(),
+      pause: () => {},
+      removeAttribute: () => {},
+      load: () => {}
+    };
+    engine.audioA = {
+      src: '',
+      currentTime: 0,
+      duration: 180,
+      play: async () => Promise.resolve(),
+      pause: () => {},
+      removeAttribute: () => {},
+      load: () => {}
+    };
+
+    const mockFile = { name: 'lifecycle.mp3', size: 2048, lastModified: Date.now() };
+    const trackId = sessionRegistry.registerFile(mockFile, 'lifecycle.mp3');
+    const track = { id: trackId, title: 'Lifecycle Song', relativePath: 'lifecycle.mp3', duration: 180 };
+
+    const prevCreateObjectURL = globalThis.URL?.createObjectURL;
+    if (!globalThis.URL) globalThis.URL = {};
+    globalThis.URL.createObjectURL = () => 'blob:http://localhost/lifecycle-blob-url';
+
+    try {
+      // 1. playTrack with startPosition updates _savedTime
+      await engine.playTrack(track, 42.5);
+      assert.equal(engine._savedTime, 42.5, 'playTrack(track, 42.5) sets _savedTime to startPosition');
+
+      // 2. seek(target) updates _savedTime to target
+      engine.seek(85);
+      assert.equal(engine._savedTime, 85, 'seek(85) updates _savedTime to 85');
+
+      // 3. stop() resets _savedTime to 0
+      engine.stop();
+      assert.equal(engine._savedTime, 0, 'stop() resets _savedTime to 0');
+    } finally {
+      globalThis.URL.createObjectURL = prevCreateObjectURL;
     }
   });
 
