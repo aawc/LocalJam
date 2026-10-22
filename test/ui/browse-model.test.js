@@ -31,6 +31,9 @@ describe('Browse Model - Library & Radio Query Shaping', () => {
     assert.equal(formatDuration(0), '0:00');
     assert.equal(formatDuration(undefined), '0:00');
     assert.equal(formatDuration(-5), '0:00');
+    assert.equal(formatDuration(Infinity), '0:00');
+    assert.equal(formatDuration(-Infinity), '0:00');
+    assert.equal(formatDuration(NaN), '0:00');
   });
 
   it('filterTracks matches on title, artist, and album case-insensitively; empty query is identity', () => {

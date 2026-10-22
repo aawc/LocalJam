@@ -1388,4 +1388,66 @@ describe('Stage Viewport Component (L0)', () => {
 
     stage.destroy();
   });
+
+  it('renders indeterminate duration as --:-- and finite duration as -M:SS without Infinity', () => {
+    let registeredListener = null;
+    const mockAudioEngine = {
+      volume: 0.8,
+      muted: false,
+      isRadio: false,
+      isPlaying: true,
+      currentTime: 0,
+      duration: 0,
+      currentTrack: { id: 't-inf', title: 'Inf Track', duration: 0 },
+      subscribe: (fn) => {
+        registeredListener = fn;
+        return () => {};
+      },
+      seek: () => {}
+    };
+
+    const container = document.createElement('div');
+    const stage = createStage({
+      audioEngine: mockAudioEngine,
+      queueManager: { getCurrent: () => null, queue: [], subscribe: () => () => {} },
+      onOpenBrowse: () => {},
+      onOpenOverflow: () => {},
+      onPickFolder: async () => true,
+      onToggleSource: async () => {},
+      onToast: () => {}
+    });
+
+    container.appendChild(stage.element);
+
+    const remainingTimeEl = stage.element.querySelector('.stage-time-remaining');
+    const currentTimeEl = stage.element.querySelector('.stage-time-current');
+    const seekSlider = stage.element.querySelector('.stage-seek-slider');
+
+    // 1. Duration = 0 (indeterminate): remaining time displays '--:--'
+    registeredListener({
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: { id: 't-inf', title: 'Inf Track', duration: 0 },
+      currentTime: 10,
+      duration: 0
+    });
+
+    assert.equal(currentTimeEl.textContent, '0:10');
+    assert.equal(remainingTimeEl.textContent, '--:--');
+    assert.notEqual(seekSlider.max, 'Infinity');
+
+    // 2. Duration = 200 (finite): remaining time displays '-3:10'
+    registeredListener({
+      isRadio: false,
+      isPlaying: true,
+      currentTrack: { id: 't-inf', title: 'Inf Track', duration: 200 },
+      currentTime: 10,
+      duration: 200
+    });
+
+    assert.equal(currentTimeEl.textContent, '0:10');
+    assert.equal(remainingTimeEl.textContent, '-3:10');
+
+    stage.destroy();
+  });
 });

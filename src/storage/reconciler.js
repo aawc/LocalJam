@@ -173,6 +173,7 @@ export class FilesystemReconciler {
         artist: (meta && meta.artist && meta.artist !== 'Unknown Artist' && !SCRAPER_REGEX.test(meta.artist.trim())) ? meta.artist : existing.artist,
         albumArtist: (meta && meta.albumArtist && !SCRAPER_REGEX.test(meta.albumArtist.trim())) ? meta.albumArtist : (existing.albumArtist || meta?.artist || existing.artist),
         album: renamedAlbum,
+        format: meta?.format || existing.format || 'unknown',
         isMissing: 0,
         handle: item.handle || existing.handle || null
       });
@@ -242,6 +243,7 @@ export class FilesystemReconciler {
         discNumber: (meta && meta.discNumber) !== undefined && meta.discNumber !== null ? meta.discNumber : existing.discNumber,
         discTotal: (meta && meta.discTotal) !== undefined && meta.discTotal !== null ? meta.discTotal : existing.discTotal,
         duration: (meta && meta.duration) || existing.duration,
+        format: meta?.format || existing.format || 'unknown',
         sampleRate: (meta && meta.sampleRate) || existing.sampleRate,
         mtime: item.mtime,
         size: item.size,
@@ -304,6 +306,7 @@ export class FilesystemReconciler {
         discNumber: meta.discNumber,
         discTotal: meta.discTotal,
         duration: meta.duration || 0,
+        format: meta?.format || 'unknown',
         sampleRate: meta.sampleRate || 0,
         artworkId: null,
         isMissing: 0,

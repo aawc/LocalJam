@@ -252,8 +252,8 @@ export function createStage(deps) {
       audioEngine.seekRelative(15);
     } else if (typeof audioEngine.seek === 'function') {
       const current = audioEngine.currentTime || 0;
-      const dur = audioEngine.duration || Infinity;
-      audioEngine.seek(Math.min(dur, current + 15));
+      const dur = (Number.isFinite(audioEngine.duration) && audioEngine.duration > 0) ? audioEngine.duration : 0;
+      audioEngine.seek(dur > 0 ? Math.min(dur, current + 15) : current + 15);
     }
   });
 
@@ -618,7 +618,7 @@ export function createStage(deps) {
     const track = state.currentTrack !== undefined ? state.currentTrack : audioEngine.currentTrack;
     const station = state.currentStation !== undefined ? state.currentStation : audioEngine.currentStation;
     const currentTime = state.currentTime !== undefined ? state.currentTime : (audioEngine.currentTime || 0);
-    const duration = state.duration !== undefined ? state.duration : (audioEngine.duration || 0);
+    const duration = (state.duration !== undefined && Number.isFinite(state.duration)) ? state.duration : (Number.isFinite(audioEngine.duration) ? audioEngine.duration : 0);
     const streamState = state.streamState !== undefined ? state.streamState : (audioEngine.streamState || 'idle');
 
     if (isRadio && streamState === 'error' && lastStreamState !== undefined && lastStreamState !== 'error') {
@@ -793,10 +793,13 @@ export function createStage(deps) {
       if (!row4El.contains(seekSlider)) row4El.appendChild(seekSlider);
       if (!row4El.contains(timestampsContainer)) row4El.appendChild(timestampsContainer);
 
-      seekSlider.max = String(Math.max(1, duration || 100));
+      const safeDuration = (Number.isFinite(duration) && duration > 0) ? duration : 0;
+      seekSlider.max = String(Math.max(1, safeDuration || 100));
       seekSlider.value = String(currentTime || 0);
       currentTimeEl.textContent = formatDuration(currentTime);
-      remainingTimeEl.textContent = '-' + formatDuration(Math.max(0, (duration || 0) - currentTime));
+      remainingTimeEl.textContent = safeDuration > 0
+        ? '-' + formatDuration(Math.max(0, safeDuration - currentTime))
+        : '--:--';
     }
 
     // Chips update

@@ -140,6 +140,10 @@ test('Filesystem 3-Way Reconciler Suite', async (t) => {
 
     // BrandNew should have been added
     assert.equal(mockDb.tracks.size, 3);
+    const added = Array.from(mockDb.tracks.values()).find((t) => t.filename === 'BrandNew.mp3');
+    assert.ok(added);
+    assert.equal(typeof added.format, 'string');
+    assert.ok(added.format.length > 0);
   });
 
   await t.test('applyDiff with { purgeMissing: true } deletes missing tracks rather than marking isMissing: 1', async () => {
