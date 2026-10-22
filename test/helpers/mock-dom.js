@@ -606,12 +606,54 @@ function queryDescendants(root, selector, firstOnly = false) {
   return firstOnly && candidates.length > 0 ? [candidates[0]] : candidates;
 }
 
+export class MockMediaSession {
+  constructor() {
+    this.metadata = null;
+    this.playbackState = 'none';
+    this.actionHandlers = new Map();
+    this.positionState = null;
+  }
+
+  setActionHandler(action, handler) {
+    if (!handler) {
+      this.actionHandlers.delete(action);
+    } else {
+      this.actionHandlers.set(action, handler);
+    }
+  }
+
+  setPositionState(state) {
+    if (state) {
+      if (typeof state.duration === 'number' && !Number.isFinite(state.duration)) {
+        throw new TypeError("Failed to execute 'setPositionState' on 'MediaSession': The provided double value is non-finite.");
+      }
+      if (typeof state.position === 'number' && !Number.isFinite(state.position)) {
+        throw new TypeError("Failed to execute 'setPositionState' on 'MediaSession': The provided double value is non-finite.");
+      }
+      this.positionState = { ...state };
+    } else {
+      this.positionState = null;
+    }
+  }
+}
+
+export class MockMediaMetadata {
+  constructor(options = {}) {
+    this.title = options.title || '';
+    this.artist = options.artist || '';
+    this.album = options.album || '';
+    this.artwork = options.artwork || [];
+  }
+}
+
 let savedGlobals = null;
 
 export function setupMockDom(options = {}) {
   savedGlobals = {
     document: globalThis.document,
     window: globalThis.window,
+    navigatorDesc: Object.getOwnPropertyDescriptor(globalThis, 'navigator'),
+    MediaMetadata: globalThis.MediaMetadata,
     HTMLElement: globalThis.HTMLElement,
     Event: globalThis.Event,
     CustomEvent: globalThis.CustomEvent,
@@ -634,6 +676,8 @@ export function setupMockDom(options = {}) {
     documentElement: new MockElement("html"),
     activeElement: null,
     readyState: options.readyState || 'complete',
+    visibilityState: options.visibilityState || 'visible',
+    hidden: options.hidden ?? false,
     createElement: (tag) => new MockElement(tag),
     getElementById: (id) => {
       if (id === 'aria-live-region') return liveRegion;
@@ -748,13 +792,42 @@ export function setupMockDom(options = {}) {
     }
   };
 
-  return { document: doc, window: win, body };
+  const mockMediaSession = new MockMediaSession();
+  const mockNavigator = {
+    userAgent: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36',
+    onLine: true,
+    mediaSession: mockMediaSession
+  };
+
+  try {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: mockNavigator,
+      configurable: true,
+      writable: true,
+      enumerable: true
+    });
+  } catch (_) {
+    globalThis.navigator = mockNavigator;
+  }
+  globalThis.MediaMetadata = MockMediaMetadata;
+
+  return { document: doc, window: win, body, navigator: mockNavigator };
 }
 
 export function teardownMockDom() {
   if (savedGlobals) {
     globalThis.document = savedGlobals.document;
     globalThis.window = savedGlobals.window;
+    if (savedGlobals.navigatorDesc) {
+      try {
+        Object.defineProperty(globalThis, 'navigator', savedGlobals.navigatorDesc);
+      } catch (_) {
+        globalThis.navigator = undefined;
+      }
+    } else {
+      delete globalThis.navigator;
+    }
+    globalThis.MediaMetadata = savedGlobals.MediaMetadata;
     globalThis.HTMLElement = savedGlobals.HTMLElement;
     globalThis.Event = savedGlobals.Event;
     globalThis.CustomEvent = savedGlobals.CustomEvent;

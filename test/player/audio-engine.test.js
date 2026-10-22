@@ -1028,6 +1028,19 @@ test('Audio Engine State & Control Suite', async (t) => {
     engine.audioA = { duration: 320 };
     engine.activePlayer = 'A';
     assert.equal(engine.duration, 320, 'Active audio duration should take highest precedence');
+
+    // Non-finite duration (Infinity / NaN) should be sanitized and fall back to track duration
+    engine.audioA = { duration: Infinity };
+    engine.currentTrack = { duration: 250 };
+    assert.equal(engine.duration, 250, 'Non-finite audio.duration should fall back to track duration');
+
+    // When both audio and track have non-finite duration, fallback to saved duration or 0
+    engine.currentTrack = { duration: 0 };
+    engine.duration = 100;
+    assert.equal(engine.duration, 100, 'Non-finite audio and track duration should fall back to _savedDuration');
+
+    engine.duration = Infinity;
+    assert.equal(engine._savedDuration, 0, 'setter must not accept Infinity');
   });
 
   await t.test('engine.play() passes saved time to playTrack and resets saved time', async () => {
@@ -1107,6 +1120,181 @@ test('Audio Engine State & Control Suite', async (t) => {
     }
   });
 
+  await t.test('MediaSession registers standard action handlers including stop', () => {
+    const { navigator } = setupMockDom();
+    try {
+      const engine = new AudioEngine();
+      let stopCalled = false;
+      engine.stop = () => { stopCalled = true; };
+
+      assert.ok(navigator.mediaSession, 'navigator.mediaSession is present');
+      const registered = Array.from(navigator.mediaSession.actionHandlers.keys());
+      assert.ok(registered.includes('play'), 'registers play');
+      assert.ok(registered.includes('pause'), 'registers pause');
+      assert.ok(registered.includes('stop'), 'registers stop');
+      assert.ok(registered.includes('previoustrack'), 'registers previoustrack');
+      assert.ok(registered.includes('nexttrack'), 'registers nexttrack');
+      assert.ok(registered.includes('seekbackward'), 'registers seekbackward');
+      assert.ok(registered.includes('seekforward'), 'registers seekforward');
+      assert.ok(registered.includes('seekto'), 'registers seekto');
+
+      const stopHandler = navigator.mediaSession.actionHandlers.get('stop');
+      assert.equal(typeof stopHandler, 'function');
+      stopHandler();
+      assert.equal(stopCalled, true, 'stop handler delegates to engine.stop()');
+
+      engine.destroy();
+    } finally {
+      teardownMockDom();
+    }
+  });
+
+  await t.test('MediaSession playbackState updates reactively across play, pause, and stop', () => {
+    const { navigator } = setupMockDom();
+    try {
+      const engine = new AudioEngine();
+      engine.currentTrack = { id: 't1', title: 'Test Track', duration: 120 };
+
+      // 1. Initial state without playback
+      engine.notifyState();
+      assert.equal(navigator.mediaSession.playbackState, 'paused');
+
+      // 2. Playing state
+      engine.isPlaying = true;
+      engine.notifyState();
+      assert.equal(navigator.mediaSession.playbackState, 'playing');
+
+      // 3. Pause
+      engine.pause();
+      assert.equal(navigator.mediaSession.playbackState, 'paused');
+
+      // 4. Stop
+      engine.stop();
+      assert.equal(navigator.mediaSession.playbackState, 'none');
+
+      engine.destroy();
+      assert.equal(navigator.mediaSession.playbackState, 'none');
+    } finally {
+      teardownMockDom();
+    }
+  });
+
+  await t.test('syncMediaSessionPosition safely handles finite durations and ignores non-finite values', () => {
+    const { navigator } = setupMockDom();
+    try {
+      const engine = new AudioEngine();
+      engine.currentTrack = { id: 't1', title: 'Test Track', duration: 180 };
+      engine.audioA = { currentTime: 45, duration: 180, playbackRate: 1 };
+      engine.activePlayer = 'A';
+
+      // Finite duration sync
+      engine.syncMediaSessionPosition();
+      assert.ok(navigator.mediaSession.positionState, 'positionState was set');
+      assert.equal(navigator.mediaSession.positionState.duration, 180);
+      assert.equal(navigator.mediaSession.positionState.position, 45);
+
+      // Reset and test with Infinity duration (should not crash with TypeError or pass Infinity)
+      navigator.mediaSession.positionState = null;
+      engine.audioA.duration = Infinity;
+      engine.currentTrack.duration = 0;
+      engine._savedDuration = 0;
+      assert.doesNotThrow(() => {
+        engine.syncMediaSessionPosition();
+      }, 'Must not throw TypeError on non-finite duration');
+      assert.equal(navigator.mediaSession.positionState, null, 'positionState remains null when duration is indeterminate');
+
+      engine.destroy();
+    } finally {
+      teardownMockDom();
+    }
+  });
+
+  await t.test('AudioContext statechange auto-resumes when suspended during active playback', async () => {
+    const prevWindow = globalThis.window;
+    let resumeCalled = false;
+    let stateChangeHandler = null;
+
+    globalThis.window = {
+      AudioContext: class {
+        constructor() {
+          this.state = 'running';
+          this.destination = {};
+        }
+        createGain() { return { gain: { value: 1 }, connect: () => {} }; }
+        createAnalyser() { return { fftSize: 2048, smoothingTimeConstant: 0.85, connect: () => {} }; }
+        createBiquadFilter() { return { connect: () => {}, frequency: { value: 0 }, gain: { value: 0 }, Q: { value: 0 } }; }
+        createMediaElementSource() { return { connect: () => {} }; }
+        addEventListener(event, handler) {
+          if (event === 'statechange') {
+            stateChangeHandler = handler;
+          }
+        }
+        removeEventListener() {}
+        resume() {
+          resumeCalled = true;
+          this.state = 'running';
+          return Promise.resolve();
+        }
+      }
+    };
+
+    try {
+      const engine = new AudioEngine();
+      await engine.initWebAudio();
+      assert.ok(stateChangeHandler, 'statechange listener registered on AudioContext');
+
+      // If engine is not playing, statechange should not auto-resume
+      engine.isPlaying = false;
+      engine.audioCtx.state = 'suspended';
+      resumeCalled = false;
+      stateChangeHandler();
+      assert.equal(resumeCalled, false, 'Does not resume when engine is not playing');
+
+      // If engine IS playing and state becomes suspended, auto-resumes
+      engine.isPlaying = true;
+      stateChangeHandler();
+      assert.equal(resumeCalled, true, 'Auto-resumes AudioContext when suspended during active playback');
+
+      engine.destroy();
+    } finally {
+      globalThis.window = prevWindow;
+    }
+  });
+
+  await t.test('visibilitychange foreground event ensures AudioContext is active and recovers paused audio', () => {
+    const { document } = setupMockDom();
+    try {
+      const engine = new AudioEngine();
+      engine.isPlaying = true;
+      let playTriggered = false;
+      let ensureAudioContextCalled = false;
+
+      engine.ensureAudioContextActive = async () => {
+        ensureAudioContextCalled = true;
+      };
+
+      const mockAudio = {
+        paused: true,
+        play: async () => {
+          playTriggered = true;
+        }
+      };
+      engine.audioA = mockAudio;
+      engine.activePlayer = 'A';
+
+      // Simulate app coming to foreground
+      document.visibilityState = 'visible';
+      document.dispatchEvent(new globalThis.Event('visibilitychange'));
+
+      assert.equal(ensureAudioContextCalled, true, 'Calls ensureAudioContextActive on foregrounding');
+      assert.equal(playTriggered, true, 'Calls audio.play() to recover paused audio element');
+
+      engine.destroy();
+    } finally {
+      teardownMockDom();
+    }
+  });
+
   await t.test('Verification that zero setInterval polling loops exist in audio-engine.js', () => {
     const enginePath = new URL('../../src/player/audio-engine.js', import.meta.url);
     const sourceCode = fs.readFileSync(enginePath, 'utf8');
@@ -1117,3 +1305,4 @@ test('Audio Engine State & Control Suite', async (t) => {
     );
   });
 });
+

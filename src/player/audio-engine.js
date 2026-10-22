@@ -36,6 +36,11 @@ export class AudioEngine {
     this.crossfadeSeconds = 0;
     this._savedTime = 0;
     this._savedDuration = 0;
+    this._isStopped = false;
+    this._userInitiatedPause = false;
+    this._lastMediaSessionPlaybackState = null;
+    this._onAudioCtxStateChange = null;
+    this._onVisibilityChange = null;
 
     /** @type {AudioContext|null} */
     this.audioCtx = null;
@@ -57,8 +62,8 @@ export class AudioEngine {
 
     if (this.audioA && this.audioB && this.radioAudio) {
       this.initAudioElements();
-      this.initMediaSession();
     }
+    this.initMediaSession();
     this.initWindowListeners();
   }
 
@@ -73,14 +78,14 @@ export class AudioEngine {
       }
 
       audio.addEventListener('timeupdate', () => {
-        if (this.getActiveAudio() === audio) {
+        if (this.getActiveAudio() === audio && !audio._isProbingDuration) {
           this.notifyState();
           this.syncMediaSessionPosition();
         }
       });
 
       audio.addEventListener('ended', () => {
-        if (this.getActiveAudio() === audio) {
+        if (this.getActiveAudio() === audio && !audio._isProbingDuration) {
           this.handleTrackEnded();
         }
       });
@@ -103,6 +108,51 @@ export class AudioEngine {
           this.notifyState();
         }
       });
+
+      const handleDurationUpdate = () => {
+        if (this.getActiveAudio() !== audio || this.isRadio) return;
+        if (audio._isProbingDuration) return;
+
+        const targetTrack = this.currentTrack;
+        if (audio.duration === Infinity) {
+          audio._isProbingDuration = true;
+          // Chromium Blob URL duration workaround: force duration computation
+          const prevTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+          const onSeekedToEnd = () => {
+            audio.removeEventListener('timeupdate', onSeekedToEnd);
+            audio._isProbingDuration = false;
+            if (Number.isFinite(audio.duration) && audio.duration > 0) {
+              if (targetTrack && (!targetTrack.duration || !Number.isFinite(targetTrack.duration) || targetTrack.duration <= 0)) {
+                targetTrack.duration = audio.duration;
+                if (db && typeof db.putTrack === 'function') {
+                  db.putTrack(targetTrack).catch(() => {});
+                }
+              }
+              this.notifyState();
+              this.syncMediaSessionPosition();
+            }
+            try { audio.currentTime = prevTime; } catch (_) {}
+          };
+          audio.addEventListener('timeupdate', onSeekedToEnd, { once: true });
+          try {
+            audio.currentTime = 1e101;
+          } catch (_) {
+            audio._isProbingDuration = false;
+          }
+        } else if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          if (targetTrack && (!targetTrack.duration || !Number.isFinite(targetTrack.duration) || targetTrack.duration <= 0)) {
+            targetTrack.duration = audio.duration;
+            if (db && typeof db.putTrack === 'function') {
+              db.putTrack(targetTrack).catch(() => {});
+            }
+          }
+          this.notifyState();
+          this.syncMediaSessionPosition();
+        }
+      };
+
+      audio.addEventListener('loadedmetadata', handleDurationUpdate);
+      audio.addEventListener('durationchange', handleDurationUpdate);
 
       audio.addEventListener('error', () => {
         if (this.getActiveAudio() === audio) {
@@ -150,6 +200,10 @@ export class AudioEngine {
 
       audio.addEventListener('pause', () => {
         if (this.getActiveAudio() === audio) {
+          if (!this._userInitiatedPause && typeof document !== 'undefined' && document.hidden) {
+            // Background suspension by browser/OS: preserve isPlaying intent for foreground/visibility recovery
+            return;
+          }
           this.isPlaying = false;
           if (this.isRadio && this.streamState !== 'error') {
             this.streamState = 'idle';
@@ -188,8 +242,23 @@ export class AudioEngine {
       }
     };
 
+    this._onVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        if (this.isPlaying) {
+          this.ensureAudioContextActive().catch(() => {});
+          const audio = this.getActiveAudio();
+          if (audio && audio.paused && !this.isRadio) {
+            audio.play().catch(() => {});
+          }
+        }
+      }
+    };
+
     window.addEventListener('offline', this._onWindowOffline);
     window.addEventListener('online', this._onWindowOnline);
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', this._onVisibilityChange);
+    }
   }
 
   startDeadSocketTimer() {
@@ -307,6 +376,14 @@ export class AudioEngine {
       if (!AudioContextClass) return;
 
       this.audioCtx = new AudioContextClass();
+      if (typeof this.audioCtx.addEventListener === 'function') {
+        this._onAudioCtxStateChange = () => {
+          if (this.isPlaying && (this.audioCtx.state === 'suspended' || this.audioCtx.state === 'interrupted')) {
+            this.audioCtx.resume().catch(() => {});
+          }
+        };
+        this.audioCtx.addEventListener('statechange', this._onAudioCtxStateChange);
+      }
       if (this.audioCtx.state === 'suspended') {
         await this.audioCtx.resume();
       }
@@ -403,7 +480,10 @@ export class AudioEngine {
   get duration() {
     if (this.isRadio) return 0;
     const audio = this.getActiveAudio();
-    return (audio && audio.duration) || (this.currentTrack?.duration) || this._savedDuration || 0;
+    const audioDur = (audio && Number.isFinite(audio.duration) && audio.duration > 0) ? audio.duration : null;
+    const trackDur = (this.currentTrack && Number.isFinite(this.currentTrack.duration) && this.currentTrack.duration > 0) ? this.currentTrack.duration : null;
+    const savedDur = (Number.isFinite(this._savedDuration) && this._savedDuration > 0) ? this._savedDuration : null;
+    return audioDur || trackDur || savedDur || 0;
   }
 
   set duration(val) {
@@ -411,6 +491,7 @@ export class AudioEngine {
   }
 
   notifyState() {
+    this.updateMediaSessionPlaybackState();
     const state = {
       isPlaying: this.isPlaying,
       isRadio: this.isRadio,
@@ -441,6 +522,8 @@ export class AudioEngine {
    */
   async playTrack(track, startPosition = 0) {
     if (!track) return;
+    this._isStopped = false;
+    this._userInitiatedPause = false;
     this._savedTime = startPosition || 0;
     this.clearAllRadioTimers();
     this.reconnectAttempts = 0;
@@ -634,6 +717,8 @@ export class AudioEngine {
     const streamUrl = station.streamUrl || station.url;
     if (!streamUrl) return;
 
+    this._isStopped = false;
+    this._userInitiatedPause = false;
     this.reconnectAttempts = 0;
     this.clearAllRadioTimers();
     const currentGen = ++this.playbackGeneration;
@@ -812,6 +897,8 @@ export class AudioEngine {
   }
 
   async play() {
+    this._isStopped = false;
+    this._userInitiatedPause = false;
     this.unlock();
     if (this.isRadio) {
       if (this.currentStation) {
@@ -854,6 +941,7 @@ export class AudioEngine {
   }
 
   pause() {
+    this._userInitiatedPause = true;
     const audio = this.getActiveAudio();
     if (audio && typeof audio.pause === 'function') {
       try { audio.pause(); } catch (_) {}
@@ -872,7 +960,9 @@ export class AudioEngine {
   }
 
   stop() {
+    this._userInitiatedPause = true;
     this.pause();
+    this._isStopped = true;
     this._savedTime = 0;
     this.clearAllRadioTimers();
     this.reconnectAttempts = 0;
@@ -900,6 +990,35 @@ export class AudioEngine {
       if (this._onWindowOffline) window.removeEventListener('offline', this._onWindowOffline);
       if (this._onWindowOnline) window.removeEventListener('online', this._onWindowOnline);
     }
+    if (typeof document !== 'undefined' && this._onVisibilityChange && typeof document.removeEventListener === 'function') {
+      document.removeEventListener('visibilitychange', this._onVisibilityChange);
+    }
+    if (this.audioCtx) {
+      if (this._onAudioCtxStateChange && typeof this.audioCtx.removeEventListener === 'function') {
+        this.audioCtx.removeEventListener('statechange', this._onAudioCtxStateChange);
+      }
+      if (typeof this.audioCtx.close === 'function') {
+        this.audioCtx.close().catch(() => {});
+      }
+    }
+    if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+      for (const url of this.activeObjectUrls) {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+      }
+    }
+    this.activeObjectUrls.clear();
+    this.currentObjectUrl = null;
+
+    this._lastMediaSessionPlaybackState = 'none';
+    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+      const actions = ['play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekbackward', 'seekforward', 'seekto'];
+      for (const action of actions) {
+        try { navigator.mediaSession.setActionHandler(action, null); } catch (_) {}
+      }
+      try {
+        navigator.mediaSession.playbackState = 'none';
+      } catch (_) {}
+    }
   }
 
   togglePlay() {
@@ -914,11 +1033,8 @@ export class AudioEngine {
     if (this.isRadio || !Number.isFinite(seconds)) return;
     const audio = this.getActiveAudio();
     if (audio) {
-      const dur = (!isNaN(audio.duration) && audio.duration > 0)
-        ? audio.duration
-        : (this.currentTrack?.duration || 0);
-      const maxSeconds = (Number.isFinite(dur) && dur > 0) ? dur : Infinity;
-      const target = Math.max(0, Number.isFinite(maxSeconds) ? Math.min(seconds, maxSeconds) : seconds);
+      const dur = this.duration;
+      const target = Math.max(0, dur > 0 ? Math.min(seconds, dur) : seconds);
       if (Number.isFinite(target)) {
         this._savedTime = target;
         audio.currentTime = target;
@@ -1012,15 +1128,44 @@ export class AudioEngine {
   initMediaSession() {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
 
-    navigator.mediaSession.setActionHandler('play', () => this.play());
-    navigator.mediaSession.setActionHandler('pause', () => this.pause());
-    navigator.mediaSession.setActionHandler('previoustrack', () => this.previous());
-    navigator.mediaSession.setActionHandler('nexttrack', () => this.next());
-    navigator.mediaSession.setActionHandler('seekbackward', (details) => this.seekRelative(-(details.seekOffset || 5)));
-    navigator.mediaSession.setActionHandler('seekforward', (details) => this.seekRelative(details.seekOffset || 5));
-    navigator.mediaSession.setActionHandler('seekto', (details) => {
-      if (details.seekTime !== undefined) this.seek(details.seekTime);
-    });
+    const handlers = {
+      play: () => this.play(),
+      pause: () => this.pause(),
+      stop: () => this.stop(),
+      previoustrack: () => this.previous(),
+      nexttrack: () => this.next(),
+      seekbackward: (details) => this.seekRelative(-(details?.seekOffset || 5)),
+      seekforward: (details) => this.seekRelative(details?.seekOffset || 5),
+      seekto: (details) => {
+        if (details && details.seekTime !== undefined) this.seek(details.seekTime);
+      }
+    };
+
+    for (const [action, handler] of Object.entries(handlers)) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch (_) {}
+    }
+
+    this.updateMediaSessionPlaybackState();
+  }
+
+  updateMediaSessionPlaybackState() {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+    let state = 'none';
+    if (this.isPlaying) {
+      state = 'playing';
+    } else if (!this._isStopped && (this.currentTrack || (this.isRadio && this.currentStation && this.streamState !== 'idle' && this.streamState !== 'error'))) {
+      state = 'paused';
+    } else {
+      state = 'none';
+    }
+
+    if (this._lastMediaSessionPlaybackState === state) return;
+    this._lastMediaSessionPlaybackState = state;
+    try {
+      navigator.mediaSession.playbackState = state;
+    } catch (_) {}
   }
 
   updateMediaSessionMetadata(track) {
@@ -1041,6 +1186,7 @@ export class AudioEngine {
       album: track.album || 'Unknown Album',
       artwork: artworkList
     });
+    this.updateMediaSessionPlaybackState();
   }
 
   updateMediaSessionRadio(station) {
@@ -1052,21 +1198,28 @@ export class AudioEngine {
       album: station.description || 'LocalJam Radio',
       artwork: station.favicon ? [{ src: station.favicon, sizes: '192x192', type: 'image/png' }] : []
     });
+    this.updateMediaSessionPlaybackState();
   }
 
   syncMediaSessionPosition() {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
     const audio = this.getActiveAudio();
-    if (!this.isRadio && audio && !isNaN(audio.duration) && audio.duration > 0) {
+    const dur = this.duration;
+    if (!this.isRadio && audio && Number.isFinite(dur) && dur > 0) {
       try {
+        const curTime = Number.isFinite(audio.currentTime) ? audio.currentTime : (this._savedTime || 0);
         navigator.mediaSession.setPositionState({
-          duration: audio.duration,
+          duration: dur,
           playbackRate: audio.playbackRate || 1.0,
-          position: Math.min(audio.currentTime || 0, audio.duration)
+          position: Math.max(0, Math.min(curTime, dur))
         });
-      } catch (e) {
-        // Ignored if state changed during seek
+      } catch (_) {
+        // Ignored if state changed during seek or non-finite position
       }
+    } else if (!this.isRadio) {
+      try {
+        navigator.mediaSession.setPositionState(null);
+      } catch (_) {}
     }
   }
 
