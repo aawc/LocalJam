@@ -1295,6 +1295,88 @@ test('Audio Engine State & Control Suite', async (t) => {
     }
   });
 
+  await t.test('probeTrackDuration uses an isolated probe and never modifies active playback element currentTime', () => {
+    const prevAudio = globalThis.Audio;
+    let probeInstantiated = false;
+    let probeSeekedTo = null;
+    let probeMuted = false;
+    let probeSrc = null;
+
+    globalThis.Audio = class {
+      constructor() {
+        probeInstantiated = true;
+        this.muted = false;
+        this.preload = '';
+        this.duration = Infinity;
+        this._listeners = {};
+      }
+      set muted(val) {
+        probeMuted = val;
+      }
+      get muted() {
+        return probeMuted;
+      }
+      set src(val) {
+        probeSrc = val;
+        // Simulate loadedmetadata
+        if (this._listeners['loadedmetadata']) {
+          this._listeners['loadedmetadata']();
+        }
+      }
+      set currentTime(val) {
+        probeSeekedTo = val;
+        this.duration = 7656.321;
+        // Simulate seeked
+        if (this._listeners['seeked']) {
+          this._listeners['seeked']();
+        }
+      }
+      addEventListener(event, handler) {
+        this._listeners[event] = handler;
+      }
+      removeEventListener(event) {
+        delete this._listeners[event];
+      }
+      load() {}
+    };
+
+    try {
+      const engine = new AudioEngine();
+      const mockActiveAudio = { currentTime: 0, duration: Infinity, paused: false, src: 'blob:active-media' };
+      engine.audioA = mockActiveAudio;
+      engine.activePlayer = 'A';
+      engine.isPlaying = true;
+
+      const track = { id: 'trk_long', title: 'Long Song', duration: 0 };
+      engine.currentTrack = track;
+
+      engine.probeTrackDuration('blob:active-media', track);
+
+      assert.equal(probeInstantiated, true, 'Probe Audio element was instantiated');
+      assert.equal(probeMuted, true, 'Probe element must be muted');
+      assert.equal(probeSeekedTo, 1e101, 'Probe sought to 1e101 to force duration calculation');
+      assert.equal(track.duration, 7656.321, 'Target track duration resolved to 7656.321');
+      assert.equal(mockActiveAudio.currentTime, 0, 'Active playback audio.currentTime must remain 0 and NEVER be seeked by probe');
+      assert.equal(track._isProbingDuration, false, '_isProbingDuration flag cleared after probe completion');
+
+      // Concurrent invocation while _isProbingDuration is true should skip probe
+      probeInstantiated = false;
+      track._isProbingDuration = true;
+      track.duration = 0;
+      engine.probeTrackDuration('blob:active-media', track);
+      assert.equal(probeInstantiated, false, 'probeTrackDuration skips probing when probe is already in-flight');
+
+      // Subsequent call when track.duration is already positive should skip probe
+      track._isProbingDuration = false;
+      track.duration = 7656.321;
+      probeInstantiated = false;
+      engine.probeTrackDuration('blob:active-media', track);
+      assert.equal(probeInstantiated, false, 'probeTrackDuration skips probing when track already has duration');
+    } finally {
+      globalThis.Audio = prevAudio;
+    }
+  });
+
   await t.test('Verification that zero setInterval polling loops exist in audio-engine.js', () => {
     const enginePath = new URL('../../src/player/audio-engine.js', import.meta.url);
     const sourceCode = fs.readFileSync(enginePath, 'utf8');

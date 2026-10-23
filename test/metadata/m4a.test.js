@@ -130,4 +130,51 @@ test('M4A / MP4 Metadata Parser Suite', async (t) => {
   await t.test('Returns null for empty or non-MP4 buffer', () => {
     assert.equal(parseM4A(Buffer.alloc(4)), null);
   });
+
+  await t.test('parseFileMetadata extracts duration, title, and artist when moov atom is located at the tail (mdat first)', async () => {
+    const { parseFileMetadata } = await import('../../src/metadata/index.js');
+    const m4aData = buildSyntheticM4A({
+      title: 'Tail Moov Track',
+      artist: 'Tail Artist',
+      album: 'Tail Album',
+      durationUnits: 44100 * 500,
+      timescale: 44100
+    });
+
+    // Extract ftyp and moov
+    const ftyp = m4aData.subarray(0, 32);
+    const moov = m4aData.subarray(32);
+
+    // Build a 180 KB mdat atom: 4 bytes size, 4 bytes 'mdat', followed by 180 KB zeros
+    const mdatPayload = Buffer.alloc(180 * 1024);
+    const mdatHeader = Buffer.alloc(8);
+    mdatHeader.writeUInt32BE(8 + mdatPayload.length, 0);
+    mdatHeader.write('mdat', 4, 4, 'ascii');
+    const mdat = Buffer.concat([mdatHeader, mdatPayload]);
+
+    // File structure: [ftyp (32 B)] + [mdat (180 KB)] + [moov]
+    const fullBuffer = Buffer.concat([ftyp, mdat, moov]);
+
+    const fakeFile = {
+      name: 'large_stream.mp4',
+      size: fullBuffer.length,
+      slice(start, end) {
+        const actualStart = start < 0 ? Math.max(0, fullBuffer.length + start) : start;
+        const actualEnd = end !== undefined ? (end < 0 ? Math.max(0, fullBuffer.length + end) : end) : fullBuffer.length;
+        const sub = fullBuffer.subarray(actualStart, actualEnd);
+        return {
+          async arrayBuffer() {
+            return sub.buffer.slice(sub.byteOffset, sub.byteOffset + sub.byteLength);
+          }
+        };
+      }
+    };
+
+    const meta = await parseFileMetadata(fakeFile);
+    assert.ok(meta);
+    assert.equal(meta.title, 'Tail Moov Track');
+    assert.equal(meta.artist, 'Tail Artist');
+    assert.equal(meta.album, 'Tail Album');
+    assert.equal(meta.duration, 500);
+  });
 });

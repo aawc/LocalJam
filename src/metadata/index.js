@@ -119,6 +119,20 @@ export function extractMetadataFromChunk(headerBuffer, filename, relativePath = 
   };
 }
 
+function findFourCC(bytes, fourcc) {
+  if (!bytes || bytes.length < 8) return -1;
+  const c0 = fourcc.charCodeAt(0);
+  const c1 = fourcc.charCodeAt(1);
+  const c2 = fourcc.charCodeAt(2);
+  const c3 = fourcc.charCodeAt(3);
+  for (let i = bytes.length - 4; i >= 4; i--) {
+    if (bytes[i] === c0 && bytes[i + 1] === c1 && bytes[i + 2] === c2 && bytes[i + 3] === c3) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 /**
  * High-level helper to extract metadata from a standard browser File object using chunked slicing
  * @param {File} file
@@ -138,7 +152,7 @@ export async function parseFileMetadata(file, relativePath = '', rootName = 'Son
     tailBuffer = new Uint8Array(await tailSlice.arrayBuffer());
   }
 
-  return extractMetadataFromChunk(
+  const result = extractMetadataFromChunk(
     new Uint8Array(headerBuffer),
     file.name,
     relativePath || file.webkitRelativePath || file.name,
@@ -146,4 +160,29 @@ export async function parseFileMetadata(file, relativePath = '', rootName = 'Son
     tailBuffer,
     rootName
   );
+
+  // If duration is 0 and the file is large enough, check if 'moov' atom is placed at the tail
+  // (Standard layout for files created by ffmpeg/yt-dlp where mdat precedes moov)
+  if (result.duration === 0 && file.size > CHUNK_SIZE) {
+    try {
+      const tailChunkSize = Math.min(file.size, 512 * 1024);
+      const tailSlice = file.slice(-tailChunkSize);
+      const tailBuf = new Uint8Array(await tailSlice.arrayBuffer());
+      const moovIdx = findFourCC(tailBuf, 'moov');
+      if (moovIdx >= 4) {
+        const moovOffset = moovIdx - 4;
+        const tailMeta = parseM4A(tailBuf.subarray(moovOffset));
+        if (tailMeta) {
+          if (tailMeta.duration > 0) result.duration = tailMeta.duration;
+          if (tailMeta.title) result.title = tailMeta.title;
+          if (tailMeta.artist) result.artist = tailMeta.artist;
+          if (tailMeta.album) result.album = tailMeta.album;
+          if (tailMeta.artwork) result.artwork = tailMeta.artwork;
+          if (tailMeta.format) result.format = tailMeta.format;
+        }
+      }
+    } catch (_) {}
+  }
+
+  return result;
 }

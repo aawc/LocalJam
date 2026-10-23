@@ -78,14 +78,14 @@ export class AudioEngine {
       }
 
       audio.addEventListener('timeupdate', () => {
-        if (this.getActiveAudio() === audio && !audio._isProbingDuration) {
+        if (this.getActiveAudio() === audio) {
           this.notifyState();
           this.syncMediaSessionPosition();
         }
       });
 
       audio.addEventListener('ended', () => {
-        if (this.getActiveAudio() === audio && !audio._isProbingDuration) {
+        if (this.getActiveAudio() === audio) {
           this.handleTrackEnded();
         }
       });
@@ -111,35 +111,9 @@ export class AudioEngine {
 
       const handleDurationUpdate = () => {
         if (this.getActiveAudio() !== audio || this.isRadio) return;
-        if (audio._isProbingDuration) return;
 
         const targetTrack = this.currentTrack;
-        if (audio.duration === Infinity) {
-          audio._isProbingDuration = true;
-          // Chromium Blob URL duration workaround: force duration computation
-          const prevTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
-          const onSeekedToEnd = () => {
-            audio.removeEventListener('timeupdate', onSeekedToEnd);
-            audio._isProbingDuration = false;
-            if (Number.isFinite(audio.duration) && audio.duration > 0) {
-              if (targetTrack && (!targetTrack.duration || !Number.isFinite(targetTrack.duration) || targetTrack.duration <= 0)) {
-                targetTrack.duration = audio.duration;
-                if (db && typeof db.putTrack === 'function') {
-                  db.putTrack(targetTrack).catch(() => {});
-                }
-              }
-              this.notifyState();
-              this.syncMediaSessionPosition();
-            }
-            try { audio.currentTime = prevTime; } catch (_) {}
-          };
-          audio.addEventListener('timeupdate', onSeekedToEnd, { once: true });
-          try {
-            audio.currentTime = 1e101;
-          } catch (_) {
-            audio._isProbingDuration = false;
-          }
-        } else if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
           if (targetTrack && (!targetTrack.duration || !Number.isFinite(targetTrack.duration) || targetTrack.duration <= 0)) {
             targetTrack.duration = audio.duration;
             if (db && typeof db.putTrack === 'function') {
@@ -148,6 +122,15 @@ export class AudioEngine {
           }
           this.notifyState();
           this.syncMediaSessionPosition();
+        } else if ((audio.duration === Infinity || isNaN(audio.duration)) && targetTrack) {
+          if (Number.isFinite(targetTrack.duration) && targetTrack.duration > 0) {
+            this.notifyState();
+            this.syncMediaSessionPosition();
+          } else if (audio.src) {
+            // Chromium Blob URL duration workaround: run an ISOLATED background probe
+            // on an offscreen, muted Audio element. Never seek or mutate the active playback element!
+            this.probeTrackDuration(audio.src, targetTrack);
+          }
         }
       };
 
@@ -212,6 +195,90 @@ export class AudioEngine {
         }
       });
     });
+  }
+
+  /**
+   * Probe true duration for files where Chromium Blob URL reports Infinity on initial load.
+   * Runs strictly on an isolated, offscreen, muted Audio element so the active playback
+   * head and audio stream are never mutated, seeked, or interrupted.
+   * @param {string} src - Media URL to probe
+   * @param {any} targetTrack - Target track record to populate with resolved duration
+   */
+  probeTrackDuration(src, targetTrack) {
+    if (!src || !targetTrack) return;
+    if (Number.isFinite(targetTrack.duration) && targetTrack.duration > 0) return;
+    if (targetTrack._isProbingDuration) return;
+    if (typeof Audio === 'undefined') return;
+
+    targetTrack._isProbingDuration = true;
+    try {
+      const probe = new Audio();
+      probe.muted = true;
+      probe.preload = 'metadata';
+
+      let resolved = false;
+      let timer = null;
+      const cleanup = () => {
+        if (resolved) return;
+        resolved = true;
+        targetTrack._isProbingDuration = false;
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        probe.removeEventListener('loadedmetadata', onLoaded);
+        probe.removeEventListener('seeked', onSeeked);
+        probe.removeEventListener('error', onError);
+        probe.src = '';
+        if (typeof probe.load === 'function') probe.load();
+      };
+
+      const finishWithDuration = (dur) => {
+        cleanup();
+        if (Number.isFinite(dur) && dur > 0) {
+          if (!targetTrack.duration || targetTrack.duration <= 0) {
+            targetTrack.duration = dur;
+            if (db && typeof db.putTrack === 'function') {
+              db.putTrack(targetTrack).catch(() => {});
+            }
+          }
+          if (this.currentTrack && this.currentTrack.id === targetTrack.id) {
+            this.notifyState();
+            this.syncMediaSessionPosition();
+          }
+        }
+      };
+
+      const onSeeked = () => {
+        finishWithDuration(probe.duration);
+      };
+
+      const onLoaded = () => {
+        if (Number.isFinite(probe.duration) && probe.duration > 0) {
+          finishWithDuration(probe.duration);
+        } else {
+          probe.addEventListener('seeked', onSeeked, { once: true });
+          try {
+            probe.currentTime = 1e101;
+          } catch (_) {
+            cleanup();
+          }
+        }
+      };
+
+      const onError = () => cleanup();
+
+      probe.addEventListener('loadedmetadata', onLoaded, { once: true });
+      probe.addEventListener('error', onError, { once: true });
+      probe.src = src;
+
+      timer = setTimeout(() => cleanup(), 10000);
+      if (typeof timer?.unref === 'function') {
+        timer.unref();
+      }
+    } catch (_) {
+      targetTrack._isProbingDuration = false;
+    }
   }
 
   initWindowListeners() {
