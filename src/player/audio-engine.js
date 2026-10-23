@@ -77,6 +77,14 @@ export class AudioEngine {
         audio.setAttribute('webkit-playsinline', '');
       }
 
+      // Attach to document.body to ensure active document media lifecycle in mobile Chromium
+      if (typeof document !== 'undefined' && typeof document.body?.appendChild === 'function' && !audio.parentNode) {
+        if (audio.style) audio.style.display = 'none';
+        try {
+          document.body.appendChild(audio);
+        } catch (_) {}
+      }
+
       audio.addEventListener('timeupdate', () => {
         if (this.getActiveAudio() === audio) {
           this.notifyState();
@@ -183,10 +191,6 @@ export class AudioEngine {
 
       audio.addEventListener('pause', () => {
         if (this.getActiveAudio() === audio) {
-          if (!this._userInitiatedPause && typeof document !== 'undefined' && document.hidden) {
-            // Background suspension by browser/OS: preserve isPlaying intent for foreground/visibility recovery
-            return;
-          }
           this.isPlaying = false;
           if (this.isRadio && this.streamState !== 'error') {
             this.streamState = 'idle';
@@ -442,7 +446,13 @@ export class AudioEngine {
       const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
       if (!AudioContextClass) return;
 
-      this.audioCtx = new AudioContextClass();
+      // latencyHint: 'playback' configures Android AAudio into power-saving mode,
+      // sustaining the audio thread during screen-off / background lock (Chromium bug 40779448 / 1231090)
+      try {
+        this.audioCtx = new AudioContextClass({ latencyHint: 'playback' });
+      } catch (_) {
+        this.audioCtx = new AudioContextClass();
+      }
       if (typeof this.audioCtx.addEventListener === 'function') {
         this._onAudioCtxStateChange = () => {
           if (this.isPlaying && (this.audioCtx.state === 'suspended' || this.audioCtx.state === 'interrupted')) {
@@ -976,6 +986,10 @@ export class AudioEngine {
     const audio = this.getActiveAudio();
     if (audio && audio.src && audio.src !== (typeof window !== 'undefined' ? window.location.href : '')) {
       try {
+        const dur = this.duration;
+        if (Number.isFinite(dur) && dur > 0 && audio.currentTime >= dur - 0.25) {
+          audio.currentTime = 0;
+        }
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           await playPromise;
@@ -1076,6 +1090,12 @@ export class AudioEngine {
     this.activeObjectUrls.clear();
     this.currentObjectUrl = null;
 
+    [this.audioA, this.audioB, this.radioAudio].forEach((audio) => {
+      if (audio && audio.parentNode) {
+        try { audio.parentNode.removeChild(audio); } catch (_) {}
+      }
+    });
+
     this._lastMediaSessionPlaybackState = 'none';
     if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
       const actions = ['play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekbackward', 'seekforward', 'seekto'];
@@ -1105,6 +1125,9 @@ export class AudioEngine {
       if (Number.isFinite(target)) {
         this._savedTime = target;
         audio.currentTime = target;
+        if (this.isPlaying && audio.paused) {
+          audio.play().catch(() => {});
+        }
         this.notifyState();
         this.syncMediaSessionPosition();
       }

@@ -128,7 +128,7 @@ From the diagnostic snapshot:
 
 ---
 
-## 5. Summary of Modified Components
+## 5. Summary of Modified Components (Initial Fix)
 
 1. [`docs/reports/AUDIO_LIFECYCLE_DIAGNOSTIC_REPORT.md`](./docs/reports/AUDIO_LIFECYCLE_DIAGNOSTIC_REPORT.md): Diagnostic investigation and architectural analysis.
 2. [`src/ui/browse-model.js`](./src/ui/browse-model.js): Robust non-finite guard in `formatDuration`.
@@ -138,3 +138,72 @@ From the diagnostic snapshot:
 6. [`test/ui/browse-model.test.js`](./test/ui/browse-model.test.js): Comprehensive duration formatting tests.
 7. [`test/player/audio-engine.test.js`](./test/player/audio-engine.test.js): Duration sanitization, MediaSession lifecycle, and background recovery unit tests.
 8. [`test/helpers/mock-dom.js`](./test/helpers/mock-dom.js): Mock `navigator.mediaSession` support for headless tests.
+
+---
+
+## 6. Post-Release Regression Investigation & Resolution (v2026.10.143)
+
+### 6.1 Telemetry & Regression Observations
+Following the deployment of `v2026.10.143`, user diagnostics identified two regressions:
+1. *"The long song shows the seemingly correct duration but doesn't play - it seeks to the end directly and plays no music when seeked back."*
+2. *"The music not only stops playing on minimising, but can now not even be resumed from the widget on the lock screen or in the notification area."*
+
+### 6.2 Root Cause Analysis
+
+#### Defect A: Active Audio Element Duration Probing
+- **Defect Mechanism:** In `v2026.10.143`, `handleDurationUpdate()` ran directly on the active playback audio element (`audioA` or `audioB`) whenever `audio.duration === Infinity`. It assigned `audio.currentTime = 1e101` directly to the active playing element.
+- **Failure Chain:**
+  1. Chromium initiated an asynchronous seek all the way to `7656.321s` (EOF of the 2-hour track).
+  2. Reaching EOF caused Chromium's media pipeline to automatically pause the audio element (`audio.paused = true`).
+  3. Although `prevTime` was restored on `timeupdate`, the element remained paused.
+  4. When the user scrubbed backwards, `seek(target)` set `currentTime` but did not call `play()`. The player remained paused and silent.
+  5. If the user tapped Play, `durationchange` / `timeupdate` re-triggered `handleDurationUpdate()`, seeking to `1e101` again.
+
+#### Defect B: MediaSession Pause Suppression & Lockscreen Desynchronization
+- **Defect Mechanism:** In an attempt to prevent background suspension, `audio.addEventListener('pause')` contained:
+  ```javascript
+  if (!this._userInitiatedPause && typeof document !== 'undefined' && document.hidden) return;
+  ```
+- **Failure Chain:**
+  1. When Android OS throttled or suspended playback, `this.isPlaying` remained `true` and `navigator.mediaSession.playbackState` remained `'playing'`.
+  2. On the Android lockscreen and notification area, the media widget showed the **Pause** button instead of **Play**.
+  3. Tapping the widget dispatched the `pause` action rather than `play`.
+  4. Tapping again to send `play` attempted to resume the element that had been seeked to EOF (`7656.321s`), which immediately halted.
+
+#### Defect C: Android AAudio Interactive vs Power-Saving Latency Hint
+- **Defect Mechanism:** `AudioContext` was instantiated without options (`new AudioContextClass()`).
+- **Failure Chain:** In Chromium on Android (Chromium Issue 40779448 / 1231090), default interactive mode does not request power-saving mode from Android's AAudio / OpenSL ES subsystem. When the screen turns off and the device is on battery, Android shuts down the Web Audio output thread after 10–15 seconds.
+
+#### Defect D: Ingestion-Time Missing MP4 Duration (mdat Precedes moov)
+- **Defect Mechanism:** Scraped or converted MP4 files without `-movflags faststart` place the `mdat` atom (raw audio frames) first and the `moov` atom (metadata + duration) at the tail of the file. The metadata parser only read the first 128 KB, missing the `moov` atom entirely and defaulting `duration` to 0.
+
+### 6.3 Architectural Remediation
+
+1. **Isolated Duration Probing:**
+   - Completely removed `audio.currentTime = 1e101` from the active playback element.
+   - Created `probeTrackDuration(src, targetTrack)` using an isolated, offscreen, muted `new Audio()` probe element with safety timeouts and event cleanup. The active playback element and stream head are never mutated.
+   - Guarded with `_isProbingDuration` to prevent concurrent duplicate probes during rapid metadata events.
+2. **Ingestion-Time Tail `moov` Atom Parsing:**
+   - Added backwards FourCC search in `src/metadata/index.js` inspecting the trailing 512 KB slice for `moov` when `duration === 0` and `file.size > CHUNK_SIZE`.
+   - Resolves duration on library scan, eliminating runtime duration probing for indexed files.
+3. **Lockscreen State Synchronization:**
+   - Removed the pause suppression guard. When audio pauses, `this.isPlaying` becomes `false` and `navigator.mediaSession.playbackState` becomes `'paused'`.
+   - The Android lockscreen widget accurately displays the **Play** button and dispatches the `play` action.
+4. **Android Background Audio Preservation:**
+   - Instantiated `AudioContext` with `{ latencyHint: 'playback' }`, configuring AAudio into power-saving mode and sustaining the audio thread during screen-off.
+   - Attached `audioA`, `audioB`, and `radioAudio` to `document.body` (`display: none`), anchoring them to the active document lifecycle.
+5. **EOF Playback Safety & Resume on Seek:**
+   - Guarded `play()`: if `audio.currentTime >= dur - 0.25`, resets `audio.currentTime = 0`.
+   - In `seek(seconds)`, automatically unpauses if `this.isPlaying && audio.paused`.
+
+### 6.4 Verification Matrix (v2026.10.143 Regressions)
+
+| Component / Scenario | Verification Command | Pre-Fix Behavior | Post-Fix Behavior | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| Long song duration resolution | `node test/player/audio-engine.test.js` | Sought active player to EOF (`1e101`), paused, silent | Probed via isolated muted `Audio`, active player unmutated | `[PASS]` |
+| Tail `moov` atom parsing | `node test/metadata/m4a.test.js` | `duration: 0` | Extracts true duration, title, artist, album | `[PASS]` |
+| Lockscreen widget pause synchronization | `node test/player/audio-engine.test.js` | `playbackState: 'playing'` while paused; widget showed Pause button | `playbackState: 'paused'`; widget shows Play button | `[PASS]` |
+| AudioContext Android power-saving | `node test/player/audio-engine.test.js` | Default interactive latency (suspended on battery sleep) | Initialized with `{ latencyHint: 'playback' }` | `[PASS]` |
+| Play from EOF recovery | `node test/player/audio-engine.test.js` | Halted at EOF | Resets `currentTime = 0` and starts playback | `[PASS]` |
+| Seek while playing | `node test/player/audio-engine.test.js` | Remained paused if element was paused | Calls `audio.play()` to resume active stream | `[PASS]` |
+| Full repository test suite | All test files | Failed globbing | 41/41 test files pass | `[PASS]` |

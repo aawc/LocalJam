@@ -1377,6 +1377,103 @@ test('Audio Engine State & Control Suite', async (t) => {
     }
   });
 
+  await t.test('pause event updates isPlaying to false and sets mediaSession playbackState to paused even when document is hidden', () => {
+    const { document, navigator } = setupMockDom();
+    try {
+      const engine = new AudioEngine();
+      const mockAudio = {
+        paused: true,
+        addEventListener: (event, handler) => {
+          mockAudio['_' + event] = handler;
+        }
+      };
+      engine.audioA = mockAudio;
+      engine.activePlayer = 'A';
+      engine.currentTrack = { id: 't1', title: 'Track 1', duration: 180 };
+      engine.isPlaying = true;
+      engine.notifyState();
+      assert.equal(navigator.mediaSession.playbackState, 'playing');
+
+      // Simulate browser background suspension where document.hidden = true and audio fires pause
+      document.hidden = true;
+      document.visibilityState = 'hidden';
+
+      let pauseHandler = null;
+      mockAudio.addEventListener = (event, handler) => {
+        if (event === 'pause') pauseHandler = handler;
+      };
+      engine.initAudioElements();
+
+      assert.ok(pauseHandler, 'pause handler registered');
+      pauseHandler();
+
+      assert.equal(engine.isPlaying, false, 'engine.isPlaying must be false after audio pause in background');
+      assert.equal(navigator.mediaSession.playbackState, 'paused', 'mediaSession.playbackState must be paused so lockscreen shows Play button');
+    } finally {
+      teardownMockDom();
+    }
+  });
+
+  await t.test('AudioContext constructor is initialized with latencyHint: playback for Android background audio preservation', async () => {
+    const prevWindow = globalThis.window;
+    let passedOptions = null;
+    globalThis.window = {
+      AudioContext: class {
+        constructor(options) {
+          passedOptions = options;
+          this.state = 'running';
+          this.destination = {};
+        }
+        createGain() { return { gain: { value: 1 }, connect: () => {} }; }
+        createAnalyser() { return { fftSize: 2048, smoothingTimeConstant: 0.85, connect: () => {} }; }
+        createBiquadFilter() { return { connect: () => {}, frequency: { value: 0 }, gain: { value: 0 }, Q: { value: 0 } }; }
+        createMediaElementSource() { return { connect: () => {} }; }
+        resume() { return Promise.resolve(); }
+      }
+    };
+
+    try {
+      const engine = new AudioEngine();
+      await engine.initWebAudio();
+      assert.ok(passedOptions, 'Options were passed to AudioContext constructor');
+      assert.equal(passedOptions.latencyHint, 'playback', 'latencyHint must be playback to enable power-saving mode on Android AAudio');
+      engine.destroy();
+    } finally {
+      globalThis.window = prevWindow;
+    }
+  });
+
+  await t.test('play() from EOF resets currentTime to 0 and seek() resumes playback if engine was playing', async () => {
+    const engine = new AudioEngine();
+    let playCalled = false;
+    const mockAudio = {
+      src: 'blob:test',
+      currentTime: 120,
+      duration: 120,
+      paused: true,
+      play: async () => {
+        playCalled = true;
+        mockAudio.paused = false;
+      }
+    };
+    engine.audioA = mockAudio;
+    engine.activePlayer = 'A';
+    engine.currentTrack = { id: 't1', title: 'Track 1', duration: 120 };
+
+    // 1. Play from EOF
+    await engine.play();
+    assert.equal(mockAudio.currentTime, 0, 'play() at EOF resets currentTime to 0');
+    assert.equal(playCalled, true, 'play() called audio.play()');
+    assert.equal(engine.isPlaying, true, 'engine.isPlaying is true');
+
+    // 2. Seeking while engine isPlaying resumes playback if paused
+    mockAudio.paused = true;
+    playCalled = false;
+    engine.seek(30);
+    assert.equal(mockAudio.currentTime, 30, 'seek() updated currentTime to 30');
+    assert.equal(playCalled, true, 'seek() resumed paused audio element when engine.isPlaying is true');
+  });
+
   await t.test('Verification that zero setInterval polling loops exist in audio-engine.js', () => {
     const enginePath = new URL('../../src/player/audio-engine.js', import.meta.url);
     const sourceCode = fs.readFileSync(enginePath, 'utf8');
